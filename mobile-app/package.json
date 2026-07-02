@@ -1,0 +1,49 @@
+{
+  "name": "weather-check",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@expo/metro-runtime": "~57.0.2",
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "expo": "~57.0.1",
+    "expo-location": "~57.0.1",
+    "expo-status-bar": "~57.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-maps": "1.27.2",
+    "react-native-web": "0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "eas-cli": "^20.5.0",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "web:api": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-api-web.ps1",
+    "export:web": "expo export --platform web --output-dir dist-phone && node scripts/post-export-pwa.mjs",
+    "export:web:api": "powershell.exe -ExecutionPolicy Bypass -File scripts/export-api-web.ps1",
+    "typecheck": "tsc --noEmit",
+    "check:domain": "node scripts/check-domain.mjs",
+    "check:pwa": "node scripts/check-pwa-export.mjs",
+    "check:api-mode": "node scripts/check-api-mode.mjs",
+    "check:backend-mode": "node scripts/check-backend-mode.mjs",
+    "check:android-preview": "node scripts/check-android-preview.mjs",
+    "check:release-readiness": "node scripts/check-release-readiness.mjs",
+    "verify": "node scripts/verify.mjs",
+    "mock-api": "node scripts/mock-api-server.mjs",
+    "eas:login": "powershell.exe -ExecutionPolicy Bypass -File scripts/eas-login.ps1",
+    "eas:whoami": "powershell.exe -ExecutionPolicy Bypass -File scripts/eas-whoami.ps1",
+    "build:android:preview:checked": "powershell.exe -ExecutionPolicy Bypass -File scripts/build-android-preview.ps1",
+    "build:android:api-preview": "powershell.exe -ExecutionPolicy Bypass -File scripts/build-android-api-preview.ps1",
+    "build:android:cloud-preview": "powershell.exe -ExecutionPolicy Bypass -File scripts/build-android-cloud-preview.ps1",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:production": "eas build --platform android --profile production"
+  },
+  "private": true
+}

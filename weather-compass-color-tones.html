@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>웨더체크 기상 나침반 컬러톤 샘플</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255, 184, 77, 0.18), transparent 30rem),
+        radial-gradient(circle at 92% 16%, rgba(60, 145, 255, 0.13), transparent 32rem),
+        #eee8dc;
+      color: #171717;
+    }
+
+    .page {
+      width: min(1680px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 68px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      align-items: end;
+      padding: 0 4px 28px;
+      border-bottom: 1px solid rgba(23, 23, 23, 0.14);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 72px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 16px 0 0;
+      color: #514b43;
+      font-size: 16px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .count {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid rgba(23, 23, 23, 0.16);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.48);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 28px;
+      padding-top: 34px;
+    }
+
+    .tone-card {
+      min-width: 0;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100%, 350px);
+      aspect-ratio: 350 / 742;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 9px solid var(--frame);
+      border-radius: 38px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--accent2) 24%, transparent), transparent 11rem),
+        radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 10rem),
+        var(--bg);
+      box-shadow: 0 28px 70px rgba(21, 20, 18, 0.2);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      z-index: 20;
+      width: 92px;
+      height: 25px;
+      border-radius: 999px;
+      background: var(--frame);
+      transform: translateX(-50%);
+    }
+
+    .status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 15;
+      height: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 22px;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 52px 16px 84px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(from 30deg, var(--accent), color-mix(in srgb, var(--panel) 60%, transparent), var(--accent2), color-mix(in srgb, var(--panel) 60%, transparent), var(--accent));
+    }
+
+    .mark::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--panel);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--bg) 78%, transparent);
+    }
+
+    .brand b {
+      display: block;
+      font-size: 16px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .temp {
+      flex: none;
+      min-width: 60px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--center-ink);
+      background: var(--center);
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .search {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 8px 0 14px;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel) 78%, transparent);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .search span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .search i {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-style: normal;
+      font-weight: 950;
+    }
+
+    .main-card {
+      position: relative;
+      min-height: 350px;
+      margin-top: 13px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--center) 46%, transparent), transparent 8rem),
+        color-mix(in srgb, var(--panel) 76%, transparent);
+    }
+
+    .chip-row {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 27px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+      font-size: 10px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .chip.accent {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .compass {
+      position: relative;
+      height: 224px;
+      display: grid;
+      place-items: center;
+      margin-top: 2px;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+    }
+
+    .ring.one {
+      width: 218px;
+      height: 218px;
+    }
+
+    .ring.two {
+      width: 158px;
+      height: 158px;
+      border-style: dashed;
+    }
+
+    .ring.three {
+      width: 104px;
+      height: 104px;
+      border: 0;
+      background: conic-gradient(var(--accent) 0 74deg, color-mix(in srgb, var(--panel) 64%, transparent) 74deg 224deg, var(--accent2) 224deg 294deg, color-mix(in srgb, var(--panel) 64%, transparent) 294deg);
+      box-shadow: 0 0 0 1px var(--line);
+    }
+
+    .axis,
+    .axis::after {
+      position: absolute;
+      content: "";
+      width: 1px;
+      height: 218px;
+      background: linear-gradient(transparent, var(--line), transparent);
+    }
+
+    .axis::after {
+      transform: rotate(90deg);
+    }
+
+    .needle {
+      position: absolute;
+      z-index: 2;
+      width: 17px;
+      height: 88px;
+      clip-path: polygon(50% 0, 100% 48%, 50% 100%, 0 48%);
+      background: linear-gradient(180deg, var(--accent3) 0 48%, var(--accent2) 49% 100%);
+      transform: rotate(36deg);
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.16));
+    }
+
+    .center {
+      position: relative;
+      z-index: 3;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--center-ink);
+      background: var(--center);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.14);
+    }
+
+    .center span {
+      display: block;
+      color: color-mix(in srgb, var(--center-ink) 64%, transparent);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .center b {
+      display: block;
+      margin-top: 5px;
+      font-size: 25px;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .answer {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .answer h2 {
+      margin: 0;
+      font-size: 29px;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .answer p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.42;
+      font-weight: 760;
+    }
+
+    .big-temp {
+      color: var(--ink);
+      font-size: 46px;
+      line-height: 0.9;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      min-height: 70px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel) 75%, transparent);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 7px;
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .evidence {
+      display: grid;
+      gap: 7px;
+      margin-top: 10px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+    }
+
+    .ev-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    .source {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .ev-row:nth-child(2) .source {
+      background: var(--accent2);
+    }
+
+    .ev-row:nth-child(3) .source {
+      background: var(--accent3);
+    }
+
+    .ev-row b {
+      display: block;
+      font-size: 12px;
+    }
+
+    .ev-row span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .ev-row strong {
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--nav) 88%, transparent);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    .bottom div {
+      height: 35px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .bottom div:first-child {
+      color: var(--center-ink);
+      background: var(--center);
+    }
+
+    .caption {
+      width: min(100%, 350px);
+      margin: 14px auto 0;
+    }
+
+    .caption strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .caption span {
+      display: block;
+      margin-top: 6px;
+      color: #5c544b;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 660;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 18px, 390px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        display: block;
+      }
+
+      .count {
+        display: inline-grid;
+        margin-top: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>기상 나침반<br />컬러톤 샘플</h1>
+        <p>9번 시안의 구조는 유지하고, 앱이 너무 어둡게 느껴지지 않도록 밝은 톤 위주로 색 조합을 갈라봤습니다. 같은 화면을 놓고 “서비스 정체성”만 비교하는 용도입니다.</p>
+      </div>
+      <div class="count">12 color tones</div>
+    </section>
+
+    <section class="grid" id="toneGrid" aria-label="기상 나침반 컬러톤 샘플"></section>
+  </main>
+
+  <script>
+    const tones = [
+      {
+        name: '01. 데이라이트 샌드',
+        note: '가장 무난한 밝은 기본안. 차분하지만 어둡지 않고, 판정 도구 느낌도 유지됩니다.',
+        vars: {
+          bg: '#f3ecdf', panel: '#fffaf1', ink: '#20262d', muted: '#6f675c', frame: '#15171b',
+          line: 'rgba(32, 38, 45, 0.14)', accent: '#ffb84d', accent2: '#55b9e8', accent3: '#65c98d',
+          center: '#ffffff', centerInk: '#20262d', accentInk: '#241605', nav: '#fffaf1'
+        }
+      },
+      {
+        name: '02. 클리어 스카이',
+        note: '맑은 날씨 앱다운 청량감. 대중적이고 접근성이 좋아 첫 후보로 보기 좋습니다.',
+        vars: {
+          bg: '#dff2ff', panel: '#f9fdff', ink: '#122e40', muted: '#557386', frame: '#102230',
+          line: 'rgba(18, 46, 64, 0.13)', accent: '#ffbd59', accent2: '#2f86ff', accent3: '#22b98f',
+          center: '#ffffff', centerInk: '#122e40', accentInk: '#17202a', nav: '#f9fdff'
+        }
+      },
+      {
+        name: '03. 민트 필드',
+        note: '현장 제보, 동네감, 산책 같은 기능과 잘 맞는 부드러운 녹색 계열입니다.',
+        vars: {
+          bg: '#e4f4e8', panel: '#fbfff8', ink: '#173126', muted: '#5f7868', frame: '#10291f',
+          line: 'rgba(23, 49, 38, 0.13)', accent: '#35c681', accent2: '#ffbd66', accent3: '#68b6ff',
+          center: '#ffffff', centerInk: '#173126', accentInk: '#092216', nav: '#fbfff8'
+        }
+      },
+      {
+        name: '04. 피치 선라이즈',
+        note: '따뜻하고 친근한 생활앱 느낌. 날씨가 차갑게 보이지 않는 장점이 있습니다.',
+        vars: {
+          bg: '#ffe4d5', panel: '#fff8f0', ink: '#33251f', muted: '#80665a', frame: '#261815',
+          line: 'rgba(51, 37, 31, 0.14)', accent: '#ff7043', accent2: '#ffc857', accent3: '#59c6d4',
+          center: '#fffdf7', centerInk: '#33251f', accentInk: '#2a130b', nav: '#fff8f0'
+        }
+      },
+      {
+        name: '05. 라벤더 에어',
+        note: '조금 더 세련되고 앱스토어적인 톤. 단, 너무 감성앱처럼 흐를 수 있습니다.',
+        vars: {
+          bg: '#eee8ff', panel: '#fffbff', ink: '#28223a', muted: '#736b89', frame: '#1f1a2e',
+          line: 'rgba(40, 34, 58, 0.13)', accent: '#8d75ff', accent2: '#ffc35c', accent3: '#60c8b3',
+          center: '#ffffff', centerInk: '#28223a', accentInk: '#ffffff', nav: '#fffbff'
+        }
+      },
+      {
+        name: '06. 페이퍼 잉크',
+        note: '가장 명료한 흑백 기반. 신뢰감은 강하고, 브랜드로 만들면 오래갑니다.',
+        vars: {
+          bg: '#f8f3e7', panel: '#fffdf5', ink: '#111111', muted: '#69635b', frame: '#111111',
+          line: 'rgba(17, 17, 17, 0.16)', accent: '#111111', accent2: '#2f76d2', accent3: '#e45032',
+          center: '#111111', centerInk: '#fffdf5', accentInk: '#fffdf5', nav: '#fffdf5'
+        }
+      },
+      {
+        name: '07. 코스탈 그린',
+        note: '비, 바람, 습도 같은 기상 정보에 잘 붙는 해안/바람 느낌의 톤입니다.',
+        vars: {
+          bg: '#dff1ee', panel: '#ffffff', ink: '#123135', muted: '#5a7677', frame: '#102a2d',
+          line: 'rgba(18, 49, 53, 0.13)', accent: '#12a7a1', accent2: '#f1a33c', accent3: '#3677e5',
+          center: '#ffffff', centerInk: '#123135', accentInk: '#ffffff', nav: '#ffffff'
+        }
+      },
+      {
+        name: '08. 소프트 로즈',
+        note: '대중적이고 부드럽지만 날씨 판정 앱으로는 조금 귀여운 쪽입니다.',
+        vars: {
+          bg: '#fff0f3', panel: '#fffafc', ink: '#34242b', muted: '#8b6571', frame: '#2a1920',
+          line: 'rgba(52, 36, 43, 0.13)', accent: '#e7567c', accent2: '#ffbe5c', accent3: '#4db6ac',
+          center: '#ffffff', centerInk: '#34242b', accentInk: '#ffffff', nav: '#fffafc'
+        }
+      },
+      {
+        name: '09. 시트러스 라임',
+        note: '눈에 잘 띄고 젊은 느낌. 과하면 가벼워질 수 있어서 포인트 조절이 필요합니다.',
+        vars: {
+          bg: '#f2f8d8', panel: '#fffff4', ink: '#2c3317', muted: '#6d754c', frame: '#222914',
+          line: 'rgba(44, 51, 23, 0.13)', accent: '#c7dc2e', accent2: '#ff7a3d', accent3: '#32b6d3',
+          center: '#ffffff', centerInk: '#2c3317', accentInk: '#202510', nav: '#fffff4'
+        }
+      },
+      {
+        name: '10. 레인 글라스',
+        note: '비 오는 날에도 잘 어울리는 차분한 밝은 회청색. 현재 어두운 안의 현실적 대안입니다.',
+        vars: {
+          bg: '#dfe8ef', panel: '#f8fbfd', ink: '#172331', muted: '#607181', frame: '#14202d',
+          line: 'rgba(23, 35, 49, 0.13)', accent: '#4c9be8', accent2: '#8fe3d0', accent3: '#ffbf66',
+          center: '#ffffff', centerInk: '#172331', accentInk: '#ffffff', nav: '#f8fbfd'
+        }
+      },
+      {
+        name: '11. 어반 라이트',
+        note: '기능성 앱처럼 보이는 중립 회색 톤. 깔끔하지만 개성은 덜합니다.',
+        vars: {
+          bg: '#eceff1', panel: '#ffffff', ink: '#1d252d', muted: '#6a747c', frame: '#151b20',
+          line: 'rgba(29, 37, 45, 0.13)', accent: '#455a64', accent2: '#ffb547', accent3: '#2fbf9b',
+          center: '#ffffff', centerInk: '#1d252d', accentInk: '#ffffff', nav: '#ffffff'
+        }
+      },
+      {
+        name: '12. 오로라 크림',
+        note: '밝지만 살짝 미래적인 느낌. 나침반 콘셉트와도 꽤 잘 붙습니다.',
+        vars: {
+          bg: '#eef7ef', panel: '#fcfff7', ink: '#1a2d2a', muted: '#657a74', frame: '#112521',
+          line: 'rgba(26, 45, 42, 0.13)', accent: '#39b980', accent2: '#75d7ff', accent3: '#ff9f64',
+          center: '#ffffff', centerInk: '#1a2d2a', accentInk: '#082217', nav: '#fcfff7'
+        }
+      }
+    ];
+
+    function cssVars(vars) {
+      return Object.entries(vars)
+        .map(([key, value]) => `--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${value}`)
+        .join(';');
+    }
+
+    function renderTone(tone) {
+      return `
+        <article class="tone-card">
+          <div class="phone" style="${cssVars(tone.vars)}">
+            <div class="status"><span>9:41</span><span>5G</span></div>
+            <div class="app">
+              <div class="top">
+                <div class="brand">
+                  <div class="mark"></div>
+                  <div>
+                    <b>웨더체크</b>
+                    <span>기상 나침반 판정</span>
+                  </div>
+                </div>
+                <div class="temp">24°</div>
+              </div>
+
+              <div class="search">
+                <span>잠실운동장 지금 비 와?</span>
+                <i>↗</i>
+              </div>
+
+              <section class="main-card">
+                <div class="chip-row">
+                  <span class="chip accent">현재 위치 · 송파구</span>
+                  <span class="chip">3분 전</span>
+                </div>
+
+                <div class="compass">
+                  <div class="axis"></div>
+                  <div class="ring one"></div>
+                  <div class="ring two"></div>
+                  <div class="ring three"></div>
+                  <div class="needle"></div>
+                  <div class="center">
+                    <div>
+                      <span>판정</span>
+                      <b>비<br />없음</b>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="answer">
+                  <div>
+                    <h2>현재는 비 안 오는 쪽이 우세해요</h2>
+                    <p>예보 3곳과 현장 제보 12건을 함께 봤어요.</p>
+                  </div>
+                  <div class="big-temp">24°</div>
+                </div>
+              </section>
+
+              <div class="stats">
+                <div class="stat"><span>확신도</span><b>82%</b></div>
+                <div class="stat"><span>제보</span><b>12건</b></div>
+                <div class="stat"><span>강수</span><b>18%</b></div>
+              </div>
+
+              <section class="evidence">
+                <div class="ev-row"><div class="source">K</div><div><b>기상청</b><span>흐림 · 20%</span></div><strong>주의</strong></div>
+                <div class="ev-row"><div class="source">Yr</div><div><b>Yr.no</b><span>강수량 0.1mm 미만</span></div><strong>약함</strong></div>
+                <div class="ev-row"><div class="source">현</div><div><b>현장 제보</b><span>12명 중 9명 비 없음</span></div><strong>우세</strong></div>
+              </section>
+
+              <nav class="bottom">
+                <div>판정</div><div>지도</div><div>제보</div><div>비교</div>
+              </nav>
+            </div>
+          </div>
+
+          <div class="caption">
+            <strong>${tone.name}</strong>
+            <span>${tone.note}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    document.getElementById('toneGrid').innerHTML = tones.map(renderTone).join('');
+  </script>
+</body>
+</html>

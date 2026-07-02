@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>날씨체크 첫페이지 디자인 시안 50개 더</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #eef2f7;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+    .page {
+      max-width: 1880px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .intro {
+      margin-bottom: 22px;
+      display: grid;
+      gap: 8px;
+    }
+    .intro h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1.05;
+    }
+    .intro p {
+      margin: 0;
+      max-width: 1040px;
+      color: #64748b;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(318px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+    .concept { display: grid; gap: 10px; }
+    .caption {
+      min-height: 38px;
+      padding: 0 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .caption strong { font-size: 15px; }
+    .caption span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 850;
+      text-align: right;
+    }
+    .phone {
+      --bg: #f8fafc;
+      --fg: #111827;
+      --muted: #64748b;
+      --card: #ffffff;
+      --soft: #eff6ff;
+      --line: rgba(148,163,184,.26);
+      --accent: #2563eb;
+      --accent2: #0ea5a4;
+      --warn: #f59e0b;
+      --shadow: rgba(15,23,42,.16);
+      min-height: 690px;
+      position: relative;
+      overflow: hidden;
+      color: var(--fg);
+      background: var(--bg);
+      border: 8px solid #070a12;
+      border-radius: 34px;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, .24);
+    }
+    .status {
+      height: 38px;
+      padding: 10px 18px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+      z-index: 3;
+    }
+    .dots { display: flex; gap: 4px; align-items: center; }
+    .dots i {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .75;
+    }
+    .content {
+      padding: 14px 16px 82px;
+      display: grid;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand { display: grid; gap: 2px; }
+    .brand b { font-size: 17px; line-height: 1.1; }
+    .brand span {
+      color: currentColor;
+      opacity: .62;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .circle {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--card) 78%, transparent);
+      font-weight: 950;
+    }
+    .search {
+      min-height: 48px;
+      padding: 0 13px;
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow) 26%, transparent);
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .search i,
+    .search em {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      font-style: normal;
+    }
+    .hero {
+      min-height: 220px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      border-radius: var(--radius, 26px);
+      position: relative;
+      overflow: hidden;
+      background: var(--hero, linear-gradient(145deg, var(--soft), var(--card)));
+      box-shadow: 0 16px 34px color-mix(in srgb, var(--shadow) 36%, transparent);
+    }
+    .hero:after {
+      content: "";
+      position: absolute;
+      right: -48px;
+      top: -42px;
+      width: 150px;
+      height: 150px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    h2 {
+      margin: 0;
+      max-width: 260px;
+      font-size: 30px;
+      line-height: 1.05;
+      position: relative;
+      z-index: 1;
+    }
+    p {
+      margin: 0;
+      max-width: 260px;
+      color: currentColor;
+      opacity: .72;
+      font-size: 13px;
+      line-height: 1.45;
+      position: relative;
+      z-index: 1;
+    }
+    .chip {
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      background: color-mix(in srgb, var(--card) 72%, transparent);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+      z-index: 1;
+    }
+    .temp {
+      color: currentColor;
+      font-size: 56px;
+      font-weight: 950;
+      line-height: .9;
+      position: relative;
+      z-index: 1;
+    }
+    .panel {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow) 20%, transparent);
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .head span { color: var(--muted); font-size: 12px; }
+    .row {
+      min-height: 48px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      border-radius: 15px;
+      background: var(--soft);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .row b { display: block; font-size: 13px; }
+    .row small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .ico {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 14%, var(--card));
+      border-radius: 13px;
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .nav {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      min-height: 58px;
+      padding: 7px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: color-mix(in srgb, var(--card) 84%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+      z-index: 4;
+    }
+    .nav span {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      border-radius: 15px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .nav .active { color: #fff; background: var(--accent); }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .mini {
+      min-height: 68px;
+      padding: 10px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .mini b { font-size: 18px; }
+    .bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--muted) 18%, transparent);
+    }
+    .bar i {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      background: var(--accent);
+      border-radius: inherit;
+    }
+    .large-number {
+      font-size: 82px;
+      font-weight: 950;
+      line-height: .86;
+      letter-spacing: -.04em;
+    }
+
+    .theme-aqua { --bg:#ecfeff; --fg:#164e63; --muted:#0e7490; --card:#fff; --soft:#cffafe; --line:#a5f3fc; --accent:#0891b2; --accent2:#06b6d4; --hero:linear-gradient(145deg,#a5f3fc,#fff); }
+    .theme-forest { --bg:#f0fdf4; --fg:#14532d; --muted:#15803d; --card:#fff; --soft:#dcfce7; --line:#bbf7d0; --accent:#16a34a; --accent2:#65a30d; --hero:linear-gradient(145deg,#bbf7d0,#f7fee7); }
+    .theme-plum { --bg:#faf5ff; --fg:#3b0764; --muted:#7e22ce; --card:#fff; --soft:#f3e8ff; --line:#e9d5ff; --accent:#9333ea; --accent2:#db2777; --hero:linear-gradient(145deg,#e9d5ff,#fce7f3); }
+    .theme-amber { --bg:#fffbeb; --fg:#451a03; --muted:#b45309; --card:#fff; --soft:#fef3c7; --line:#fde68a; --accent:#d97706; --accent2:#f59e0b; --hero:linear-gradient(145deg,#fde68a,#fff7ed); }
+    .theme-slate { --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8; --card:#1e293b; --soft:#111827; --line:rgba(255,255,255,.10); --accent:#60a5fa; --accent2:#22d3ee; --shadow:rgba(0,0,0,.60); --hero:linear-gradient(145deg,#1e3a8a,#0f172a); }
+    .theme-rose { --bg:#fff1f2; --fg:#4c0519; --muted:#be123c; --card:#fff; --soft:#ffe4e6; --line:#fecdd3; --accent:#e11d48; --accent2:#fb7185; --hero:linear-gradient(145deg,#fecdd3,#fff); }
+    .theme-mono { --bg:#f5f5f4; --fg:#1c1917; --muted:#57534e; --card:#fff; --soft:#e7e5e4; --line:#d6d3d1; --accent:#1c1917; --accent2:#78716c; --hero:linear-gradient(145deg,#fff,#e7e5e4); }
+    .theme-cobalt { --bg:#eff6ff; --fg:#172554; --muted:#1d4ed8; --card:#fff; --soft:#dbeafe; --line:#bfdbfe; --accent:#2563eb; --accent2:#0ea5a4; --hero:linear-gradient(145deg,#bfdbfe,#ecfeff); }
+    .theme-lime { --bg:#f7fee7; --fg:#365314; --muted:#65a30d; --card:#fff; --soft:#ecfccb; --line:#d9f99d; --accent:#65a30d; --accent2:#16a34a; --hero:linear-gradient(145deg,#d9f99d,#fff); }
+    .theme-night { --bg:#09090b; --fg:#fafafa; --muted:#a1a1aa; --card:#18181b; --soft:#27272a; --line:rgba(255,255,255,.11); --accent:#a78bfa; --accent2:#22d3ee; --shadow:rgba(0,0,0,.65); --hero:radial-gradient(circle at 70% 20%,rgba(167,139,250,.34),transparent 28%),linear-gradient(145deg,#18181b,#09090b); }
+
+    .layout-radar .visual {
+      min-height: 300px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 50% 52%, transparent 0 42px, color-mix(in srgb, var(--accent) 28%, transparent) 43px 45px, transparent 46px 88px, color-mix(in srgb, var(--accent2) 24%, transparent) 89px 91px, transparent 92px),
+        conic-gradient(from 140deg at 58% 52%, color-mix(in srgb, var(--accent) 40%, transparent), color-mix(in srgb, var(--accent2) 34%, transparent), transparent, color-mix(in srgb, var(--accent) 40%, transparent)),
+        var(--soft);
+    }
+    .layout-cardwall .wall { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .layout-cardwall .tile {
+      min-height: 128px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 22px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    .layout-cardwall .tile.big { grid-column: span 2; min-height: 190px; background: var(--hero); }
+    .layout-timeline .timeline {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      border-radius: 26px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    .layout-timeline .step {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 10px;
+      align-items: center;
+      position: relative;
+    }
+    .layout-timeline .step:before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      position: absolute;
+      left: 21px;
+      top: 20px;
+    }
+    .layout-timeline .time { font-weight: 950; color: var(--accent); }
+    .layout-map .map {
+      min-height: 330px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--accent) 24%, transparent) 0 42px, transparent 43px),
+        radial-gradient(circle at 76% 62%, color-mix(in srgb, var(--accent2) 22%, transparent) 0 58px, transparent 59px),
+        linear-gradient(145deg, var(--soft), var(--card));
+    }
+    .layout-map .pin {
+      position: absolute;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: var(--card);
+      box-shadow: 0 10px 20px color-mix(in srgb, var(--shadow) 28%, transparent);
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .layout-map .pin.a { left: 22px; top: 88px; }
+    .layout-map .pin.b { right: 20px; top: 165px; }
+    .layout-map .pin.c { left: 82px; bottom: 34px; }
+    .layout-command .command {
+      min-height: 340px;
+      padding: 16px;
+      display: grid;
+      gap: 9px;
+      align-content: start;
+      border-radius: 22px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+    }
+    .layout-command .command b { color: var(--accent); }
+    .layout-split .split {
+      min-height: 330px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      border-radius: 30px;
+      border: 1px solid var(--line);
+    }
+    .layout-split .split > div { padding: 18px; display: grid; align-content: space-between; }
+    .layout-split .left { background: var(--accent); color: #fff; }
+    .layout-split .right { background: var(--card); color: var(--fg); }
+    .layout-orbit .orbit {
+      min-height: 340px;
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 50% 50%, var(--accent) 0 44px, transparent 45px),
+        radial-gradient(circle at 50% 50%, transparent 0 90px, color-mix(in srgb, var(--accent) 28%, transparent) 91px 94px, transparent 95px 138px, color-mix(in srgb, var(--accent2) 24%, transparent) 139px 142px, transparent 143px),
+        var(--soft);
+    }
+    .layout-orbit .orbit-card {
+      padding: 14px;
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--card) 84%, transparent);
+      text-align: center;
+      box-shadow: 0 12px 24px color-mix(in srgb, var(--shadow) 22%, transparent);
+    }
+    .layout-stack .stack { min-height: 330px; position: relative; }
+    .layout-stack .paper {
+      position: absolute;
+      inset: 0;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 34px color-mix(in srgb, var(--shadow) 24%, transparent);
+    }
+    .layout-stack .p1 { transform: rotate(-6deg) translate(-8px,18px); opacity:.65; }
+    .layout-stack .p2 { transform: rotate(5deg) translate(10px,10px); opacity:.78; background: var(--soft); }
+    .layout-stack .p3 { transform: rotate(0); background: var(--hero); }
+    .layout-graph .graph {
+      min-height: 310px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    .layout-graph .bars {
+      height: 150px;
+      display: flex;
+      align-items: end;
+      gap: 8px;
+    }
+    .layout-graph .bars i {
+      flex: 1;
+      height: var(--h);
+      border-radius: 999px 999px 8px 8px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+    }
+    .layout-ticket .ticket {
+      min-height: 330px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 0 50%, var(--bg) 0 18px, transparent 19px),
+        radial-gradient(circle at 100% 50%, var(--bg) 0 18px, transparent 19px),
+        var(--hero);
+      border: 1px solid var(--line);
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: 18px 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .phone { min-height: 650px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="intro">
+      <h1>첫페이지 디자인 시안 50개 더</h1>
+      <p>31-50번까지 보고도 더 넓게 보기 위해 51-100번을 추가했습니다. 이번 파일은 레이아웃 타입을 10개로 나누고, 테마와 콘셉트를 바꿔 50개를 빠르게 비교하도록 만들었습니다.</p>
+    </section>
+    <div class="grid" id="variants"></div>
+  </div>
+
+  <script>
+    const layouts = {
+      radar: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="search"><i>⌕</i><span>${v.query}</span><em>›</em></div>
+        <div class="visual"><span class="chip">${v.chip}</span><div><h2>${v.title}</h2><p>${v.copy}</p></div></div>
+        <div class="mini-grid"><div class="mini">확신<b>${v.a}</b></div><div class="mini">제보<b>${v.b}</b></div><div class="mini">강수<b>${v.c}</b></div></div>`,
+      cardwall: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="search"><i>⌕</i><span>${v.query}</span><em>›</em></div>
+        <div class="wall"><div class="tile big"><span class="chip">${v.chip}</span><h2>${v.title}</h2><p>${v.copy}</p></div><div class="tile"><span>현재</span><b>${v.a}</b></div><div class="tile"><span>제보</span><b>${v.b}</b></div><div class="tile"><span>1시간</span><b>${v.c}</b></div><div class="tile"><span>모델</span><b>${v.d}</b></div></div>`,
+      timeline: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="hero"><span class="chip">${v.chip}</span><h2>${v.title}</h2><p>${v.copy}</p></div>
+        <div class="timeline"><div class="step"><span class="time">지금</span><span><b>${v.a}</b><small>현장 제보 기준</small></span></div><div class="step"><span class="time">+30</span><span><b>${v.b}</b><small>단기 모델 기준</small></span></div><div class="step"><span class="time">+60</span><span><b>${v.c}</b><small>변동 가능성</small></span></div></div>`,
+      map: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="search"><i>⌕</i><span>${v.query}</span><em>›</em></div>
+        <div class="map"><span class="pin a">${v.a}</span><span class="pin b">${v.b}</span><span class="pin c">${v.c}</span><span class="chip">${v.chip}</span><div style="position:absolute;left:18px;right:18px;bottom:18px"><h2>${v.title}</h2><p>${v.copy}</p></div></div>
+        <div class="panel"><div class="head">근처 신호 <span>실시간</span></div><div class="row"><span class="ico">R</span><span><b>${v.d}</b><small>제보와 모델 종합</small></span><b>${v.e}</b></div></div>`,
+      command: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="command"><span>$ ask "${v.query}"</span><span>&gt; location: <b>${v.place}</b></span><span>&gt; reports: <b>${v.b}</b></span><span>&gt; rain_now: <b>false</b></span><span>&gt; confidence: <b>${v.a}</b></span><span>&gt; answer: <b>${v.title}</b></span></div>
+        <div class="search"><i>$</i><span>명령어 또는 자연어 입력</span><em>↵</em></div>`,
+      split: (v) => `
+        <div class="search"><i>?</i><span>${v.query}</span><em>›</em></div>
+        <div class="split"><div class="left"><span class="chip">${v.chip}</span><h2>${v.title}</h2><div class="large-number">${v.a}</div></div><div class="right"><span class="chip">근거</span><div class="row"><span class="ico">K</span><span><b>기상청</b><small>${v.b}</small></span></div><div class="row"><span class="ico">Y</span><span><b>Yr.no</b><small>${v.c}</small></span></div><div class="row"><span class="ico">W</span><span><b>Windy</b><small>${v.d}</small></span></div></div></div>
+        <div class="panel"><div class="head">${v.brand} <span>${v.sub}</span></div><p>${v.copy}</p></div>`,
+      orbit: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="orbit"><div class="orbit-card"><span class="chip">${v.chip}</span><h2>${v.title}</h2><p>${v.copy}</p><div class="temp">${v.a}</div></div></div>
+        <div class="search"><i>◎</i><span>${v.query}</span><em>›</em></div>`,
+      stack: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="stack"><div class="paper p1"></div><div class="paper p2"></div><div class="paper p3"><span class="chip">${v.chip}</span><h2>${v.title}</h2><p>${v.copy}</p><div class="temp">${v.a}</div></div></div>
+        <div class="search"><i>↔</i><span>${v.query}</span><em>›</em></div>`,
+      graph: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="graph"><span class="chip">${v.chip}</span><div><h2>${v.title}</h2><p>${v.copy}</p></div><div class="bars"><i style="--h:36%"></i><i style="--h:58%"></i><i style="--h:42%"></i><i style="--h:72%"></i><i style="--h:48%"></i><i style="--h:26%"></i></div></div>
+        <div class="panel"><div class="head">모델 변화 <span>6시간</span></div><div class="bar"><i style="--w:${v.a}"></i></div></div>`,
+      ticket: (v) => `
+        <div class="top"><div class="brand"><b>${v.brand}</b><span>${v.sub}</span></div><div class="circle">${v.badge}</div></div>
+        <div class="ticket"><span class="chip">${v.chip}</span><h2>${v.title}</h2><p>${v.copy}</p><div class="row"><span class="ico">${v.a}</span><span><b>${v.b}</b><small>${v.c}</small></span><b>${v.d}</b></div></div>
+        <div class="search"><i>⌕</i><span>${v.query}</span><em>›</em></div>`
+    };
+
+    const themes = ["theme-aqua","theme-forest","theme-plum","theme-amber","theme-slate","theme-rose","theme-mono","theme-cobalt","theme-lime","theme-night"];
+    const layoutNames = ["radar","cardwall","timeline","map","command","split","orbit","stack","graph","ticket"];
+    const names = [
+      ["51. 수변 레이더", "강/한강 주변 비구름"],
+      ["52. 공원 피크닉", "잔디/야외 활동 판단"],
+      ["53. 보라빛 이벤트", "공연장 감성 판정"],
+      ["54. 해질녘 퇴근", "저녁 이동 판단"],
+      ["55. 다크 항해", "야간 비구름 추적"],
+      ["56. 핑크 소셜", "친구와 공유하는 날씨"],
+      ["57. 무채색 프로", "미니멀 업무용"],
+      ["58. 블루 모델보드", "예보 모델 중심"],
+      ["59. 라임 액티브", "러닝/운동 가능성"],
+      ["60. 네온 나이트", "밤 외출 감각"],
+      ["61. 비구름 스캔", "레이더 원형 UI"],
+      ["62. 캠핑 체크", "야외 숙박 판단"],
+      ["63. 페스티벌 카드", "행사장 운영"],
+      ["64. 우산 타임라인", "언제 필요한지"],
+      ["65. 새벽 출근", "어두운 출근길"],
+      ["66. 동네 투표", "주민 제보형"],
+      ["67. 운영 상황판", "결정권자용"],
+      ["68. 모델 랭킹", "서비스별 순위"],
+      ["69. 산책 가능", "걷기 좋은지"],
+      ["70. 심야 레이더", "야간 위험 감지"],
+      ["71. 강수 궤도", "비구름 거리"],
+      ["72. 숲길 날씨", "등산/트레일"],
+      ["73. 보라 알림", "감성 알림형"],
+      ["74. 골든 아워", "일몰 전 일정"],
+      ["75. 심해 레이어", "기상 레이어형"],
+      ["76. 로즈 피드", "커뮤니티 피드"],
+      ["77. 흑백 판정", "초간결 결론"],
+      ["78. 코발트 비교", "비교 탭 우선"],
+      ["79. 액티브 러너", "운동 루틴"],
+      ["80. 네온 웨이브", "음성/파형 느낌"],
+      ["81. 마이크로 레이더", "반경 1km"],
+      ["82. 초록 생활", "세탁/환기"],
+      ["83. 퍼플 스토리", "카드 넘김"],
+      ["84. 앰버 티켓", "야구장 입장권"],
+      ["85. 다크 커맨드", "전문가 로그"],
+      ["86. 로즈 요청", "제보 요청 중심"],
+      ["87. 모노 캘린더", "일정형"],
+      ["88. 블루 루트", "경로 기반"],
+      ["89. 라임 캠퍼스", "학교/운동장"],
+      ["90. 나이트 오퍼레이션", "재난 상황실"],
+      ["91. 해안 바람", "바람 중심"],
+      ["92. 숲속 제보", "자연 친화"],
+      ["93. 플럼 챗", "대화형"],
+      ["94. 앰버 브리핑", "뉴스 요약"],
+      ["95. 슬레이트 맵", "다크 지도"],
+      ["96. 로즈 키즈", "쉬운 말"],
+      ["97. 모노 리포트", "리포트 문서형"],
+      ["98. 코발트 홈", "정석 앱형"],
+      ["99. 라임 고대비", "활동 점수"],
+      ["100. 나이트 미니멀", "고급 다크"]
+    ];
+
+    const variants = names.map((n, idx) => {
+      const layout = layoutNames[idx % layoutNames.length];
+      const theme = themes[idx % themes.length];
+      return {
+        num: 51 + idx,
+        name: n[0],
+        desc: n[1],
+        layout,
+        theme,
+        brand: n[0].replace(/^\d+\.\s*/, ""),
+        sub: n[1],
+        badge: ["R","P","E","T","D","S","M","B","A","N"][idx % 10],
+        query: [
+          "잠실운동장 지금 비 와?",
+          "오늘 야외 활동 괜찮아?",
+          "경기장 1시간 뒤 비 와?",
+          "퇴근길 우산 필요해?",
+          "근처 비구름 어디야?"
+        ][idx % 5],
+        chip: ["현재판정","반경 1km","예보비교","현장제보","위험감지"][idx % 5],
+        title: [
+          "지금은 비 안 오는 쪽이 우세해요",
+          "우산 없이 이동 가능해 보여요",
+          "1시간 뒤 약한 비 가능성이 있어요",
+          "근처 제보는 비 없음이 많아요",
+          "비구름은 살짝 빗겨가고 있어요"
+        ][idx % 5],
+        copy: [
+          "기상청, Yr.no, Windy와 현장 제보를 한 번에 합쳐 판단했어요.",
+          "현재 제보와 단기 예보가 대체로 같은 방향을 보고 있어요.",
+          "지금은 괜찮지만 일정 시간이 지나면 다시 확인하는 게 좋아요.",
+          "동네 사람들이 남긴 한줄 제보를 예보와 같이 보여줘요.",
+          "비구름 방향과 이동 속도를 기준으로 현재 위치 영향을 추정했어요."
+        ][idx % 5],
+        place: "잠실운동장",
+        a: ["72%","18","28%","NO","27°","30%","38%","24%","OK","46분"][idx % 10],
+        b: ["비 없음","18건","30분","흐림 30%","제보 18"][idx % 5],
+        c: ["약한 비","28%","1시간","비 가능","주의"][idx % 5],
+        d: ["Windy","OK","낮음","모델 3개","건조"][idx % 5],
+        e: ["72%","좋음","낮음","확인","주의"][idx % 5]
+      };
+    });
+
+    const root = document.getElementById("variants");
+    root.innerHTML = variants.map((v) => `
+      <article class="concept">
+        <div class="caption"><strong>${v.name}</strong><span>${v.desc}</span></div>
+        <section class="phone ${v.theme} layout-${v.layout}">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">${layouts[v.layout](v)}</div>
+          <nav class="nav"><span class="active">홈</span><span>지도</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+    `).join("");
+  </script>
+</body>
+</html>

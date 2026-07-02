@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>날씨체크 첫페이지 디자인 시안 추가 20개</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #e8edf4;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+    .page {
+      max-width: 1840px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .intro {
+      margin-bottom: 22px;
+      display: grid;
+      gap: 8px;
+    }
+    .intro h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1.05;
+    }
+    .intro p {
+      margin: 0;
+      max-width: 980px;
+      color: #64748b;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(318px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+    .concept { display: grid; gap: 10px; }
+    .caption {
+      min-height: 38px;
+      padding: 0 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .caption strong { font-size: 15px; }
+    .caption span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 850;
+      text-align: right;
+    }
+    .phone {
+      min-height: 690px;
+      position: relative;
+      overflow: hidden;
+      border: 8px solid #080b12;
+      border-radius: 34px;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, .24);
+    }
+    .status {
+      height: 38px;
+      padding: 10px 18px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+      z-index: 2;
+    }
+    .dots { display: flex; gap: 4px; align-items: center; }
+    .dots i {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .75;
+    }
+    .content {
+      padding: 14px 16px 82px;
+      display: grid;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand { display: grid; gap: 2px; }
+    .brand b { font-size: 17px; line-height: 1.1; }
+    .brand span { color: currentColor; opacity: .62; font-size: 12px; font-weight: 800; }
+    .circle {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      font-weight: 950;
+    }
+    .search {
+      min-height: 48px;
+      padding: 0 13px;
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .search i, .search em {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      font-style: normal;
+    }
+    .hero {
+      min-height: 220px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      border-radius: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    h2 {
+      margin: 0;
+      max-width: 245px;
+      font-size: 30px;
+      line-height: 1.05;
+    }
+    p {
+      margin: 0;
+      max-width: 250px;
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: .72;
+    }
+    .chip {
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .temp {
+      font-size: 56px;
+      font-weight: 950;
+      line-height: .9;
+    }
+    .panel {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      border-radius: 22px;
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .head span { opacity: .62; font-size: 12px; }
+    .row {
+      min-height: 48px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .row b { display: block; font-size: 13px; }
+    .row small { display: block; margin-top: 2px; opacity: .62; font-size: 11px; font-weight: 800; }
+    .ico {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      font-weight: 950;
+    }
+    .bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148,163,184,.24);
+    }
+    .bar i {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      border-radius: inherit;
+      background: currentColor;
+    }
+    .nav {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      min-height: 58px;
+      padding: 7px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+      z-index: 3;
+    }
+    .nav span {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      border-radius: 15px;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .mini {
+      min-height: 68px;
+      padding: 10px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .mini b { font-size: 18px; }
+
+    /* 11 Apple-style dynamic sky */
+    .v11 { color: #fff; background: linear-gradient(180deg, #2563eb 0%, #7dd3fc 48%, #f8fafc 100%); }
+    .v11:before {
+      content: "";
+      position: absolute;
+      inset: -70px -120px auto auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.34);
+      filter: blur(3px);
+    }
+    .v11 .search, .v11 .panel, .v11 .mini { background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.22); }
+    .v11 .hero { min-height: 290px; align-content: end; background: transparent; }
+    .v11 h2 { font-size: 36px; }
+    .v11 .chip, .v11 .row { background: rgba(255,255,255,.16); }
+    .v11 .ico { background: rgba(255,255,255,.20); }
+    .v11 .nav { background: rgba(255,255,255,.22); border: 1px solid rgba(255,255,255,.24); }
+    .v11 .nav .active { background: #fff; color: #2563eb; }
+
+    /* 12 Wind-layer console */
+    .v12 { background: #101820; color: #e5f7f6; }
+    .layer-map {
+      min-height: 330px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background:
+        repeating-radial-gradient(ellipse at 68% 44%, rgba(45,212,191,.24) 0 2px, transparent 3px 18px),
+        conic-gradient(from 220deg at 58% 52%, #0f766e, #2563eb, #f97316, #0f766e);
+      box-shadow: inset 0 0 80px rgba(0,0,0,.38);
+    }
+    .layer-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .layer-tabs span { padding: 7px 9px; border-radius: 999px; background: rgba(0,0,0,.34); font-size: 11px; font-weight: 900; }
+    .v12 .search, .v12 .panel { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
+    .v12 .row { background: rgba(255,255,255,.07); }
+    .v12 .ico { background: rgba(45,212,191,.14); color: #5eead4; }
+    .v12 .nav { background: rgba(0,0,0,.46); border: 1px solid rgba(255,255,255,.10); }
+    .v12 .nav .active { background: #14b8a6; color: #042f2e; }
+
+    /* 13 MinuteCast radial */
+    .v13 { background: #f8fafc; color: #172554; }
+    .minute {
+      min-height: 320px;
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      background: #fff;
+      border: 1px solid #dbeafe;
+    }
+    .minute-ring {
+      width: 210px;
+      height: 210px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: conic-gradient(#2563eb 0 18%, #93c5fd 18% 28%, #e2e8f0 28% 100%);
+      box-shadow: 0 22px 42px rgba(37,99,235,.18);
+    }
+    .minute-ring div {
+      width: 154px;
+      height: 154px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border-radius: inherit;
+      background: #fff;
+      font-weight: 950;
+      line-height: 1.1;
+    }
+    .v13 .search { background: #fff; border: 1px solid #dbeafe; color: #64748b; }
+    .v13 .panel { background: #eff6ff; }
+    .v13 .row { background: #fff; }
+    .v13 .ico { background: #dbeafe; color: #2563eb; }
+    .v13 .nav { background: rgba(255,255,255,.90); border: 1px solid #dbeafe; }
+    .v13 .nav .active { background: #2563eb; color: #fff; }
+
+    /* 14 Lightning proximity */
+    .v14 { background: #111827; color: #fefce8; }
+    .strike {
+      min-height: 310px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background:
+        linear-gradient(120deg, transparent 0 58%, #fde047 58% 65%, transparent 65%),
+        radial-gradient(circle at 50% 52%, transparent 0 46px, rgba(250,204,21,.24) 47px 49px, transparent 50px 96px, rgba(250,204,21,.16) 97px 99px, transparent 100px),
+        #1e293b;
+    }
+    .v14 .search, .v14 .panel, .v14 .mini { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
+    .v14 .row { background: rgba(255,255,255,.07); }
+    .v14 .ico { background: rgba(250,204,21,.18); color: #fde047; }
+    .v14 .nav { background: rgba(0,0,0,.36); border: 1px solid rgba(255,255,255,.12); }
+    .v14 .nav .active { background: #fde047; color: #111827; }
+
+    /* 15 Gamified reporters */
+    .v15 { background: #fdf2f8; color: #500724; }
+    .badge-card {
+      min-height: 270px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background: linear-gradient(145deg, #f9a8d4, #fef3c7);
+    }
+    .level {
+      width: 126px;
+      height: 126px;
+      display: grid;
+      place-items: center;
+      justify-self: center;
+      border: 8px solid rgba(255,255,255,.55);
+      border-radius: 999px;
+      background: rgba(255,255,255,.42);
+      font-size: 28px;
+      font-weight: 950;
+    }
+    .v15 .search, .v15 .panel { background: #fff; border: 1px solid #fbcfe8; }
+    .v15 .row { background: #fdf2f8; }
+    .v15 .ico { background: #fbcfe8; color: #be185d; }
+    .v15 .nav { background: rgba(255,255,255,.88); border: 1px solid #fbcfe8; }
+    .v15 .nav .active { background: #db2777; color: #fff; }
+
+    /* 16 Neighborhood alerts */
+    .v16 { background: #fef2f2; color: #450a0a; }
+    .alert-map {
+      min-height: 320px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 28% 34%, rgba(239,68,68,.24) 0 42px, transparent 43px),
+        radial-gradient(circle at 72% 58%, rgba(245,158,11,.24) 0 52px, transparent 53px),
+        linear-gradient(145deg, #fee2e2, #fff);
+    }
+    .alert-pin {
+      position: absolute;
+      padding: 9px 11px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 12px 28px rgba(127,29,29,.14);
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .p1 { left: 24px; top: 88px; }
+    .p2 { right: 20px; top: 160px; }
+    .p3 { left: 72px; bottom: 34px; }
+    .v16 .search, .v16 .panel { background: #fff; border: 1px solid #fecaca; }
+    .v16 .row { background: #fff7ed; }
+    .v16 .ico { background: #fee2e2; color: #dc2626; }
+    .v16 .nav { background: rgba(255,255,255,.88); border: 1px solid #fecaca; }
+    .v16 .nav .active { background: #dc2626; color: #fff; }
+
+    /* 17 Material You */
+    .v17 { background: #eef2ff; color: #312e81; }
+    .v17 .content { gap: 14px; }
+    .v17 .search { min-height: 58px; border-radius: 28px; background: #e0e7ff; color: #4338ca; }
+    .v17 .hero { min-height: 270px; border-radius: 34px; background: #c7d2fe; }
+    .v17 .hero h2 { font-size: 34px; }
+    .v17 .chip { background: #eef2ff; color: #4338ca; }
+    .v17 .panel, .v17 .mini { background: #fff; border-radius: 28px; }
+    .v17 .row { background: #eef2ff; border-radius: 22px; }
+    .v17 .ico { background: #c7d2fe; color: #4338ca; }
+    .v17 .nav { background: rgba(255,255,255,.84); border-radius: 28px; }
+    .v17 .nav .active { background: #4f46e5; color: #fff; border-radius: 22px; }
+
+    /* 18 Neumorphic soft */
+    .v18 { background: #e7edf6; color: #334155; }
+    .v18 .search, .v18 .hero, .v18 .panel, .v18 .mini, .v18 .nav {
+      background: #e7edf6;
+      box-shadow: 10px 10px 24px rgba(148,163,184,.48), -10px -10px 24px rgba(255,255,255,.86);
+    }
+    .v18 .hero { min-height: 265px; }
+    .v18 .chip, .v18 .row, .v18 .ico {
+      background: #e7edf6;
+      box-shadow: inset 5px 5px 12px rgba(148,163,184,.34), inset -5px -5px 12px rgba(255,255,255,.8);
+    }
+    .v18 .nav .active { color: #2563eb; box-shadow: inset 5px 5px 12px rgba(148,163,184,.34), inset -5px -5px 12px rgba(255,255,255,.8); }
+
+    /* 19 Brutalist alert */
+    .v19 { background: #fff; color: #000; border-color: #000; }
+    .v19 .content { gap: 10px; }
+    .v19 .top, .v19 .search, .v19 .hero, .v19 .panel, .v19 .nav, .v19 .row {
+      border: 3px solid #000;
+      border-radius: 0;
+      background: #fff;
+      box-shadow: 7px 7px 0 #000;
+    }
+    .v19 .top { padding: 10px; }
+    .v19 .hero { min-height: 260px; background: #facc15; }
+    .v19 .chip, .v19 .ico { background: #000; color: #fff; border-radius: 0; }
+    .v19 h2 { font-size: 34px; text-transform: uppercase; }
+    .v19 .nav .active { background: #000; color: #fff; }
+
+    /* 20 Terminal meteorology */
+    .v20 { background: #020617; color: #86efac; font-family: Consolas, "Courier New", monospace; }
+    .terminal {
+      min-height: 350px;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      border: 1px solid rgba(134,239,172,.28);
+      border-radius: 18px;
+      background: #03140b;
+      box-shadow: inset 0 0 60px rgba(34,197,94,.08);
+      font-size: 12px;
+    }
+    .terminal b { color: #fff; }
+    .v20 .search, .v20 .panel, .v20 .nav { background: #03140b; border: 1px solid rgba(134,239,172,.28); }
+    .v20 .row { background: rgba(134,239,172,.08); }
+    .v20 .ico { background: rgba(134,239,172,.14); color: #bbf7d0; }
+    .v20 .nav .active { background: #86efac; color: #020617; }
+
+    /* 21 TV ticker */
+    .v21 { background: #0b2a4a; color: #fff; }
+    .broadcast {
+      min-height: 340px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      overflow: hidden;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at 78% 20%, rgba(255,255,255,.34) 0 46px, transparent 47px),
+        linear-gradient(145deg, #2563eb, #0f172a);
+    }
+    .broadcast-main { padding: 18px; display: grid; align-content: end; }
+    .ticker {
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      background: #facc15;
+      color: #111827;
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .ticker b { display: grid; place-items: center; background: #111827; color: #fff; }
+    .ticker span { padding: 10px; }
+    .v21 .search, .v21 .panel { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14); }
+    .v21 .row { background: rgba(255,255,255,.10); }
+    .v21 .ico { background: #facc15; color: #111827; }
+    .v21 .nav { background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.16); }
+    .v21 .nav .active { background: #facc15; color: #111827; }
+
+    /* 22 Widget mosaic */
+    .v22 { background: #f1f5f9; color: #0f172a; }
+    .mosaic {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .tile {
+      min-height: 132px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 12px 28px rgba(15,23,42,.06);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .tile.big { grid-column: span 2; min-height: 205px; background: linear-gradient(145deg, #dbeafe, #fff); }
+    .tile b { font-size: 28px; }
+    .v22 .search { background: #fff; border: 1px solid #e2e8f0; color: #64748b; }
+    .v22 .nav { background: rgba(255,255,255,.88); border: 1px solid #e2e8f0; }
+    .v22 .nav .active { background: #0f172a; color: #fff; }
+
+    /* 23 AR camera overlay */
+    .v23 { background: #1f2937; color: #fff; }
+    .camera {
+      min-height: 430px;
+      padding: 16px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 26px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.50)),
+        radial-gradient(circle at 72% 24%, #fde68a 0 42px, transparent 43px),
+        linear-gradient(145deg, #94a3b8, #334155);
+    }
+    .ar-card {
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 18px;
+      background: rgba(15,23,42,.42);
+      backdrop-filter: blur(12px);
+    }
+    .v23 .search { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18); }
+    .v23 .nav { background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.16); }
+    .v23 .nav .active { background: #fff; color: #111827; }
+
+    /* 24 Korean portal dense */
+    .v24 { background: #f8fafc; color: #111827; }
+    .dense-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .dense-tabs span {
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #e2e8f0;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .dense-tabs .on { background: #03c75a; color: #fff; }
+    .v24 .hero { min-height: 178px; background: #fff; border: 1px solid #e2e8f0; }
+    .v24 .search, .v24 .panel { background: #fff; border: 1px solid #e2e8f0; }
+    .v24 .row { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .v24 .ico { background: #e0f2fe; color: #0369a1; }
+    .v24 .nav { background: rgba(255,255,255,.92); border: 1px solid #e2e8f0; }
+    .v24 .nav .active { background: #03c75a; color: #fff; }
+
+    /* 25 Commute route */
+    .v25 { background: #f8fafc; color: #0f172a; }
+    .route {
+      min-height: 320px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      border-radius: 28px;
+      background:
+        linear-gradient(90deg, transparent 0 48%, rgba(37,99,235,.26) 48% 52%, transparent 52%),
+        radial-gradient(circle at 50% 22%, #2563eb 0 8px, transparent 9px),
+        radial-gradient(circle at 50% 78%, #16a34a 0 8px, transparent 9px),
+        #e0f2fe;
+    }
+    .route-step { padding: 10px; border-radius: 16px; background: rgba(255,255,255,.78); font-weight: 900; }
+    .v25 .search, .v25 .panel { background: #fff; border: 1px solid #dbeafe; }
+    .v25 .row { background: #f8fafc; }
+    .v25 .ico { background: #dbeafe; color: #2563eb; }
+    .v25 .nav { background: rgba(255,255,255,.88); border: 1px solid #dbeafe; }
+    .v25 .nav .active { background: #2563eb; color: #fff; }
+
+    /* 26 Calendar planner */
+    .v26 { background: #fff; color: #111827; }
+    .calendar {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      border-radius: 24px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .calendar span {
+      min-height: 42px;
+      padding: 4px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .calendar .rain { background: #dbeafe; color: #2563eb; }
+    .calendar .good { background: #dcfce7; color: #166534; }
+    .v26 .hero { min-height: 180px; background: linear-gradient(145deg, #ecfeff, #fff); border: 1px solid #e2e8f0; }
+    .v26 .search, .v26 .panel { background: #fff; border: 1px solid #e2e8f0; }
+    .v26 .nav { background: rgba(255,255,255,.90); border: 1px solid #e2e8f0; }
+    .v26 .nav .active { background: #0f172a; color: #fff; }
+
+    /* 27 Playful stickers */
+    .v27 { background: #fff7ed; color: #431407; }
+    .v27 .hero {
+      min-height: 300px;
+      background:
+        radial-gradient(circle at 82% 18%, #fef3c7 0 48px, transparent 49px),
+        linear-gradient(145deg, #fed7aa, #fef9c3);
+      border: 4px solid #431407;
+      box-shadow: 8px 8px 0 #431407;
+    }
+    .sticker { position: absolute; right: 18px; bottom: 18px; font-size: 52px; transform: rotate(8deg); }
+    .v27 .search, .v27 .panel, .v27 .nav { background: #fff; border: 3px solid #431407; box-shadow: 5px 5px 0 #431407; }
+    .v27 .row { background: #fff7ed; }
+    .v27 .ico { background: #fdba74; color: #431407; }
+    .v27 .nav .active { background: #fb923c; color: #431407; }
+
+    /* 28 High contrast accessibility */
+    .v28 { background: #000; color: #fff; }
+    .v28 .search, .v28 .hero, .v28 .panel, .v28 .nav {
+      background: #000;
+      border: 2px solid #fff;
+      border-radius: 12px;
+    }
+    .v28 .hero { min-height: 280px; }
+    .v28 h2 { max-width: 280px; font-size: 36px; }
+    .v28 .chip, .v28 .nav .active { background: #fff; color: #000; border-radius: 8px; }
+    .v28 .row { background: #111; border: 1px solid #fff; border-radius: 8px; }
+    .v28 .ico { background: #fff; color: #000; border-radius: 8px; }
+
+    /* 29 Emergency command center */
+    .v29 { background: #111827; color: #fff; }
+    .v29 .hero {
+      min-height: 250px;
+      background: linear-gradient(145deg, #991b1b, #111827);
+      border: 1px solid rgba(248,113,113,.28);
+    }
+    .warning-strip {
+      min-height: 44px;
+      display: grid;
+      place-items: center;
+      background: repeating-linear-gradient(45deg, #facc15 0 12px, #111827 12px 24px);
+      color: #fff;
+      border-radius: 12px;
+      font-weight: 950;
+      text-shadow: 0 2px 0 #000;
+    }
+    .v29 .search, .v29 .panel, .v29 .mini { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+    .v29 .row { background: rgba(255,255,255,.06); }
+    .v29 .ico { background: rgba(248,113,113,.18); color: #fecaca; }
+    .v29 .nav { background: rgba(0,0,0,.38); border: 1px solid rgba(255,255,255,.12); }
+    .v29 .nav .active { background: #dc2626; color: #fff; }
+
+    /* 30 Minimal monochrome */
+    .v30 { background: #f5f5f4; color: #1c1917; }
+    .v30 .content { gap: 18px; }
+    .v30 .top { border-bottom: 1px solid #d6d3d1; padding-bottom: 14px; }
+    .v30 .search { background: transparent; border: 1px solid #a8a29e; border-radius: 8px; }
+    .v30 .hero {
+      min-height: 300px;
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      align-content: center;
+      border-bottom: 1px solid #d6d3d1;
+    }
+    .v30 h2 { max-width: 300px; font-size: 42px; letter-spacing: 0; }
+    .v30 .chip { padding: 0; background: transparent; color: #57534e; }
+    .v30 .temp { font-size: 78px; }
+    .v30 .panel { padding: 0; background: transparent; border-radius: 0; }
+    .v30 .row { padding: 10px 0; border-bottom: 1px solid #d6d3d1; border-radius: 0; }
+    .v30 .ico { background: #1c1917; color: #fff; border-radius: 999px; }
+    .v30 .nav { background: rgba(245,245,244,.92); border: 1px solid #d6d3d1; border-radius: 8px; }
+    .v30 .nav .active { background: #1c1917; color: #fff; border-radius: 6px; }
+
+    @media (max-width: 720px) {
+      .page { padding: 18px 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .phone { min-height: 650px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="intro">
+      <h1>첫페이지 디자인 시안 추가 20개</h1>
+      <p>이전 10개가 비슷하게 느껴졌던 문제를 피하려고, 이번에는 실제 날씨앱/레이더/커뮤니티/경보/디자인 시스템에서 힌트를 얻어 구조 자체를 다르게 나눴습니다. 번호 11-30 중에서 방향을 골라주세요.</p>
+    </section>
+
+    <div class="grid">
+      <article class="concept">
+        <div class="caption"><strong>11. iOS 다이내믹 스카이</strong><span>큰 날씨 배경 중심</span></div>
+        <section class="phone v11">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크</b><span>현재 위치</span></div><div class="circle">☁</div></div>
+            <div class="hero"><span class="chip">잠실운동장</span><h2>비는 아직 오지 않아요</h2><p>30분 뒤 약한 비 가능성이 있어요.</p><div class="temp">27°</div></div>
+            <div class="search"><i>⌕</i><span>다른 장소 물어보기</span><em>›</em></div>
+            <div class="mini-grid"><div class="mini">확신도<b>72%</b></div><div class="mini">제보<b>18</b></div><div class="mini">강수<b>28%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>지도</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>12. Wind Layer</strong><span>기상 레이어 조작형</span></div>
+        <section class="phone v12">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>LayerCast</b><span>바람·비·구름 레이어</span></div><div class="circle">≋</div></div>
+            <div class="search"><i>⌕</i><span>잠실운동장 레이어 보기</span><em>›</em></div>
+            <div class="layer-map"><div class="layer-tabs"><span>비</span><span>바람</span><span>구름</span><span>레이더</span></div><div><h2>비구름은 동쪽으로 밀려나요</h2><p>현재 위치와 가장 가까운 강수대는 4.2km 밖이에요.</p></div></div>
+            <div class="panel"><div class="head">레이어 판정 <span>3개 모델</span></div><div class="row"><span class="ico">E</span><span><b>ECMWF</b><small>강수대 동진</small></span><b>낮음</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">레이어</span><span>질문</span><span>모델</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>13. MinuteCast 링</strong><span>2시간 강수 타임라인</span></div>
+        <section class="phone v13">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>2시간 판정</b><span>분 단위 비 예측</span></div><div class="circle">120</div></div>
+            <div class="search"><i>⌕</i><span>언제부터 비 와?</span><em>›</em></div>
+            <div class="minute"><div class="minute-ring"><div>비 시작<br>예상<br><strong>46분 뒤</strong></div></div></div>
+            <div class="panel"><div class="head">다음 120분 <span>잠실운동장</span></div><div class="bar" style="color:#2563eb"><i style="--w:28%"></i></div><p>현재는 안전하지만 45분 뒤부터 약한 비 가능성이 생겨요.</p></div>
+          </div>
+          <nav class="nav"><span class="active">분예보</span><span>레이더</span><span>제보</span><span>비교</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>14. 낙뢰 근접형</strong><span>번개/위험 거리 중심</span></div>
+        <section class="phone v14">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Lightning Now</b><span>가장 가까운 낙뢰</span></div><div class="circle">⚡</div></div>
+            <div class="search"><i>⌕</i><span>천둥번개 위험해?</span><em>›</em></div>
+            <div class="strike"><span class="chip">최근 10분</span><div><h2>낙뢰는 18km 밖이에요</h2><p>현재 위치는 주의 낮음, 남쪽 하늘만 관찰 필요.</p></div></div>
+            <div class="mini-grid"><div class="mini">거리<b>18km</b></div><div class="mini">방향<b>남동</b></div><div class="mini">위험<b>낮음</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">낙뢰</span><span>비</span><span>경보</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>15. 제보 게임화</strong><span>레벨/포인트 기반</span></div>
+        <section class="phone v15">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨특파원</b><span>제보하면 동네 랭킹 상승</span></div><div class="circle">★</div></div>
+            <div class="badge-card"><span class="chip">송파구 8위</span><div class="level">Lv.7</div><div><h2>오늘 3번 제보하면 Expert</h2><p>잠실 주변 답변 요청이 5개 있어요.</p></div></div>
+            <div class="search"><i>＋</i><span>지금 날씨 한줄 남기기</span><em>›</em></div>
+            <div class="panel"><div class="head">요청 리스트 <span>근처 1km</span></div><div class="row"><span class="ico">?</span><span><b>잠실운동장</b><small>지금 비 오나요?</small></span><b>+3P</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">랭킹</span><span>요청</span><span>지도</span><span>내글</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>16. 동네 긴급 알림</strong><span>알림 지도/위험 피드</span></div>
+        <section class="phone v16">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>동네 날씨알림</b><span>근처 이슈 먼저</span></div><div class="circle">!</div></div>
+            <div class="search"><i>⌕</i><span>우리 동네 위험 알림</span><em>›</em></div>
+            <div class="alert-map"><span class="alert-pin p1">소나기</span><span class="alert-pin p2">침수 제보</span><span class="alert-pin p3">강풍</span><h2>반경 3km 안 날씨 이슈 3개</h2><p>잠실역 남쪽에서 침수 제보가 올라왔어요.</p></div>
+            <div class="panel"><div class="row"><span class="ico">1</span><span><b>잠실새내역</b><small>도로 물고임 제보</small></span><b>8분</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">알림</span><span>지도</span><span>제보</span><span>비교</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>17. Material You</strong><span>큰 둥근 면과 색상 시스템</span></div>
+        <section class="phone v17">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Weather You</b><span>내 테마로 보는 판정</span></div><div class="circle">☂</div></div>
+            <div class="search"><i>⌕</i><span>잠실운동장 지금 비 와?</span><em>›</em></div>
+            <div class="hero"><span class="chip">현재 판정</span><h2>우산 없이 이동 가능해요</h2><p>다만 1시간 뒤 비 가능성은 조금 올라가요.</p><div class="temp">27°</div></div>
+            <div class="mini-grid"><div class="mini">KMA<b>30</b></div><div class="mini">Yr.no<b>38</b></div><div class="mini">Windy<b>24</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>비교</span><span>제보</span><span>설정</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>18. 뉴모피즘 소프트</strong><span>돌출/음각 질감</span></div>
+        <section class="phone v18">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Soft Weather</b><span>조용한 홈 위젯 느낌</span></div><div class="circle">☁</div></div>
+            <div class="search"><i>⌕</i><span>궁금한 장소 검색</span><em>›</em></div>
+            <div class="hero"><span class="chip">흐림</span><h2>비는 아직 멀어요</h2><p>확신도 72%, 현장 제보 18건 반영.</p><div class="temp">27°</div></div>
+            <div class="panel"><div class="head">오늘의 판단 <span>부드러운 모드</span></div><div class="row"><span class="ico">✓</span><span><b>비 없음 우세</b><small>근처 제보와 일치</small></span><b>72%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>지도</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>19. 브루탈 알림판</strong><span>거칠고 강한 판정</span></div>
+        <section class="phone v19">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>RAIN?</b><span>YES OR NO</span></div><div class="circle">!</div></div>
+            <div class="search"><i>?</i><span>잠실운동장 지금 비 와?</span><em>GO</em></div>
+            <div class="hero"><span class="chip">ANSWER</span><h2>NO RAIN NOW</h2><p>30분 뒤 다시 확인. 현재 제보 18건.</p><div class="temp">27°</div></div>
+            <div class="panel"><div class="row"><span class="ico">K</span><span><b>KMA</b><small>흐림</small></span><b>30%</b></div><div class="row"><span class="ico">Y</span><span><b>YR</b><small>약한 비</small></span><b>38%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">NOW</span><span>MAP</span><span>DATA</span><span>POST</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>20. 터미널 기상실</strong><span>전문가/로그 스타일</span></div>
+        <section class="phone v20">
+          <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>WX-CHECK</b><span>hyperlocal shell</span></div><div class="circle">_</div></div>
+            <div class="terminal"><span>$ ask "잠실운동장 지금 비 와?"</span><span>&gt; loading KMA / YR / WINDY / REPORTS</span><span>&gt; reports: <b>18</b>, rain_now: <b>false</b></span><span>&gt; confidence: <b>0.72</b></span><span>&gt; answer: <b>NO RAIN NOW</b></span></div>
+            <div class="search"><i>$</i><span>명령어 입력</span><em>↵</em></div>
+          </div>
+          <nav class="nav"><span class="active">ASK</span><span>LOG</span><span>MAP</span><span>POST</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>21. TV 날씨 속보</strong><span>방송 자막/티커형</span></div>
+        <section class="phone v21">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Weather Live</b><span>속보형 날씨판정</span></div><div class="circle">ON</div></div>
+            <div class="broadcast"><div class="broadcast-main"><span class="chip">LIVE</span><h2>잠실 현재 비 없음</h2><p>강수대는 남동쪽으로 이동 중입니다.</p></div><div class="ticker"><b>속보</b><span>근처 제보 18건 · 기상청 흐림 · Yr.no 약한 비 가능성</span></div></div>
+            <div class="search"><i>⌕</i><span>다른 지역 속보 확인</span><em>›</em></div>
+          </div>
+          <nav class="nav"><span class="active">라이브</span><span>레이더</span><span>제보</span><span>비교</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>22. 위젯 모자이크</strong><span>홈 위젯 여러 개</span></div>
+        <section class="phone v22">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨 위젯보드</b><span>한눈에 보는 현재</span></div><div class="circle">＋</div></div>
+            <div class="search"><i>⌕</i><span>위젯에 장소 추가</span><em>›</em></div>
+            <div class="mosaic"><div class="tile big"><span>잠실운동장</span><b>비 없음</b><small>확신도 72%</small></div><div class="tile"><span>제보</span><b>18</b><small>5분 내</small></div><div class="tile"><span>강수</span><b>28%</b><small>현재</small></div><div class="tile"><span>1시간 뒤</span><b>주의</b><small>비 가능</small></div><div class="tile"><span>바람</span><b>2m/s</b><small>약함</small></div></div>
+          </div>
+          <nav class="nav"><span class="active">보드</span><span>질문</span><span>지도</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>23. AR 카메라 오버레이</strong><span>하늘 비춰보기</span></div>
+        <section class="phone v23">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Sky Lens</b><span>카메라 위 판정</span></div><div class="circle">◎</div></div>
+            <div class="camera"><span class="chip">AR 판정</span><div class="ar-card"><h2>이 방향 구름은 비구름이 아니에요</h2><p>남쪽 하늘만 40분 뒤 주의.</p></div></div>
+            <div class="search"><i>⌕</i><span>장소 검색 또는 카메라 켜기</span><em>›</em></div>
+          </div>
+          <nav class="nav"><span class="active">렌즈</span><span>질문</span><span>레이더</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>24. 한국 포털 밀도형</strong><span>정보량 많은 첫화면</span></div>
+        <section class="phone v24">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크</b><span>송파구 잠실동</span></div><div class="circle">☰</div></div>
+            <div class="search"><i>⌕</i><span>지역명, 장소명 검색</span><em>›</em></div>
+            <div class="dense-tabs"><span class="on">현재</span><span>시간별</span><span>비교</span><span>제보</span></div>
+            <div class="hero"><span class="chip">현장판정</span><h2>비 없음 우세</h2><p>27° · 습도 68% · 강수 28% · 바람 2m/s</p></div>
+            <div class="panel"><div class="row"><span class="ico">K</span><span><b>기상청</b><small>흐림 30%</small></span><b>16:00</b></div><div class="row"><span class="ico">Y</span><span><b>Yr.no</b><small>약한 비 38%</small></span><b>16:10</b></div><div class="row"><span class="ico">W</span><span><b>Windy</b><small>흐림 24%</small></span><b>16:12</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>비교</span><span>지도</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>25. 출퇴근 경로형</strong><span>이동 루트별 비 판단</span></div>
+        <section class="phone v25">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Route Weather</b><span>내 동선 기준 판정</span></div><div class="circle">↕</div></div>
+            <div class="search"><i>⌕</i><span>강남역에서 잠실운동장까지</span><em>›</em></div>
+            <div class="route"><div class="route-step">출발지: 강남역 · 비 없음</div><div><h2>이동 중 비 만날 확률 22%</h2><p>잠실 도착 20분 전까지는 안전해 보여요.</p></div><div class="route-step">도착지: 잠실운동장 · 흐림</div></div>
+            <div class="panel"><div class="head">구간별 판단 <span>35분 경로</span></div><div class="bar" style="color:#2563eb"><i style="--w:22%"></i></div></div>
+          </div>
+          <nav class="nav"><span class="active">경로</span><span>질문</span><span>지도</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>26. 캘린더 플래너</strong><span>일정별 날씨 판단</span></div>
+        <section class="phone v26">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨 일정표</b><span>약속 전에 확인</span></div><div class="circle">31</div></div>
+            <div class="search"><i>⌕</i><span>토요일 야구장 비 와?</span><em>›</em></div>
+            <div class="hero"><span class="chip">오늘 18:30 일정</span><h2>경기 시작 전까지는 비 낮음</h2><p>21시 이후 약한 비 가능성이 있어요.</p></div>
+            <div class="calendar"><span>월</span><span>화</span><span class="rain">수</span><span>목</span><span class="good">금</span><span class="rain">토</span><span>일</span><span>12</span><span>13</span><span class="rain">14</span><span>15</span><span class="good">16</span><span class="rain">17</span><span>18</span></div>
+          </div>
+          <nav class="nav"><span class="active">일정</span><span>질문</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>27. 스티커 플레이풀</strong><span>가볍고 귀여운 톤</span></div>
+        <section class="phone v27">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>비 와?</b><span>친구처럼 알려주는 날씨</span></div><div class="circle">?</div></div>
+            <div class="search"><i>⌕</i><span>잠실운동장 지금 비 와?</span><em>GO</em></div>
+            <div class="hero"><span class="chip">답변 도착</span><h2>아직 안 와! 그래도 하늘은 흐려</h2><p>30분 뒤 다시 물어보면 더 정확해.</p><span class="sticker">☂️</span></div>
+            <div class="panel"><div class="row"><span class="ico">👀</span><span><b>근처 친구들</b><small>18명이 확인했어</small></span><b>좋음</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>친구</span><span>지도</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>28. 고대비 접근성</strong><span>큰 글자/명확한 대비</span></div>
+        <section class="phone v28">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨 판정</b><span>읽기 쉬운 모드</span></div><div class="circle">A</div></div>
+            <div class="search"><i>⌕</i><span>장소 검색</span><em>›</em></div>
+            <div class="hero"><span class="chip">결론</span><h2>현재 비 오지 않음</h2><p>확신도 72%. 1시간 뒤 비 가능성 있음.</p><div class="temp">27°</div></div>
+            <div class="panel"><div class="row"><span class="ico">1</span><span><b>현장 제보</b><small>비 없음 14건</small></span><b>확인</b></div><div class="row"><span class="ico">2</span><span><b>예보 비교</b><small>3개 중 2개 흐림</small></span><b>확인</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>비교</span><span>지도</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>29. 재난 상황실</strong><span>경보/대응 중심</span></div>
+        <section class="phone v29">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Weather Ops</b><span>위험 판단 모드</span></div><div class="circle">!</div></div>
+            <div class="warning-strip">WEATHER WATCH</div>
+            <div class="hero"><span class="chip">주의</span><h2>30분 뒤 강한 소나기 가능</h2><p>실시간 제보와 레이더가 동시에 나빠지는 중.</p></div>
+            <div class="mini-grid"><div class="mini">위험<b>중</b></div><div class="mini">낙뢰<b>낮음</b></div><div class="mini">침수<b>주의</b></div></div>
+            <div class="search"><i>⌕</i><span>위험 지역 검색</span><em>›</em></div>
+          </div>
+          <nav class="nav"><span class="active">상황</span><span>지도</span><span>경보</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>30. 미니멀 타이포</strong><span>텍스트 중심 초간결</span></div>
+        <section class="phone v30">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Weather Check</b><span>Jamsil Stadium</span></div><div class="circle">N</div></div>
+            <div class="hero"><span class="chip">NOW</span><h2>No rain right now.</h2><p>Rain probability rises after 18:30. 18 nearby reports say the ground is dry.</p><div class="temp">27°</div></div>
+            <div class="search"><i>⌕</i><span>Ask another place</span><em>›</em></div>
+            <div class="panel"><div class="row"><span class="ico">01</span><span><b>KMA</b><small>Cloudy, 30%</small></span></div><div class="row"><span class="ico">02</span><span><b>YR</b><small>Light rain, 38%</small></span></div></div>
+          </div>
+          <nav class="nav"><span class="active">Now</span><span>Map</span><span>Compare</span><span>Report</span></nav>
+        </section>
+      </article>
+    </div>
+  </div>
+</body>
+</html>

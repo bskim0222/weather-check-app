@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>웨더체크 날씨별 판정카드 시안</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page-bg: #211018;
+      --cream: #fff2e9;
+      --cream-soft: rgba(255, 240, 237, 0.68);
+      --line: rgba(255, 240, 237, 0.17);
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 7%, rgba(255, 122, 138, 0.18), transparent 28rem),
+        radial-gradient(circle at 90% 12%, rgba(107, 215, 255, 0.14), transparent 30rem),
+        radial-gradient(circle at 50% 100%, rgba(255, 211, 107, 0.1), transparent 34rem),
+        var(--page-bg);
+      color: var(--cream);
+    }
+
+    .page {
+      width: min(1720px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding: 0 4px 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 74px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 16px 0 0;
+      color: var(--cream-soft);
+      font-size: 16px;
+      line-height: 1.55;
+      font-weight: 680;
+    }
+
+    .count {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 240, 237, 0.08);
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 30px;
+      padding-top: 34px;
+    }
+
+    .variant {
+      min-width: 0;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100%, 360px);
+      aspect-ratio: 360 / 730;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 9px solid #12070c;
+      border-radius: 38px;
+      box-shadow: var(--shadow);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.08), transparent 11rem),
+        var(--phone-bg);
+      color: var(--text);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      z-index: 30;
+      width: 96px;
+      height: 26px;
+      border-radius: 999px;
+      background: #12070c;
+      transform: translateX(-50%);
+    }
+
+    .status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      font-size: 11px;
+      font-weight: 950;
+      pointer-events: none;
+    }
+
+    .screen {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 52px 16px 82px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--card-line);
+      display: grid;
+      place-items: center;
+      background: conic-gradient(from 30deg, var(--accent), rgba(255,255,255,.04), var(--accent2), rgba(255,255,255,.04), var(--accent));
+    }
+
+    .brand-mark::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--center);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--phone-bg) 80%, transparent);
+    }
+
+    .brand b {
+      display: block;
+      font-size: 16px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .temp-pill {
+      min-width: 58px;
+      min-height: 36px;
+      border: 1px solid var(--card-line);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--center-ink);
+      background: var(--center);
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .search {
+      height: 42px;
+      border: 1px solid var(--card-line);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 8px 0 14px;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel) 74%, transparent);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .search span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .search i {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-style: normal;
+      font-weight: 950;
+    }
+
+    .decision-card {
+      position: relative;
+      min-height: 372px;
+      margin-top: 13px;
+      padding: 15px;
+      border: 1px solid var(--card-line);
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 39%, color-mix(in srgb, var(--center) 18%, transparent), transparent 8.5rem),
+        color-mix(in srgb, var(--panel) 82%, transparent);
+    }
+
+    .decision-card::before {
+      content: "";
+      position: absolute;
+      inset: -20px;
+      opacity: 0.95;
+      background: var(--weather-art);
+      pointer-events: none;
+    }
+
+    .decision-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 0 52%, color-mix(in srgb, var(--panel) 52%, transparent));
+      pointer-events: none;
+    }
+
+    .meta {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 27px;
+      padding: 0 10px;
+      border: 1px solid var(--card-line);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 10px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .chip.accent {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .weather-stage {
+      position: relative;
+      z-index: 2;
+      height: 212px;
+      display: grid;
+      place-items: center;
+      margin-top: 4px;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--card-line);
+    }
+
+    .ring.one {
+      width: 210px;
+      height: 210px;
+    }
+
+    .ring.two {
+      width: 154px;
+      height: 154px;
+      border-style: dashed;
+    }
+
+    .ring.three {
+      width: 104px;
+      height: 104px;
+      border: 0;
+      background: conic-gradient(var(--accent) 0 74deg, rgba(255,255,255,.06) 74deg 224deg, var(--accent2) 224deg 294deg, rgba(255,255,255,.06) 294deg);
+      box-shadow: 0 0 0 1px var(--card-line);
+    }
+
+    .weather-glyph {
+      position: absolute;
+      z-index: 2;
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: var(--glyph);
+      box-shadow: var(--glyph-shadow);
+      transform: translateY(-4px);
+    }
+
+    .weather-glyph::before,
+    .weather-glyph::after {
+      content: "";
+      position: absolute;
+      background: var(--glyph-extra);
+    }
+
+    .center-answer {
+      position: relative;
+      z-index: 3;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--center-ink);
+      background: var(--center);
+      box-shadow: 0 17px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    .center-answer span {
+      display: block;
+      color: color-mix(in srgb, var(--center-ink) 64%, transparent);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .center-answer b {
+      display: block;
+      margin-top: 5px;
+      font-size: 25px;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .answer {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-top: 4px;
+    }
+
+    .answer h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .answer p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.42;
+      font-weight: 760;
+    }
+
+    .big-temp {
+      color: var(--text);
+      font-size: 46px;
+      line-height: 0.9;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      min-height: 68px;
+      padding: 10px;
+      border: 1px solid var(--card-line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel) 72%, transparent);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 7px;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .source-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .source {
+      min-height: 58px;
+      padding: 8px 7px;
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 4px;
+      text-align: center;
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+    }
+
+    .source img {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      border-radius: 5px;
+      background: var(--center);
+    }
+
+    .source span {
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      padding: 7px;
+      border: 1px solid var(--card-line);
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--nav) 88%, transparent);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+    }
+
+    .bottom-nav div {
+      height: 35px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .bottom-nav div:first-child {
+      color: var(--center-ink);
+      background: var(--center);
+    }
+
+    .caption {
+      width: min(100%, 360px);
+      margin: 14px auto 0;
+    }
+
+    .caption strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .caption span {
+      display: block;
+      margin-top: 6px;
+      color: var(--cream-soft);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 660;
+    }
+
+    .sunny .weather-glyph::before {
+      inset: -18px;
+      border-radius: 50%;
+      border: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+      background: transparent;
+    }
+
+    .cloudy .weather-glyph,
+    .overcast .weather-glyph,
+    .rain .weather-glyph,
+    .shower .weather-glyph,
+    .snow .weather-glyph,
+    .thunder .weather-glyph,
+    .fog .weather-glyph,
+    .wind .weather-glyph {
+      width: 112px;
+      height: 62px;
+      border-radius: 42px;
+      transform: translateY(-2px);
+    }
+
+    .cloudy .weather-glyph::before,
+    .overcast .weather-glyph::before,
+    .rain .weather-glyph::before,
+    .shower .weather-glyph::before,
+    .snow .weather-glyph::before,
+    .thunder .weather-glyph::before,
+    .fog .weather-glyph::before,
+    .wind .weather-glyph::before {
+      left: 18px;
+      top: -28px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: inherit;
+      box-shadow: 42px 14px 0 -8px var(--glyph-extra);
+    }
+
+    .rain .weather-glyph::after,
+    .shower .weather-glyph::after {
+      left: 18px;
+      top: 76px;
+      width: 88px;
+      height: 50px;
+      background:
+        linear-gradient(110deg, transparent 0 38%, var(--accent2) 39% 48%, transparent 49%) 0 0 / 24px 32px repeat-x;
+    }
+
+    .snow .weather-glyph::after {
+      left: 11px;
+      top: 78px;
+      width: 92px;
+      height: 44px;
+      border-radius: 0;
+      background:
+        radial-gradient(circle, var(--accent2) 0 3px, transparent 4px) 0 0 / 24px 24px,
+        radial-gradient(circle, var(--center) 0 2px, transparent 3px) 12px 10px / 26px 26px;
+    }
+
+    .thunder .weather-glyph::after {
+      left: 45px;
+      top: 42px;
+      width: 40px;
+      height: 82px;
+      clip-path: polygon(42% 0, 100% 0, 64% 38%, 94% 38%, 28% 100%, 44% 52%, 12% 52%);
+      background: var(--accent);
+      filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 55%, transparent));
+    }
+
+    .fog .weather-glyph::after {
+      left: -4px;
+      top: 80px;
+      width: 122px;
+      height: 52px;
+      border-radius: 0;
+      background:
+        linear-gradient(var(--muted), var(--muted)) 0 0 / 100% 4px no-repeat,
+        linear-gradient(var(--muted), var(--muted)) 16px 20px / 82% 4px no-repeat,
+        linear-gradient(var(--muted), var(--muted)) 0 40px / 100% 4px no-repeat;
+    }
+
+    .wind .weather-glyph::after {
+      left: -8px;
+      top: 80px;
+      width: 130px;
+      height: 54px;
+      border-radius: 0;
+      background:
+        linear-gradient(var(--accent2), var(--accent2)) 0 4px / 96px 4px no-repeat,
+        linear-gradient(var(--accent2), var(--accent2)) 28px 24px / 96px 4px no-repeat,
+        linear-gradient(var(--accent2), var(--accent2)) 8px 44px / 70px 4px no-repeat;
+    }
+
+    .heat .weather-glyph::before {
+      inset: -24px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, transparent 0 52%, color-mix(in srgb, var(--accent) 44%, transparent) 53% 55%, transparent 56%),
+        conic-gradient(from 10deg, transparent 0 8deg, color-mix(in srgb, var(--accent) 45%, transparent) 8deg 14deg, transparent 14deg 35deg);
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 18px, 390px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        display: block;
+      }
+
+      .count {
+        display: inline-grid;
+        margin-top: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>첫화면 판정카드<br />날씨별 디자인</h1>
+        <p>버건디 스톰 톤과 기상 나침반 구조는 유지하고, 판정된 날씨에 따라 카드 배경, 중앙 원, 그래픽, 온도, 근거 색이 달라지는 시안입니다.</p>
+      </div>
+      <div class="count">10 weather cards</div>
+    </section>
+
+    <section class="grid" id="cards" aria-label="날씨별 판정카드 시안"></section>
+  </main>
+
+  <script>
+    const variants = [
+      {
+        cls: 'sunny',
+        name: '01. 맑음',
+        note: '가장 밝게 열리는 상태. 버건디 배경 위에 크림/골드 중심부를 크게 살립니다.',
+        title: '현재는 맑은 쪽이 우세해요',
+        verdict: '맑음',
+        temp: '27°',
+        confidence: '88%',
+        reports: '14건',
+        rain: '4%',
+        meta: '현재 위치 · 송파구',
+        evidence: ['맑음', '비 없음', '맑음', '우세'],
+        vars: {
+          phoneBg: '#301a22', panel: '#442631', nav: '#211018', text: '#fff2e9', muted: 'rgba(255,240,237,.68)',
+          cardLine: 'rgba(255,240,237,.17)', center: '#fff2e9', centerInk: '#301a22', accent: '#ffd36b',
+          accent2: '#ff9f73', accentInk: '#2b1408', glyph: '#ffd36b', glyphExtra: '#fff2e9',
+          glyphShadow: '0 0 44px rgba(255,211,107,.38)', weatherArt: 'radial-gradient(circle at 70% 24%, rgba(255,211,107,.28), transparent 6rem)'
+        }
+      },
+      {
+        cls: 'cloudy',
+        name: '02. 구름 많음',
+        note: '맑음과 흐림 사이. 답답하지 않게 구름은 부드럽고 판정은 유지합니다.',
+        title: '구름은 많지만 비 신호는 약해요',
+        verdict: '구름',
+        temp: '24°',
+        confidence: '76%',
+        reports: '11건',
+        rain: '16%',
+        meta: '송파구 · 3분 전',
+        evidence: ['흐림', '약함', '구름', '우세'],
+        vars: {
+          phoneBg: '#2c202d', panel: '#433247', nav: '#201721', text: '#fff0ed', muted: 'rgba(255,240,237,.66)',
+          cardLine: 'rgba(255,240,237,.17)', center: '#fff0ed', centerInk: '#2c202d', accent: '#ffb7a2',
+          accent2: '#a9d8ff', accentInk: '#2a1712', glyph: '#f1d7d0', glyphExtra: '#cab0bb',
+          glyphShadow: '0 16px 35px rgba(0,0,0,.2)', weatherArt: 'radial-gradient(circle at 65% 20%, rgba(169,216,255,.18), transparent 6rem)'
+        }
+      },
+      {
+        cls: 'overcast',
+        name: '03. 흐림',
+        note: '전체적으로 낮게 깔리는 카드. 대비를 줄여 구름 낀 느낌을 줍니다.',
+        title: '흐린 쪽으로 판정돼요',
+        verdict: '흐림',
+        temp: '22°',
+        confidence: '79%',
+        reports: '9건',
+        rain: '28%',
+        meta: '현재 위치 · 흐림',
+        evidence: ['흐림', '흐림', '구름', '흐림'],
+        vars: {
+          phoneBg: '#282830', panel: '#393944', nav: '#1b1b22', text: '#f1ece8', muted: 'rgba(241,236,232,.64)',
+          cardLine: 'rgba(241,236,232,.15)', center: '#f1ece8', centerInk: '#282830', accent: '#b7b3c6',
+          accent2: '#7fa5c6', accentInk: '#1b1b22', glyph: '#b9b7c1', glyphExtra: '#8d8b99',
+          glyphShadow: '0 18px 38px rgba(0,0,0,.26)', weatherArt: 'linear-gradient(180deg, rgba(255,255,255,.05), transparent 45%)'
+        }
+      },
+      {
+        cls: 'rain',
+        name: '04. 비',
+        note: '비는 파란 포인트를 강하게. 즉시 우산 판단이 되도록 위험도를 올립니다.',
+        title: '현재는 비 오는 쪽이 우세해요',
+        verdict: '비',
+        temp: '19°',
+        confidence: '86%',
+        reports: '18건',
+        rain: '72%',
+        meta: '잠실운동장 · 비',
+        evidence: ['비', '비', '비구름', '우세'],
+        vars: {
+          phoneBg: '#192333', panel: '#26364d', nav: '#111925', text: '#eef7ff', muted: 'rgba(238,247,255,.66)',
+          cardLine: 'rgba(238,247,255,.17)', center: '#f5fbff', centerInk: '#192333', accent: '#4aa3ff',
+          accent2: '#7de0ff', accentInk: '#061729', glyph: '#7faed0', glyphExtra: '#b8d7ef',
+          glyphShadow: '0 18px 42px rgba(74,163,255,.22)', weatherArt: 'linear-gradient(115deg, transparent 0 42%, rgba(125,224,255,.16) 43% 45%, transparent 46%) 0 0 / 28px 38px'
+        }
+      },
+      {
+        cls: 'shower',
+        name: '05. 소나기',
+        note: '비보다 더 급작스러운 느낌. 경고색과 파란색을 같이 씁니다.',
+        title: '소나기 가능성이 커지고 있어요',
+        verdict: '소나기',
+        temp: '21°',
+        confidence: '68%',
+        reports: '7건',
+        rain: '54%',
+        meta: '18시 전후 주의',
+        evidence: ['소나기', '약한 비', '비구름', '대기'],
+        vars: {
+          phoneBg: '#252235', panel: '#352f4f', nav: '#181525', text: '#f4f1ff', muted: 'rgba(244,241,255,.66)',
+          cardLine: 'rgba(244,241,255,.17)', center: '#fff7ea', centerInk: '#252235', accent: '#ffbf66',
+          accent2: '#66d6ff', accentInk: '#221405', glyph: '#9aa0bf', glyphExtra: '#ccd0e5',
+          glyphShadow: '0 18px 42px rgba(102,214,255,.18)', weatherArt: 'radial-gradient(circle at 72% 20%, rgba(255,191,102,.22), transparent 5rem), linear-gradient(115deg, transparent 0 42%, rgba(102,214,255,.15) 43% 45%, transparent 46%) 0 0 / 30px 40px'
+        }
+      },
+      {
+        cls: 'snow',
+        name: '06. 눈',
+        note: '버건디 톤 안에서도 차갑고 조용하게. 중앙 원은 눈처럼 밝게 둡니다.',
+        title: '눈 오는 쪽으로 판정돼요',
+        verdict: '눈',
+        temp: '-1°',
+        confidence: '81%',
+        reports: '6건',
+        rain: '눈',
+        meta: '영하권 · 미끄럼 주의',
+        evidence: ['눈', '눈', '습설', '주의'],
+        vars: {
+          phoneBg: '#222a34', panel: '#303945', nav: '#171d25', text: '#f5fbff', muted: 'rgba(245,251,255,.68)',
+          cardLine: 'rgba(245,251,255,.17)', center: '#ffffff', centerInk: '#222a34', accent: '#dff6ff',
+          accent2: '#8bd4ee', accentInk: '#15222c', glyph: '#eef8ff', glyphExtra: '#d2e6f0',
+          glyphShadow: '0 18px 42px rgba(223,246,255,.22)', weatherArt: 'radial-gradient(circle, rgba(255,255,255,.42) 0 2px, transparent 3px) 0 0 / 34px 34px'
+        }
+      },
+      {
+        cls: 'thunder',
+        name: '07. 천둥번개',
+        note: '가장 극적인 상태. 번개 포인트를 크게 쓰고 대비를 강하게 둡니다.',
+        title: '천둥번개 가능성이 높아요',
+        verdict: '번개',
+        temp: '20°',
+        confidence: '90%',
+        reports: '5건',
+        rain: '78%',
+        meta: '실외 이동 주의',
+        evidence: ['뇌우', '강한 비', '번개', '경고'],
+        vars: {
+          phoneBg: '#20142d', panel: '#322047', nav: '#130b1e', text: '#fff5ff', muted: 'rgba(255,245,255,.66)',
+          cardLine: 'rgba(255,245,255,.18)', center: '#fff5df', centerInk: '#20142d', accent: '#ffd33d',
+          accent2: '#a079ff', accentInk: '#201200', glyph: '#5e5276', glyphExtra: '#81739f',
+          glyphShadow: '0 18px 44px rgba(255,211,61,.24)', weatherArt: 'radial-gradient(circle at 70% 20%, rgba(255,211,61,.24), transparent 5rem), radial-gradient(circle at 20% 30%, rgba(160,121,255,.2), transparent 6rem)'
+        }
+      },
+      {
+        cls: 'fog',
+        name: '08. 안개',
+        note: '정보 대비를 낮춰 시야가 흐린 느낌을 만들되, 판정 문구는 읽히게 유지합니다.',
+        title: '시야가 흐려질 수 있어요',
+        verdict: '안개',
+        temp: '15°',
+        confidence: '73%',
+        reports: '4건',
+        rain: '시야',
+        meta: '가시거리 주의',
+        evidence: ['안개', '박무', '저시정', '주의'],
+        vars: {
+          phoneBg: '#2d2c31', panel: '#403d43', nav: '#1f1d21', text: '#f0ece9', muted: 'rgba(240,236,233,.56)',
+          cardLine: 'rgba(240,236,233,.14)', center: '#f0ece9', centerInk: '#2d2c31', accent: '#d2c9c2',
+          accent2: '#b7c3cf', accentInk: '#2d2c31', glyph: '#d7d2cf', glyphExtra: '#bbb5b7',
+          glyphShadow: '0 18px 38px rgba(0,0,0,.18)', weatherArt: 'linear-gradient(180deg, rgba(255,255,255,.13), transparent 22%, rgba(255,255,255,.09), transparent 54%)'
+        }
+      },
+      {
+        cls: 'wind',
+        name: '09. 강풍',
+        note: '비는 없어도 행동 판단이 필요한 상태. 선형 그래픽으로 바람감을 줍니다.',
+        title: '바람이 강한 쪽으로 판정돼요',
+        verdict: '강풍',
+        temp: '18°',
+        confidence: '80%',
+        reports: '8건',
+        rain: '9m/s',
+        meta: '간판·우산 주의',
+        evidence: ['강풍', '돌풍', '바람', '주의'],
+        vars: {
+          phoneBg: '#10282d', panel: '#1d3a41', nav: '#0b1b20', text: '#ecffff', muted: 'rgba(236,255,255,.66)',
+          cardLine: 'rgba(236,255,255,.17)', center: '#f2fff9', centerInk: '#10282d', accent: '#32d5c4',
+          accent2: '#7aa7ff', accentInk: '#041b18', glyph: '#9ed9d1', glyphExtra: '#bfeee8',
+          glyphShadow: '0 18px 42px rgba(50,213,196,.2)', weatherArt: 'linear-gradient(100deg, transparent 0 32%, rgba(50,213,196,.13) 33% 36%, transparent 37%) 0 0 / 70px 42px'
+        }
+      },
+      {
+        cls: 'heat',
+        name: '10. 폭염',
+        note: '비 여부와 별개로 위험 판정이 필요한 상태. 온도와 열감을 가장 크게 보여줍니다.',
+        title: '더위 위험이 높은 쪽이에요',
+        verdict: '폭염',
+        temp: '34°',
+        confidence: '85%',
+        reports: '12건',
+        rain: '주의',
+        meta: '체감온도 36°',
+        evidence: ['폭염', '고온', '열감', '주의'],
+        vars: {
+          phoneBg: '#321a18', panel: '#4a2722', nav: '#1f0f0d', text: '#fff1e8', muted: 'rgba(255,241,232,.66)',
+          cardLine: 'rgba(255,241,232,.17)', center: '#fff2d9', centerInk: '#321a18', accent: '#ff6f45',
+          accent2: '#ffd166', accentInk: '#2b1005', glyph: '#ff9f4f', glyphExtra: '#ffd166',
+          glyphShadow: '0 0 48px rgba(255,111,69,.34)', weatherArt: 'radial-gradient(circle at 68% 22%, rgba(255,111,69,.32), transparent 7rem), radial-gradient(circle at 24% 20%, rgba(255,209,102,.2), transparent 5rem)'
+        }
+      }
+    ];
+
+    function varStyle(vars) {
+      return Object.entries(vars)
+        .map(([key, value]) => `--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${value}`)
+        .join(';');
+    }
+
+    function source(label, icon) {
+      return `<div class="source"><img src="${icon}" alt=""><span>${label}</span></div>`;
+    }
+
+    function renderCard(item) {
+      return `
+        <article class="variant ${item.cls}">
+          <div class="phone" style="${varStyle(item.vars)}">
+            <div class="status"><span>9:41</span><span>5G</span></div>
+            <div class="screen">
+              <div class="top">
+                <div class="brand">
+                  <div class="brand-mark"></div>
+                  <div><b>웨더체크</b><span>기상 나침반 판정</span></div>
+                </div>
+                <div class="temp-pill">${item.temp}</div>
+              </div>
+
+              <div class="search">
+                <span>잠실운동장 지금 비 와?</span>
+                <i>↗</i>
+              </div>
+
+              <section class="decision-card">
+                <div class="meta">
+                  <span class="chip accent">${item.meta}</span>
+                  <span class="chip">3분 전</span>
+                </div>
+
+                <div class="weather-stage">
+                  <div class="ring one"></div>
+                  <div class="ring two"></div>
+                  <div class="ring three"></div>
+                  <div class="weather-glyph"></div>
+                  <div class="center-answer">
+                    <div><span>판정</span><b>${item.verdict}</b></div>
+                  </div>
+                </div>
+
+                <div class="answer">
+                  <div>
+                    <h2>${item.title}</h2>
+                    <p>예보 3곳과 현장 제보를 함께 본 결과입니다.</p>
+                  </div>
+                  <div class="big-temp">${item.temp}</div>
+                </div>
+              </section>
+
+              <div class="stats">
+                <div class="stat"><span>확신도</span><b>${item.confidence}</b></div>
+                <div class="stat"><span>제보</span><b>${item.reports}</b></div>
+                <div class="stat"><span>위험도</span><b>${item.rain}</b></div>
+              </div>
+
+              <div class="source-row">
+                ${source(item.evidence[0], 'assets/icon-kma.ico')}
+                ${source(item.evidence[1], 'assets/icon-yr.png')}
+                ${source(item.evidence[2], 'assets/icon-windy.ico')}
+                ${source(item.evidence[3], 'assets/icon-kma.ico')}
+              </div>
+
+              <nav class="bottom-nav">
+                <div>판정</div><div>지도</div><div>제보</div><div>비교</div>
+              </nav>
+            </div>
+          </div>
+          <div class="caption">
+            <strong>${item.name}</strong>
+            <span>${item.note}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    document.getElementById('cards').innerHTML = variants.map(renderCard).join('');
+  </script>
+</body>
+</html>

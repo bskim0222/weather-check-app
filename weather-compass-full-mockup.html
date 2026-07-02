@@ -1,0 +1,3011 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>웨더체크 기상 나침반 전체 목업</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #301a22;
+      --panel: #442631;
+      --panel-2: #211018;
+      --cream: #fff2e9;
+      --cream-soft: rgba(255, 240, 237, 0.66);
+      --cream-faint: rgba(255, 240, 237, 0.1);
+      --cream-line: rgba(255, 240, 237, 0.17);
+      --amber: #ff7a8a;
+      --sky: #6bd7ff;
+      --mint: #ffd36b;
+      --coral: #ffd36b;
+      --ink: #301a22;
+      --shadow: 0 30px 80px rgba(9, 13, 18, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(255, 122, 138, 0.18), transparent 28rem),
+        radial-gradient(circle at 84% 12%, rgba(107, 215, 255, 0.15), transparent 30rem),
+        radial-gradient(circle at 60% 100%, rgba(255, 211, 107, 0.1), transparent 35rem),
+        #211018;
+      color: var(--cream);
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .showcase {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(360px, 430px) minmax(360px, 620px);
+      gap: 34px;
+      align-items: center;
+      justify-content: center;
+      padding: 34px;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100%, 410px);
+      aspect-ratio: 410 / 860;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 10px solid #12070c;
+      border-radius: 42px;
+      box-shadow: var(--shadow);
+      background:
+        radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.08), transparent 12rem),
+        radial-gradient(circle at 30% 20%, rgba(255, 122, 138, 0.13), transparent 12rem),
+        var(--bg);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      left: 50%;
+      z-index: 50;
+      width: 108px;
+      height: 28px;
+      border-radius: 999px;
+      background: #12070c;
+      transform: translateX(-50%);
+    }
+
+    .status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 42px;
+      padding: 0 24px;
+      color: var(--cream);
+      font-size: 12px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    .screen {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-head {
+      flex: none;
+      padding: 54px 18px 12px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--cream-line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        conic-gradient(from 20deg, var(--amber), rgba(245, 234, 215, 0.08), var(--sky), rgba(245, 234, 215, 0.08), var(--amber));
+    }
+
+    .brand-mark::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cream);
+      box-shadow: 0 0 0 5px rgba(39, 48, 60, 0.88);
+    }
+
+    .brand strong {
+      display: block;
+      line-height: 1;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 4px;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .refresh-pill {
+      flex: none;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cream);
+      background: transparent;
+      font-weight: 950;
+      cursor: pointer;
+    }
+
+    .refresh-pill:active {
+      transform: translateY(1px);
+      background: rgba(245, 234, 215, 0.1);
+    }
+
+    .refresh-icon {
+      font-size: 22px;
+      line-height: 1;
+      transform-origin: center;
+    }
+
+    .refresh-pill.is-refreshing .refresh-icon {
+      animation: spin-refresh 600ms ease;
+    }
+
+    @keyframes spin-refresh {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .question {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 38px;
+      gap: 8px;
+    }
+
+    .question input {
+      width: 100%;
+      height: 44px;
+      min-width: 0;
+      padding: 0 15px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      outline: 0;
+      color: var(--cream);
+      background: rgba(245, 234, 215, 0.1);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .question input::placeholder {
+      color: rgba(245, 234, 215, 0.48);
+    }
+
+    .question button {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 50%;
+      color: var(--ink);
+      background: var(--amber);
+      font-weight: 950;
+    }
+
+    .content {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 0 18px 96px;
+      scrollbar-width: none;
+    }
+
+    .content::-webkit-scrollbar {
+      display: none;
+    }
+
+    .view {
+      display: none;
+      animation: enter 260ms ease both;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    @keyframes enter {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero-card {
+      position: relative;
+      min-height: 390px;
+      padding: 18px;
+      border: 1px solid var(--cream-line);
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 43%, rgba(255, 255, 255, 0.08), transparent 11rem),
+        rgba(245, 234, 215, 0.07);
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: -70px -48px auto;
+      height: 260px;
+      background: var(--weather-art,
+        radial-gradient(circle at 38% 48%, rgba(255, 122, 138, 0.3), transparent 5rem),
+        radial-gradient(circle at 68% 42%, rgba(107, 215, 255, 0.2), transparent 5rem));
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .weather-switch {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 10px;
+      padding-bottom: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .weather-switch::-webkit-scrollbar {
+      display: none;
+    }
+
+    .weather-switch button {
+      flex: none;
+      min-height: 30px;
+      padding: 0 11px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      color: var(--cream-soft);
+      background: rgba(255, 240, 237, 0.07);
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .weather-switch button.active {
+      color: var(--weather-accent-ink, var(--ink));
+      background: var(--weather-accent, var(--amber));
+      border-color: var(--weather-accent, var(--amber));
+    }
+
+    .hero-card.weather-sunny {
+      --weather-accent: #ffd36b;
+      --weather-accent2: #ff9f73;
+      --weather-accent3: #ff7a8a;
+      --weather-accent-ink: #2b1408;
+      --weather-center: #fff2e9;
+      --weather-center-ink: #301a22;
+      --weather-glyph: #ffd36b;
+      --weather-glyph-extra: #fff2e9;
+      --weather-glyph-shadow: 0 0 44px rgba(255, 211, 107, 0.38);
+      --weather-art: radial-gradient(circle at 68% 28%, rgba(255, 211, 107, 0.28), transparent 6rem);
+    }
+
+    .hero-card.weather-cloudy {
+      --weather-accent: #ffb7a2;
+      --weather-accent2: #a9d8ff;
+      --weather-accent3: #ffd36b;
+      --weather-accent-ink: #2a1712;
+      --weather-center: #fff0ed;
+      --weather-center-ink: #2c202d;
+      --weather-glyph: #f1d7d0;
+      --weather-glyph-extra: #cab0bb;
+      --weather-glyph-shadow: 0 16px 35px rgba(0, 0, 0, 0.2);
+      --weather-art: radial-gradient(circle at 65% 20%, rgba(169, 216, 255, 0.18), transparent 6rem);
+    }
+
+    .hero-card.weather-overcast {
+      --weather-accent: #b7b3c6;
+      --weather-accent2: #7fa5c6;
+      --weather-accent3: #9c98aa;
+      --weather-accent-ink: #1b1b22;
+      --weather-center: #f1ece8;
+      --weather-center-ink: #282830;
+      --weather-glyph: #b9b7c1;
+      --weather-glyph-extra: #8d8b99;
+      --weather-glyph-shadow: 0 18px 38px rgba(0, 0, 0, 0.26);
+      --weather-art: linear-gradient(180deg, rgba(255,255,255,.05), transparent 45%);
+    }
+
+    .hero-card.weather-rain {
+      --weather-accent: #4aa3ff;
+      --weather-accent2: #7de0ff;
+      --weather-accent3: #ffbf66;
+      --weather-accent-ink: #061729;
+      --weather-center: #f5fbff;
+      --weather-center-ink: #192333;
+      --weather-glyph: #7faed0;
+      --weather-glyph-extra: #b8d7ef;
+      --weather-glyph-shadow: 0 18px 42px rgba(74, 163, 255, 0.22);
+      --weather-art: linear-gradient(115deg, transparent 0 42%, rgba(125,224,255,.16) 43% 45%, transparent 46%) 0 0 / 28px 38px;
+    }
+
+    .hero-card.weather-shower {
+      --weather-accent: #ffbf66;
+      --weather-accent2: #66d6ff;
+      --weather-accent3: #a079ff;
+      --weather-accent-ink: #221405;
+      --weather-center: #fff7ea;
+      --weather-center-ink: #252235;
+      --weather-glyph: #9aa0bf;
+      --weather-glyph-extra: #ccd0e5;
+      --weather-glyph-shadow: 0 18px 42px rgba(102, 214, 255, 0.18);
+      --weather-art: radial-gradient(circle at 72% 20%, rgba(255,191,102,.22), transparent 5rem), linear-gradient(115deg, transparent 0 42%, rgba(102,214,255,.15) 43% 45%, transparent 46%) 0 0 / 30px 40px;
+    }
+
+    .hero-card.weather-snow {
+      --weather-accent: #dff6ff;
+      --weather-accent2: #8bd4ee;
+      --weather-accent3: #ffffff;
+      --weather-accent-ink: #15222c;
+      --weather-center: #ffffff;
+      --weather-center-ink: #222a34;
+      --weather-glyph: #eef8ff;
+      --weather-glyph-extra: #d2e6f0;
+      --weather-glyph-shadow: 0 18px 42px rgba(223, 246, 255, 0.22);
+      --weather-art: radial-gradient(circle, rgba(255,255,255,.42) 0 2px, transparent 3px) 0 0 / 34px 34px;
+    }
+
+    .hero-card.weather-thunder {
+      --weather-accent: #ffd33d;
+      --weather-accent2: #a079ff;
+      --weather-accent3: #ffd33d;
+      --weather-accent-ink: #201200;
+      --weather-center: #fff5df;
+      --weather-center-ink: #20142d;
+      --weather-glyph: #5e5276;
+      --weather-glyph-extra: #81739f;
+      --weather-glyph-shadow: 0 18px 44px rgba(255, 211, 61, 0.24);
+      --weather-art: radial-gradient(circle at 70% 20%, rgba(255,211,61,.24), transparent 5rem), radial-gradient(circle at 20% 30%, rgba(160,121,255,.2), transparent 6rem);
+    }
+
+    .hero-card.weather-fog {
+      --weather-accent: #d2c9c2;
+      --weather-accent2: #b7c3cf;
+      --weather-accent3: #a79fa3;
+      --weather-accent-ink: #2d2c31;
+      --weather-center: #f0ece9;
+      --weather-center-ink: #2d2c31;
+      --weather-glyph: #d7d2cf;
+      --weather-glyph-extra: #bbb5b7;
+      --weather-glyph-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+      --weather-art: linear-gradient(180deg, rgba(255,255,255,.13), transparent 22%, rgba(255,255,255,.09), transparent 54%);
+    }
+
+    .hero-card.weather-wind {
+      --weather-accent: #32d5c4;
+      --weather-accent2: #7aa7ff;
+      --weather-accent3: #ffb65f;
+      --weather-accent-ink: #041b18;
+      --weather-center: #f2fff9;
+      --weather-center-ink: #10282d;
+      --weather-glyph: #9ed9d1;
+      --weather-glyph-extra: #bfeee8;
+      --weather-glyph-shadow: 0 18px 42px rgba(50, 213, 196, 0.2);
+      --weather-art: linear-gradient(100deg, transparent 0 32%, rgba(50,213,196,.13) 33% 36%, transparent 37%) 0 0 / 70px 42px;
+    }
+
+    .hero-card.weather-heat {
+      --weather-accent: #ff6f45;
+      --weather-accent2: #ffd166;
+      --weather-accent3: #ff9f4f;
+      --weather-accent-ink: #2b1005;
+      --weather-center: #fff2d9;
+      --weather-center-ink: #321a18;
+      --weather-glyph: #ff9f4f;
+      --weather-glyph-extra: #ffd166;
+      --weather-glyph-shadow: 0 0 48px rgba(255, 111, 69, 0.34);
+      --weather-art: radial-gradient(circle at 68% 22%, rgba(255,111,69,.32), transparent 7rem), radial-gradient(circle at 24% 20%, rgba(255,209,102,.2), transparent 5rem);
+    }
+
+    .hero-card .chip.amber {
+      color: var(--weather-accent-ink, #22170b);
+      background: var(--weather-accent, var(--amber));
+      border-color: var(--weather-accent, var(--amber));
+    }
+
+    .hero-card .ring.r3 {
+      background: conic-gradient(var(--weather-accent, var(--amber)) 0 74deg, rgba(245, 234, 215, 0.1) 74deg 230deg, var(--weather-accent2, var(--sky)) 230deg 295deg, rgba(245, 234, 215, 0.1) 295deg);
+    }
+
+    .hero-card .needle {
+      opacity: 0.4;
+      background: linear-gradient(180deg, var(--weather-accent3, var(--coral)) 0 48%, var(--weather-accent2, var(--sky)) 49% 100%);
+    }
+
+    .hero-card .center-answer {
+      color: var(--weather-center-ink, var(--ink));
+      background: var(--weather-center, var(--cream));
+    }
+
+    .hero-card .center-answer span {
+      color: color-mix(in srgb, var(--weather-center-ink, var(--ink)) 64%, transparent);
+    }
+
+    .hero-card .weather-glyph {
+      position: absolute;
+      z-index: 2;
+      top: 34px;
+      right: 12px;
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: var(--weather-glyph, var(--amber));
+      box-shadow: var(--weather-glyph-shadow, none);
+      transform: translateY(-4px) rotate(-4deg);
+    }
+
+    .hero-card .weather-glyph::before,
+    .hero-card .weather-glyph::after {
+      content: "";
+      position: absolute;
+      background: var(--weather-glyph-extra, var(--cream));
+    }
+
+    .hero-card.weather-sunny .weather-glyph::before,
+    .hero-card.weather-heat .weather-glyph::before {
+      inset: -18px;
+      border-radius: 50%;
+      border: 2px dashed color-mix(in srgb, var(--weather-accent) 70%, transparent);
+      background: transparent;
+    }
+
+    .hero-card.weather-cloudy .weather-glyph,
+    .hero-card.weather-overcast .weather-glyph,
+    .hero-card.weather-rain .weather-glyph,
+    .hero-card.weather-shower .weather-glyph,
+    .hero-card.weather-snow .weather-glyph,
+    .hero-card.weather-thunder .weather-glyph,
+    .hero-card.weather-fog .weather-glyph,
+    .hero-card.weather-wind .weather-glyph {
+      width: 112px;
+      height: 62px;
+      border-radius: 42px;
+      transform: translateY(-2px) rotate(-4deg);
+    }
+
+    .hero-card.weather-cloudy .weather-glyph::before,
+    .hero-card.weather-overcast .weather-glyph::before,
+    .hero-card.weather-rain .weather-glyph::before,
+    .hero-card.weather-shower .weather-glyph::before,
+    .hero-card.weather-snow .weather-glyph::before,
+    .hero-card.weather-thunder .weather-glyph::before,
+    .hero-card.weather-fog .weather-glyph::before,
+    .hero-card.weather-wind .weather-glyph::before {
+      left: 18px;
+      top: -28px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: inherit;
+      box-shadow: 42px 14px 0 -8px var(--weather-glyph-extra, var(--cream));
+    }
+
+    .hero-card.weather-rain .weather-glyph::after,
+    .hero-card.weather-shower .weather-glyph::after {
+      left: 18px;
+      top: 76px;
+      width: 88px;
+      height: 50px;
+      background: linear-gradient(110deg, transparent 0 38%, var(--weather-accent2) 39% 48%, transparent 49%) 0 0 / 24px 32px repeat-x;
+    }
+
+    .hero-card.weather-snow .weather-glyph::after {
+      left: 11px;
+      top: 78px;
+      width: 92px;
+      height: 44px;
+      background: radial-gradient(circle, var(--weather-accent2) 0 3px, transparent 4px) 0 0 / 24px 24px, radial-gradient(circle, var(--weather-center) 0 2px, transparent 3px) 12px 10px / 26px 26px;
+    }
+
+    .hero-card.weather-thunder .weather-glyph::after {
+      left: 45px;
+      top: 42px;
+      width: 40px;
+      height: 82px;
+      clip-path: polygon(42% 0, 100% 0, 64% 38%, 94% 38%, 28% 100%, 44% 52%, 12% 52%);
+      background: var(--weather-accent);
+      filter: drop-shadow(0 0 18px color-mix(in srgb, var(--weather-accent) 55%, transparent));
+    }
+
+    .hero-card.weather-fog .weather-glyph::after,
+    .hero-card.weather-wind .weather-glyph::after {
+      left: -4px;
+      top: 80px;
+      width: 122px;
+      height: 52px;
+      background: linear-gradient(var(--cream-soft), var(--cream-soft)) 0 0 / 100% 4px no-repeat, linear-gradient(var(--cream-soft), var(--cream-soft)) 16px 20px / 82% 4px no-repeat, linear-gradient(var(--cream-soft), var(--cream-soft)) 0 40px / 100% 4px no-repeat;
+    }
+
+    .hero-card.weather-wind .weather-glyph::after {
+      background: linear-gradient(var(--weather-accent2), var(--weather-accent2)) 0 4px / 96px 4px no-repeat, linear-gradient(var(--weather-accent2), var(--weather-accent2)) 28px 24px / 96px 4px no-repeat, linear-gradient(var(--weather-accent2), var(--weather-accent2)) 8px 44px / 70px 4px no-repeat;
+    }
+
+    .meta-row {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 11px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      color: var(--cream);
+      background: rgba(245, 234, 215, 0.08);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .chip.fill {
+      color: var(--ink);
+      background: var(--cream);
+      border-color: var(--cream);
+    }
+
+    .chip.amber {
+      color: #22170b;
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .compass {
+      position: relative;
+      z-index: 2;
+      height: 248px;
+      display: grid;
+      place-items: center;
+      margin-top: 5px;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--cream-line);
+    }
+
+    .ring.r1 {
+      width: 246px;
+      height: 246px;
+    }
+
+    .ring.r2 {
+      width: 184px;
+      height: 184px;
+      border-style: dashed;
+      opacity: 0.9;
+    }
+
+    .ring.r3 {
+      width: 122px;
+      height: 122px;
+      border: 0;
+      background: conic-gradient(var(--amber) 0 74deg, rgba(245, 234, 215, 0.1) 74deg 230deg, var(--sky) 230deg 295deg, rgba(245, 234, 215, 0.1) 295deg);
+      box-shadow: 0 0 0 1px var(--cream-line);
+    }
+
+    .compass::before,
+    .compass::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      width: 1px;
+      height: 242px;
+      background: linear-gradient(transparent, var(--cream-line), transparent);
+      transform-origin: center;
+    }
+
+    .compass::after {
+      transform: rotate(90deg);
+    }
+
+    .needle {
+      position: absolute;
+      z-index: 2;
+      width: 18px;
+      height: 100px;
+      clip-path: polygon(50% 0, 100% 48%, 50% 100%, 0 48%);
+      background: linear-gradient(180deg, var(--coral) 0 48%, var(--sky) 49% 100%);
+      transform: rotate(36deg);
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.22));
+    }
+
+    .center-answer {
+      position: relative;
+      z-index: 3;
+      width: 142px;
+      height: 142px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--ink);
+      background: var(--cream);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+    }
+
+    .center-answer span {
+      display: block;
+      color: rgba(29, 36, 48, 0.64);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .center-answer b {
+      display: block;
+      margin-top: 5px;
+      font-size: 28px;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .hero-summary {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: end;
+      margin-top: 2px;
+    }
+
+    .hero-summary h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 0.95;
+      letter-spacing: 0;
+      word-break: keep-all;
+    }
+
+    .hero-summary p {
+      margin: 10px 0 0;
+      color: var(--cream-soft);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 700;
+      word-break: keep-all;
+    }
+
+    .big-temp {
+      display: inline-flex;
+      align-items: flex-start;
+      color: var(--cream);
+      line-height: 0.78;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .temp-value {
+      font-size: 78px;
+      line-height: 0.78;
+    }
+
+    .temp-unit {
+      margin-top: 4px;
+      margin-left: 2px;
+      color: var(--cream-soft);
+      font-size: 20px;
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .quick-stats {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      padding-bottom: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .quick-stats::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mini-card {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      background: rgba(245, 234, 215, 0.08);
+    }
+
+    .mini-card:first-child {
+      color: var(--weather-accent-ink, var(--ink));
+      border-color: var(--weather-accent, var(--amber));
+      background: var(--weather-accent, var(--amber));
+    }
+
+    .mini-card:first-child span {
+      color: color-mix(in srgb, var(--weather-accent-ink, var(--ink)) 70%, transparent);
+    }
+
+    .mini-card span,
+    .eyebrow {
+      display: block;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .mini-card b {
+      display: block;
+      margin-top: 0;
+      font-size: 13px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .local-report {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid var(--cream-line);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 90% 14%, rgba(255, 211, 107, 0.16), transparent 6rem),
+        rgba(245, 234, 215, 0.075);
+    }
+
+    .local-report-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .local-report h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .local-report p {
+      margin: 4px 0 0;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 760;
+      line-height: 1.4;
+    }
+
+    .local-options {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .local-options::-webkit-scrollbar {
+      display: none;
+    }
+
+    .local-options button {
+      flex: none;
+      min-height: 31px;
+      padding: 0 11px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      color: var(--cream);
+      background: rgba(32, 40, 51, 0.46);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .local-options button.active {
+      color: var(--ink);
+      border-color: var(--amber);
+      background: var(--amber);
+    }
+
+    .local-report-form {
+      display: grid;
+      grid-template-columns: 1fr 66px;
+      gap: 8px;
+    }
+
+    .local-report-form input {
+      min-width: 0;
+      height: 42px;
+      padding: 0 13px;
+      border: 1px solid var(--cream-line);
+      border-radius: 15px;
+      color: var(--cream);
+      outline: 0;
+      background: rgba(32, 40, 51, 0.62);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .local-report-form button {
+      border: 0;
+      border-radius: 15px;
+      color: var(--ink);
+      background: var(--amber);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .local-report-status {
+      min-height: 16px;
+    }
+
+    .section {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid var(--cream-line);
+      border-radius: 24px;
+      background: rgba(245, 234, 215, 0.07);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    .section-head button {
+      min-height: 30px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      color: var(--cream);
+      background: rgba(245, 234, 215, 0.08);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .evidence-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .reason-summary {
+      display: grid;
+      gap: 5px;
+      margin-bottom: 10px;
+      padding: 13px;
+      border: 1px solid color-mix(in srgb, var(--weather-accent, var(--amber)) 50%, transparent);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 94% 18%, color-mix(in srgb, var(--weather-accent, var(--amber)) 16%, transparent), transparent 5rem),
+        rgba(32, 40, 51, 0.5);
+    }
+
+    .reason-summary b {
+      display: block;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .reason-summary span {
+      display: block;
+      color: var(--cream-soft);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1.45;
+    }
+
+    .evidence {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 64px;
+      padding: 10px;
+      border-radius: 17px;
+      background: rgba(32, 40, 51, 0.56);
+    }
+
+    .source-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: var(--cream);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .service-logo {
+      overflow: hidden;
+      padding: 5px;
+      background: var(--cream);
+      color: var(--ink);
+    }
+
+    .service-logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      border-radius: 9px;
+    }
+
+    .service-logo span {
+      display: none;
+    }
+
+    .service-logo.is-fallback img {
+      display: none;
+    }
+
+    .service-logo.is-fallback span {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .evidence b {
+      display: block;
+      font-size: 13px;
+    }
+
+    .evidence span {
+      display: block;
+      margin-top: 3px;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .evidence strong {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 27px;
+      padding: 0 9px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      background: rgba(245, 234, 215, 0.07);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .source-weather {
+      min-width: 62px;
+      color: var(--cream);
+    }
+
+    .source-weather span {
+      display: block;
+      margin: 0;
+      color: var(--cream);
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .mini-weather-icon {
+      position: relative;
+      flex: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--mini-weather-main, var(--amber));
+      box-shadow: 0 0 16px color-mix(in srgb, var(--mini-weather-main, var(--amber)) 34%, transparent);
+    }
+
+    .mini-weather-icon::before,
+    .mini-weather-icon::after {
+      content: "";
+      position: absolute;
+    }
+
+    .mini-weather-icon.cloudy,
+    .mini-weather-icon.overcast,
+    .mini-weather-icon.rain,
+    .mini-weather-icon.shower,
+    .mini-weather-icon.snow,
+    .mini-weather-icon.thunder {
+      width: 22px;
+      height: 14px;
+      border-radius: 999px;
+      --mini-weather-main: #9ec9e8;
+    }
+
+    .mini-weather-icon.cloudy::before,
+    .mini-weather-icon.overcast::before,
+    .mini-weather-icon.rain::before,
+    .mini-weather-icon.shower::before,
+    .mini-weather-icon.snow::before,
+    .mini-weather-icon.thunder::before {
+      left: 3px;
+      top: -6px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: inherit;
+      box-shadow: 9px 4px 0 -3px rgba(255, 255, 255, 0.58);
+    }
+
+    .mini-weather-icon.sunny {
+      --mini-weather-main: #ffd36b;
+    }
+
+    .mini-weather-icon.sunny::before,
+    .mini-weather-icon.heat::before {
+      inset: -3px;
+      border: 1px dashed color-mix(in srgb, var(--mini-weather-main) 75%, transparent);
+      border-radius: 50%;
+    }
+
+    .mini-weather-icon.overcast {
+      --mini-weather-main: #b7b3c6;
+    }
+
+    .mini-weather-icon.rain::after,
+    .mini-weather-icon.shower::after {
+      left: 4px;
+      top: 15px;
+      width: 16px;
+      height: 8px;
+      background: linear-gradient(110deg, transparent 0 36%, #6bd7ff 37% 50%, transparent 51%) 0 0 / 7px 8px repeat-x;
+    }
+
+    .mini-weather-icon.shower {
+      --mini-weather-main: #8fa0d7;
+    }
+
+    .mini-weather-icon.snow::after {
+      left: 2px;
+      top: 16px;
+      width: 18px;
+      height: 8px;
+      background: radial-gradient(circle, #eaf8ff 0 2px, transparent 3px) 0 0 / 8px 8px;
+    }
+
+    .mini-weather-icon.thunder::after {
+      left: 8px;
+      top: 9px;
+      width: 10px;
+      height: 18px;
+      clip-path: polygon(43% 0, 100% 0, 62% 42%, 95% 42%, 22% 100%, 42% 54%, 10% 54%);
+      background: #ffd33d;
+      filter: drop-shadow(0 0 8px rgba(255, 211, 61, 0.5));
+    }
+
+    .mini-weather-icon.fog,
+    .mini-weather-icon.wind {
+      border-radius: 8px;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .mini-weather-icon.fog::before,
+    .mini-weather-icon.wind::before {
+      inset: 2px 0;
+      background: linear-gradient(var(--cream-soft), var(--cream-soft)) 0 1px / 18px 2px no-repeat, linear-gradient(var(--cream-soft), var(--cream-soft)) 4px 7px / 14px 2px no-repeat, linear-gradient(var(--cream-soft), var(--cream-soft)) 0 13px / 18px 2px no-repeat;
+      border-radius: 999px;
+    }
+
+    .mini-weather-icon.wind::before {
+      background: linear-gradient(#6bd7ff, #6bd7ff) 0 1px / 18px 2px no-repeat, linear-gradient(#6bd7ff, #6bd7ff) 5px 7px / 13px 2px no-repeat, linear-gradient(#6bd7ff, #6bd7ff) 0 13px / 14px 2px no-repeat;
+    }
+
+    .mini-weather-icon.heat {
+      --mini-weather-main: #ff7a45;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+    }
+
+    .forecast-summary {
+      display: grid;
+      gap: 5px;
+      padding: 12px 13px;
+      border-radius: 18px;
+      color: var(--weather-accent-ink, var(--ink));
+      background: var(--weather-accent, var(--amber));
+      box-shadow: inset 0 -18px 34px rgba(255, 255, 255, 0.12);
+    }
+
+    .forecast-summary span {
+      color: color-mix(in srgb, var(--weather-accent-ink, var(--ink)) 70%, transparent);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .forecast-summary b {
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .forecast-now {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px;
+      border: 1px solid color-mix(in srgb, var(--weather-accent, var(--amber)) 45%, transparent);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--weather-accent, var(--amber)) 18%, transparent), transparent 5rem),
+        rgba(32, 40, 51, 0.54);
+    }
+
+    .forecast-now-main,
+    .forecast-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .forecast-now .mini-weather-icon {
+      transform: scale(1.2);
+      transform-origin: center;
+    }
+
+    .forecast-now span,
+    .forecast-row span {
+      display: block;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .forecast-now b,
+    .forecast-row b {
+      display: block;
+      margin-top: 3px;
+      font-size: 14px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .forecast-now strong {
+      flex: none;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 11px;
+      border-radius: 999px;
+      color: var(--weather-accent-ink, var(--ink));
+      background: var(--weather-accent, var(--amber));
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .forecast-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .forecast-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 60px;
+      padding: 10px;
+      border-radius: 17px;
+      background: rgba(32, 40, 51, 0.56);
+    }
+
+    .forecast-side {
+      text-align: right;
+    }
+
+    .forecast-side strong {
+      display: block;
+      margin-top: 4px;
+      color: var(--cream);
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .map-panel {
+      position: relative;
+      height: 500px;
+      border: 1px solid var(--cream-line);
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        linear-gradient(35deg, transparent 0 44%, rgba(245, 234, 215, 0.1) 45% 46%, transparent 47%),
+        linear-gradient(120deg, rgba(255, 211, 107, 0.12), transparent 28%),
+        radial-gradient(circle at 72% 27%, rgba(107, 215, 255, 0.2), transparent 6rem),
+        rgba(245, 234, 215, 0.07);
+    }
+
+    .map-road,
+    .map-road::before,
+    .map-road::after {
+      position: absolute;
+      content: "";
+      border-radius: 999px;
+      background: rgba(245, 234, 215, 0.18);
+      transform-origin: left center;
+    }
+
+    .map-road {
+      left: 24px;
+      top: 126px;
+      width: 330px;
+      height: 7px;
+      transform: rotate(22deg);
+    }
+
+    .map-road::before {
+      left: 64px;
+      top: 74px;
+      width: 250px;
+      height: 6px;
+      transform: rotate(-74deg);
+    }
+
+    .map-road::after {
+      left: -10px;
+      top: 206px;
+      width: 310px;
+      height: 6px;
+      transform: rotate(-38deg);
+    }
+
+    .rain-zone {
+      position: absolute;
+      border-radius: 46% 54% 52% 48%;
+      background: rgba(107, 215, 255, 0.22);
+      filter: blur(1px);
+    }
+
+    .pin {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50% 50% 50% 10px;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: var(--amber);
+      box-shadow: 0 15px 28px rgba(0, 0, 0, 0.26);
+      transform: rotate(-45deg);
+      font-weight: 950;
+    }
+
+    .pin span {
+      transform: rotate(45deg);
+    }
+
+    .map-sheet {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      padding: 16px;
+      border: 1px solid var(--cream-line);
+      border-radius: 24px;
+      background: rgba(32, 40, 51, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    .map-sheet h2 {
+      margin: 10px 0 6px;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .map-sheet p {
+      margin: 0;
+      color: var(--cream-soft);
+      font-size: 12px;
+      line-height: 1.42;
+      font-weight: 760;
+    }
+
+    .report-request {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid var(--cream-line);
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 88% 24%, rgba(255, 122, 138, 0.18), transparent 7rem),
+        rgba(245, 234, 215, 0.07);
+    }
+
+    .report-request h2 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.05;
+      letter-spacing: 0;
+      word-break: keep-all;
+    }
+
+    .report-guide {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .report-step {
+      min-height: 66px;
+      padding: 10px;
+      border: 1px solid var(--cream-line);
+      border-radius: 17px;
+      background: rgba(32, 40, 51, 0.5);
+    }
+
+    .report-step span {
+      display: block;
+      color: var(--cream-soft);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .report-step b {
+      display: block;
+      margin-top: 5px;
+      font-size: 13px;
+      line-height: 1.18;
+      word-break: keep-all;
+    }
+
+    .request-form {
+      display: grid;
+      grid-template-columns: 1fr 74px;
+      gap: 8px;
+    }
+
+    .request-form input {
+      height: 42px;
+      min-width: 0;
+      padding: 0 13px;
+      border: 1px solid var(--cream-line);
+      border-radius: 15px;
+      color: var(--cream);
+      outline: 0;
+      background: rgba(32, 40, 51, 0.6);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .request-form button,
+    .reply-box button {
+      border: 0;
+      border-radius: 15px;
+      color: var(--ink);
+      background: var(--amber);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .request-list,
+    .live-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .request-item,
+    .live-item {
+      border: 1px solid transparent;
+      border-radius: 19px;
+      padding: 12px;
+      color: var(--cream);
+      background: rgba(32, 40, 51, 0.62);
+      text-align: left;
+    }
+
+    .request-item.is-selected {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px rgba(255, 122, 138, 0.16);
+    }
+
+    .request-item b,
+    .live-item b {
+      display: block;
+      font-size: 13px;
+      line-height: 1.24;
+    }
+
+    .request-item span,
+    .live-item span {
+      display: block;
+      margin-top: 5px;
+      color: var(--cream-soft);
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .reply-box {
+      display: none;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 122, 138, 0.34);
+      border-radius: 20px;
+      background: rgba(255, 122, 138, 0.08);
+    }
+
+    .reply-box.active {
+      display: grid;
+    }
+
+    .reply-box textarea {
+      width: 100%;
+      min-height: 72px;
+      resize: none;
+      padding: 12px;
+      border: 1px solid var(--cream-line);
+      border-radius: 16px;
+      color: var(--cream);
+      outline: 0;
+      background: rgba(32, 40, 51, 0.62);
+      font-size: 12px;
+      font-weight: 780;
+      line-height: 1.4;
+    }
+
+    .reply-box button {
+      min-height: 40px;
+    }
+
+    .compare-card {
+      border: 1px solid var(--cream-line);
+      border-radius: 26px;
+      overflow: hidden;
+      background: rgba(245, 234, 215, 0.07);
+    }
+
+    .compare-top {
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      background:
+        radial-gradient(circle at 80% 20%, rgba(107, 215, 255, 0.2), transparent 8rem),
+        rgba(32, 40, 51, 0.52);
+    }
+
+    .compare-top h2 {
+      margin: 0;
+      font-size: 27px;
+      line-height: 1;
+      letter-spacing: 0;
+      word-break: keep-all;
+    }
+
+    .compare-snapshot {
+      display: grid;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .forecast-service-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 62px;
+      padding: 10px;
+      border: 1px solid var(--cream-line);
+      border-radius: 18px;
+      background: rgba(32, 40, 51, 0.58);
+    }
+
+    .forecast-service-card > div {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .forecast-service-card span {
+      color: var(--cream-soft);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .forecast-service-card b {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .forecast-service-card strong {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 9px;
+      border-radius: 999px;
+      color: var(--ink);
+      background: var(--cream);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .forecast-service-card strong .mini-weather-icon {
+      transform: scale(0.78);
+      transform-origin: center;
+      margin: -2px -2px -2px -3px;
+    }
+
+    .forecast-service-card strong span {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .compare-mode {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+      padding: 10px;
+      border-top: 1px solid var(--cream-line);
+      background: rgba(32, 40, 51, 0.34);
+    }
+
+    .compare-mode button {
+      height: 36px;
+      border: 1px solid var(--cream-line);
+      border-radius: 14px;
+      color: var(--cream-soft);
+      background: rgba(245, 234, 215, 0.06);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .compare-mode button.active {
+      color: var(--ink);
+      border-color: var(--cream);
+      background: var(--cream);
+    }
+
+    .compare-panel {
+      display: none;
+    }
+
+    .compare-panel.active {
+      display: block;
+    }
+
+    .compare-panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--cream-line);
+      background: rgba(32, 40, 51, 0.46);
+    }
+
+    .compare-panel-title b {
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .compare-panel-title span {
+      color: var(--cream-soft);
+      font-size: 10px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .compare-table {
+      display: grid;
+    }
+
+    .compare-row {
+      display: grid;
+      grid-template-columns: 52px repeat(3, 1fr);
+      min-height: 58px;
+      border-top: 1px solid var(--cream-line);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .compare-row > div {
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      padding: 9px 8px;
+      border-left: 1px solid var(--cream-line);
+    }
+
+    .compare-row > div:first-child {
+      border-left: 0;
+      color: var(--cream-soft);
+    }
+
+    .compare-row strong {
+      font-size: 13px;
+    }
+
+    .compare-row span {
+      color: var(--cream-soft);
+      font-size: 10px;
+    }
+
+    .compare-weather {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .compare-weather .mini-weather-icon {
+      transform: scale(0.72);
+      transform-origin: center;
+      margin: -2px -3px -2px -2px;
+    }
+
+    .compare-weather .weather-label {
+      color: var(--cream);
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.1;
+    }
+
+    .compare-service {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .compare-service .service-logo {
+      flex: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      padding: 3px;
+      display: grid;
+      place-items: center;
+    }
+
+    .source-orbit {
+      height: 194px;
+      position: relative;
+      display: grid;
+      place-items: center;
+      margin-top: 6px;
+    }
+
+    .source-orbit .ring.r1 {
+      width: 178px;
+      height: 178px;
+    }
+
+    .source-orbit .ring.r2 {
+      width: 118px;
+      height: 118px;
+    }
+
+    .source-node {
+      position: absolute;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background: var(--cream);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .source-node.service-logo {
+      padding: 8px;
+    }
+
+    .source-node.service-logo span {
+      font-size: 12px;
+    }
+
+    .source-node.main {
+      width: 86px;
+      height: 86px;
+      background: var(--amber);
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 15px;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid var(--cream-line);
+      border-radius: 24px;
+      background: rgba(23, 29, 38, 0.86);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+    }
+
+    .nav-btn {
+      height: 42px;
+      border: 0;
+      border-radius: 16px;
+      color: var(--cream-soft);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .nav-btn.active {
+      color: var(--ink);
+      background: var(--cream);
+    }
+
+    .side {
+      color: var(--cream);
+    }
+
+    .side-kicker {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 13px;
+      border: 1px solid var(--cream-line);
+      border-radius: 999px;
+      color: var(--cream-soft);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .side h1 {
+      margin: 20px 0 0;
+      max-width: 620px;
+      font-size: clamp(46px, 6vw, 86px);
+      line-height: 0.92;
+      letter-spacing: 0;
+    }
+
+    .side p {
+      max-width: 560px;
+      margin: 22px 0 0;
+      color: var(--cream-soft);
+      font-size: 17px;
+      line-height: 1.6;
+      font-weight: 720;
+    }
+
+    .direction-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 600px;
+      margin-top: 28px;
+    }
+
+    .direction {
+      min-height: 116px;
+      padding: 16px;
+      border: 1px solid var(--cream-line);
+      border-radius: 24px;
+      background: rgba(245, 234, 215, 0.07);
+    }
+
+    .direction b {
+      display: block;
+      font-size: 15px;
+    }
+
+    .direction span {
+      display: block;
+      margin-top: 8px;
+      color: var(--cream-soft);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 720;
+    }
+
+    @media (max-width: 960px) {
+      .showcase {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+
+      .side {
+        order: -1;
+      }
+
+      .side h1 {
+        font-size: 45px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        background: var(--bg);
+      }
+
+      .showcase {
+        display: block;
+        padding: 0;
+      }
+
+      .phone {
+        width: 100%;
+        min-height: 100vh;
+        aspect-ratio: auto;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .side {
+        display: none;
+      }
+
+      .hero-summary h1 {
+        font-size: 33px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="showcase">
+    <section class="phone" aria-label="웨더체크 기상 나침반 목업">
+      <div class="status">
+        <span>9:41</span>
+        <span>5G</span>
+      </div>
+
+      <div class="screen">
+        <header class="app-head">
+          <div class="brand-row">
+            <div class="brand">
+              <div class="brand-mark"></div>
+              <div>
+                <strong>웨더체크</strong>
+                <span id="screenSub">기상 나침반 판정</span>
+              </div>
+            </div>
+            <button class="refresh-pill" id="refreshWeatherButton" type="button" aria-label="날씨 다시 갱신">
+              <span class="refresh-icon" aria-hidden="true">↻</span>
+            </button>
+          </div>
+          <form class="question" id="questionForm">
+            <input id="questionInput" value="" placeholder="잠실운동장 지금 비 와?" />
+            <button type="submit">↗</button>
+          </form>
+        </header>
+
+        <div class="content">
+          <section class="view active" data-view="home">
+            <div class="weather-switch" aria-label="날씨 상태별 판정카드 보기">
+              <button class="active" type="button" data-weather-option="sunny">맑음</button>
+              <button type="button" data-weather-option="cloudy">구름</button>
+              <button type="button" data-weather-option="overcast">흐림</button>
+              <button type="button" data-weather-option="rain">비</button>
+              <button type="button" data-weather-option="shower">소나기</button>
+              <button type="button" data-weather-option="snow">눈</button>
+              <button type="button" data-weather-option="thunder">번개</button>
+              <button type="button" data-weather-option="fog">안개</button>
+              <button type="button" data-weather-option="wind">강풍</button>
+              <button type="button" data-weather-option="heat">폭염</button>
+            </div>
+            <div class="hero-card weather-sunny" id="weatherDecisionCard">
+              <div class="meta-row">
+                <span class="chip amber">현재 위치 · 송파구</span>
+                <span class="chip">3분 전 갱신</span>
+              </div>
+
+              <div class="compass" aria-hidden="true">
+                <div class="ring r1"></div>
+                <div class="ring r2"></div>
+                <div class="ring r3"></div>
+                <div class="needle"></div>
+                <div class="weather-glyph"></div>
+                <div class="center-answer">
+                  <div>
+                    <span>판정</span>
+                    <b>비<br />없음</b>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hero-summary">
+                <div>
+                  <h1>현재는 비 안 오는 쪽이 우세해요</h1>
+                  <p>기상청, Yr.no, Windy와 반경 1.2km 현장 제보를 함께 본 결과입니다.</p>
+                </div>
+                <div class="big-temp"><span class="temp-value">24</span><span class="temp-unit">°C</span></div>
+              </div>
+
+              <div class="quick-stats" aria-label="판정 근거 요약">
+                <div class="mini-card"><span>판정</span><b>확실해요</b></div>
+                <div class="mini-card"><span>현장</span><b>근처 12명</b></div>
+                <div class="mini-card"><span>신호</span><b>비 약함</b></div>
+              </div>
+            </div>
+
+            <section class="local-report" aria-labelledby="localReportTitle">
+              <div class="local-report-head">
+                <div>
+                  <h2 id="localReportTitle">실제 날씨는요</h2>
+                  <p>현재 위치 날씨를 한줄로 남기면 생생날씨특파원에 바로 올라가요.</p>
+                </div>
+                <span class="chip amber">현위치</span>
+              </div>
+              <div class="local-options" aria-label="현위치 날씨 빠른 선택">
+                <button class="active" type="button" data-local-weather="비 안 와요">비 안 와요</button>
+                <button type="button" data-local-weather="비 와요">비 와요</button>
+                <button type="button" data-local-weather="소나기예요">소나기</button>
+                <button type="button" data-local-weather="눈 와요">눈</button>
+                <button type="button" data-local-weather="천둥 들려요">천둥</button>
+                <button type="button" data-local-weather="바람 강해요">강풍</button>
+              </div>
+              <form class="local-report-form" id="localReportForm">
+                <input id="localReportInput" placeholder="예: 바닥 말라있고 우산 안 써요" />
+                <button type="submit">올리기</button>
+              </form>
+              <p class="local-report-status" id="localReportStatus">최근 30분 제보와 함께 판정 근거에 반영됩니다.</p>
+            </section>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>왜 그렇게 판단했나요?</h2>
+                <button type="button" data-nav="compare">비교</button>
+              </div>
+              <div class="reason-summary" id="reasonSummary">
+                <b>예보와 현장 제보가 같은 방향이에요</b>
+                <span>세 예보 모두 비 신호가 있고, 근처 제보도 비가 온다는 쪽으로 모이고 있어요.</span>
+              </div>
+              <div class="evidence-list">
+                <div class="evidence">
+                  <div class="source-mark service-logo" title="기상청">
+                    <img src="assets/icon-kma.ico" alt="기상청 아이콘">
+                    <span>KMA</span>
+                  </div>
+                  <div><b>기상청</b><span>초단기 예보에서 강수 가능성이 올라왔어요.</span></div>
+                  <strong class="source-weather"><i class="mini-weather-icon rain"></i><span>19°</span></strong>
+                </div>
+                <div class="evidence">
+                  <div class="source-mark service-logo" title="Yr.no">
+                    <img src="assets/icon-yr.png" alt="Yr.no 아이콘">
+                    <span>Yr</span>
+                  </div>
+                  <div><b>Yr.no</b><span>같은 시간대에 약한 비 가능성을 보고 있어요.</span></div>
+                  <strong class="source-weather"><i class="mini-weather-icon rain"></i><span>18°</span></strong>
+                </div>
+                <div class="evidence">
+                  <div class="source-mark service-logo" title="Windy">
+                    <img src="assets/icon-windy.ico" alt="Windy 아이콘">
+                    <span>W</span>
+                  </div>
+                  <div><b>Windy</b><span>비구름이 잠실 쪽으로 걸쳐 있는 흐름이에요.</span></div>
+                  <strong class="source-weather"><i class="mini-weather-icon rain"></i><span>19°</span></strong>
+                </div>
+                <div class="evidence">
+                  <div class="source-mark" style="background:var(--amber);">현</div>
+                  <div><b>생생날씨특파원</b><span>최근 제보가 예보와 같은 쪽으로 들어오고 있어요.</span></div>
+                  <strong>비 제보 많음</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>다음 6시간 날씨</h2>
+                <button type="button">우산 판단</button>
+              </div>
+              <div class="timeline">
+                <div class="forecast-summary" id="forecastSummary">
+                  <span>핵심</span>
+                  <b>비 걱정은 낮고, 밤에는 흐려져요</b>
+                </div>
+                <div class="forecast-now" id="forecastNow">
+                  <div class="forecast-now-main">
+                    <i class="mini-weather-icon rain"></i>
+                    <div><span>지금~1시간</span><b>비가 이어져요</b></div>
+                  </div>
+                  <strong>우산 필요</strong>
+                </div>
+                <div class="forecast-list" id="forecastList">
+                  <div class="forecast-row">
+                    <div class="forecast-main">
+                      <i class="mini-weather-icon rain"></i>
+                      <div><span>15시</span><b>약한 비</b></div>
+                    </div>
+                    <div class="forecast-side"><span>19°</span><strong>계속</strong></div>
+                  </div>
+                  <div class="forecast-row">
+                    <div class="forecast-main">
+                      <i class="mini-weather-icon rain"></i>
+                      <div><span>18시</span><b>빗줄기 강해짐</b></div>
+                    </div>
+                    <div class="forecast-side"><span>18°</span><strong>주의</strong></div>
+                  </div>
+                  <div class="forecast-row">
+                    <div class="forecast-main">
+                      <i class="mini-weather-icon cloudy"></i>
+                      <div><span>21시</span><b>비 약해짐</b></div>
+                    </div>
+                    <div class="forecast-side"><span>18°</span><strong>재확인</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="view" data-view="map">
+            <div class="map-panel">
+              <div class="map-road"></div>
+              <div class="rain-zone" style="left:32px;top:164px;width:124px;height:82px;"></div>
+              <div class="rain-zone" style="right:30px;top:82px;width:104px;height:122px;background:rgba(255,191,102,.16);"></div>
+              <div class="pin" style="left:166px;top:210px;"><span>24</span></div>
+              <div class="pin" style="left:72px;top:326px;background:var(--sky);"><span>8</span></div>
+              <div class="pin" style="right:56px;top:134px;background:var(--coral);"><span>3</span></div>
+              <div class="map-sheet">
+                <span class="chip amber">잠실운동장 반경 1.2km</span>
+                <h2>주변 제보는 비 없음 쪽으로 모였어요</h2>
+                <p>핀 숫자는 최근 30분 제보 수입니다. 지도에서는 비구름 영역과 현장 제보 밀도를 같이 보여줍니다.</p>
+              </div>
+            </div>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>근처 현장</h2>
+                <button type="button" data-nav="report">제보</button>
+              </div>
+              <div class="evidence-list">
+                <div class="evidence"><div class="source-mark">잠</div><div><b>종합운동장역 2번 출구</b><span>방금 전 · 바닥 말라있음</span></div><strong>맑음</strong></div>
+                <div class="evidence"><div class="source-mark" style="background:var(--sky);">석</div><div><b>석촌호수 서호</b><span>8분 전 · 구름 많음</span></div><strong>흐림</strong></div>
+                <div class="evidence"><div class="source-mark" style="background:var(--amber);">삼</div><div><b>삼전동 사거리</b><span>12분 전 · 우산 든 사람 적음</span></div><strong>비 없음</strong></div>
+              </div>
+            </section>
+          </section>
+
+          <section class="view" data-view="report">
+            <div class="report-request">
+              <span class="chip amber">현장 제보</span>
+              <h2>사람에게 직접 묻고, 지금 본 날씨로 답해요</h2>
+              <div class="report-guide" aria-label="제보탭 흐름">
+                <div class="report-step"><span>요청</span><b>궁금한 장소를 올림</b></div>
+                <div class="report-step"><span>답변</span><b>근처 사람이 현장 확인</b></div>
+                <div class="report-step"><span>반영</span><b>판정과 지도에 반영</b></div>
+              </div>
+              <form class="request-form" id="requestForm">
+                <input id="requestInput" placeholder="예: 잠실야구장 1루쪽 지금 비 와요?" />
+                <button type="submit">요청</button>
+              </form>
+            </div>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>답변 기다리는 요청</h2>
+                <button type="button">근처순</button>
+              </div>
+              <div class="request-list" id="requestList">
+                <button class="request-item is-selected" type="button">
+                  <b>잠실운동장 지금 비 와요?</b>
+                  <span>320m · 현장 답변 4개 · 3분 전</span>
+                </button>
+                <button class="request-item" type="button">
+                  <b>석촌호수 산책 가능할까요?</b>
+                  <span>1.1km · 현장 답변 2개 · 9분 전</span>
+                </button>
+                <button class="request-item" type="button">
+                  <b>잠실새내역 쪽 천둥 소리 들리나요?</b>
+                  <span>850m · 답변 대기 · 11분 전</span>
+                </button>
+              </div>
+              <div class="reply-box active" id="replyBox">
+                <span class="eyebrow" id="replyTarget">잠실운동장 요청에 현장 답변하기</span>
+                <textarea placeholder="예: 3루 출입구 쪽은 아직 비 안 와요. 바닥도 말라있어요."></textarea>
+                <button type="button" id="replySubmit">선택한 요청에 답변</button>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>방금 올라온 현장 글</h2>
+                <button type="button" data-nav="map">지도에서 보기</button>
+              </div>
+              <div class="live-list" id="liveList">
+                <div class="live-item"><b>종합운동장역 2번 출구</b><span>방금 · 바닥 말라있고 비 안 와요</span></div>
+                <div class="live-item"><b>잠실야구장 중앙 게이트</b><span>4분 전 · 구름은 많은데 우산은 안 폈어요</span></div>
+                <div class="live-item"><b>석촌호수 서호</b><span>8분 전 · 바람 약하고 산책 가능</span></div>
+              </div>
+            </section>
+          </section>
+
+          <section class="view" data-view="compare">
+            <div class="compare-card">
+              <div class="compare-top">
+                <span class="chip amber">예보 데이터</span>
+                <h2>기상청·Yr.no·Windy가 같은 시간을 어떻게 다르게 보는지 비교해요</h2>
+                <div class="compare-snapshot" aria-label="서비스별 현재 예보 요약">
+                  <div class="forecast-service-card">
+                    <span class="service-logo" title="기상청"><img src="assets/icon-kma.ico" alt="기상청 아이콘"><span>K</span></span>
+                    <div><span>기상청</span><b>흐림, 강수확률은 낮게 봐요</b></div>
+                    <strong><i class="mini-weather-icon overcast"></i><span>20%</span></strong>
+                  </div>
+                  <div class="forecast-service-card">
+                    <span class="service-logo" title="Yr.no"><img src="assets/icon-yr.png" alt="Yr.no 아이콘"><span>Yr</span></span>
+                    <div><span>Yr.no</span><b>강수량은 거의 없다고 봐요</b></div>
+                    <strong><i class="mini-weather-icon sunny"></i><span>0.1mm</span></strong>
+                  </div>
+                  <div class="forecast-service-card">
+                    <span class="service-logo" title="Windy"><img src="assets/icon-windy.ico" alt="Windy 아이콘"><span>W</span></span>
+                    <div><span>Windy</span><b>비구름은 약하고 북동쪽으로 벗어나요</b></div>
+                    <strong><i class="mini-weather-icon cloudy"></i><span>약함</span></strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="compare-mode" aria-label="예보 비교 보기 방식">
+                <button class="active" type="button" data-compare-mode="hourly">시간별</button>
+                <button type="button" data-compare-mode="daily">날짜별</button>
+              </div>
+
+              <div class="compare-panel active" data-compare-panel="hourly">
+                <div class="compare-panel-title">
+                  <b>시간대별 예보 비교</b>
+                  <span>오늘 · 잠실운동장</span>
+                </div>
+                <div class="compare-table">
+                  <div class="compare-row">
+                    <div>시간</div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="기상청"><img src="assets/icon-kma.ico" alt="기상청 아이콘"><span>K</span></span>
+                        기상청
+                      </strong>
+                      <span>KMA</span>
+                    </div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="Yr.no"><img src="assets/icon-yr.png" alt="Yr.no 아이콘"><span>Yr</span></span>
+                        Yr.no
+                      </strong>
+                      <span>Norway</span>
+                    </div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="Windy"><img src="assets/icon-windy.ico" alt="Windy 아이콘"><span>W</span></span>
+                        Windy
+                      </strong>
+                      <span>ECMWF</span>
+                    </div>
+                  </div>
+                  <div class="compare-row">
+                    <div>지금</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>27° · 20%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon sunny"></i><span class="weather-label">비 없음</span></strong><span>26° · 0.1mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon cloudy"></i><span class="weather-label">구름 약함</span></strong><span>27° · 북동풍</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>15시</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>27° · 30%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>27° · 0.2mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon cloudy"></i><span class="weather-label">구름</span></strong><span>26° · 동풍</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>18시</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon shower"></i><span class="weather-label">소나기</span></strong><span>25° · 50%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">약한 비</span></strong><span>24° · 0.8mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">비구름 접근</span></strong><span>25° · 남동</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>21시</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>24° · 40%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">비 약함</span></strong><span>23° · 0.4mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>24° · 약함</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="compare-panel" data-compare-panel="daily">
+                <div class="compare-panel-title">
+                  <b>날짜별 예보 비교</b>
+                  <span>5일 전망</span>
+                </div>
+                <div class="compare-table">
+                  <div class="compare-row">
+                    <div>날짜</div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="기상청"><img src="assets/icon-kma.ico" alt="기상청 아이콘"><span>K</span></span>
+                        기상청
+                      </strong>
+                      <span>KMA</span>
+                    </div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="Yr.no"><img src="assets/icon-yr.png" alt="Yr.no 아이콘"><span>Yr</span></span>
+                        Yr.no
+                      </strong>
+                      <span>Norway</span>
+                    </div>
+                    <div>
+                      <strong class="compare-service">
+                        <span class="service-logo" title="Windy"><img src="assets/icon-windy.ico" alt="Windy 아이콘"><span>W</span></span>
+                        Windy
+                      </strong>
+                      <span>ECMWF</span>
+                    </div>
+                  </div>
+                  <div class="compare-row">
+                    <div>오늘</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>24/28° · 30%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon cloudy"></i><span class="weather-label">구름</span></strong><span>23/27° · 0.3mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon cloudy"></i><span class="weather-label">구름 약함</span></strong><span>24/28° · 약함</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>내일</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">비</span></strong><span>23/26° · 60%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">약한 비</span></strong><span>22/25° · 1.4mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon rain"></i><span class="weather-label">비구름</span></strong><span>23/26° · 통과</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>모레</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon sunny"></i><span class="weather-label">맑음</span></strong><span>24/30° · 10%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon sunny"></i><span class="weather-label">맑음</span></strong><span>23/29° · 0mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon sunny"></i><span class="weather-label">맑음</span></strong><span>24/30° · 약함</span></div>
+                  </div>
+                  <div class="compare-row">
+                    <div>주말</div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon shower"></i><span class="weather-label">소나기</span></strong><span>25/31° · 45%</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon overcast"></i><span class="weather-label">흐림</span></strong><span>24/30° · 0.6mm</span></div>
+                    <div><strong class="compare-weather"><i class="mini-weather-icon thunder"></i><span class="weather-label">대기 불안정</span></strong><span>25/31° · 국지</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <section class="section">
+              <div class="section-head">
+                <h2>서비스별 차이</h2>
+                <button type="button" data-nav="home">판정</button>
+              </div>
+              <div class="evidence-list">
+                <div class="evidence"><div class="source-mark service-logo" title="기상청"><img src="assets/icon-kma.ico" alt="기상청 아이콘"><span>K</span></div><div><b>기상청</b><span>강수확률은 18시에 가장 높지만 현재 강수는 낮게 봐요.</span></div><strong>확률 중심</strong></div>
+                <div class="evidence"><div class="source-mark service-logo" title="Yr.no"><img src="assets/icon-yr.png" alt="Yr.no 아이콘"><span>Yr</span></div><div><b>Yr.no</b><span>강수량 자체는 작게 잡아 짧은 약한 비 가능성에 가까워요.</span></div><strong>강수량 중심</strong></div>
+                <div class="evidence"><div class="source-mark service-logo" title="Windy"><img src="assets/icon-windy.ico" alt="Windy 아이콘"><span>W</span></div><div><b>Windy</b><span>비구름 이동 방향은 보이지만 중심은 잠실을 살짝 벗어나요.</span></div><strong>구름 흐름</strong></div>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <nav class="bottom-nav" aria-label="하단 탭">
+          <button class="nav-btn active" type="button" data-nav="home">판정</button>
+          <button class="nav-btn" type="button" data-nav="map">지도</button>
+          <button class="nav-btn" type="button" data-nav="report">제보</button>
+          <button class="nav-btn" type="button" data-nav="compare">비교</button>
+        </nav>
+      </div>
+    </section>
+
+    <aside class="side">
+      <span class="side-kicker">9번 시안 확장 목업</span>
+      <h1>기상 나침반<br />전체 앱 톤</h1>
+      <p>첫 화면의 원형 계기판 느낌을 앱 전체로 밀어본 시안입니다. 판정은 중앙 나침반, 근거는 궤도와 표, 지도는 핀과 강수 영역, 제보는 어두운 관제 패널처럼 이어집니다.</p>
+      <div class="direction-grid">
+        <div class="direction">
+          <b>강점</b>
+          <span>일반 날씨앱과 다르게 “판정 도구”라는 인상이 강합니다.</span>
+        </div>
+        <div class="direction">
+          <b>주의점</b>
+          <span>너무 무거워 보일 수 있어 실제 서비스에서는 밝은 상태도 필요합니다.</span>
+        </div>
+        <div class="direction">
+          <b>잘 맞는 기능</b>
+          <span>예보 비교, 확신도, 현장 제보처럼 근거를 보여주는 화면과 궁합이 좋습니다.</span>
+        </div>
+        <div class="direction">
+          <b>다음 판단</b>
+          <span>이 톤이 마음에 들면 홈 화면을 더 정교하게 다듬고, 반대로 답답하면 밝은 변형을 만들면 됩니다.</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const views = [...document.querySelectorAll('.view')];
+    const navButtons = [...document.querySelectorAll('[data-nav]')];
+    const screenSub = document.getElementById('screenSub');
+    const labels = {
+      home: '기상 나침반 판정',
+      map: '주변 제보 지도',
+      report: '현장 제보',
+      compare: '예보 데이터 비교'
+    };
+
+    function showView(name) {
+      views.forEach((view) => {
+        view.classList.toggle('active', view.dataset.view === name);
+      });
+
+      document.querySelectorAll('.nav-btn').forEach((button) => {
+        button.classList.toggle('active', button.dataset.nav === name);
+      });
+
+      screenSub.textContent = labels[name] || labels.home;
+      const content = document.querySelector('.content');
+      if (content) content.scrollTop = 0;
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+
+    navButtons.forEach((button) => {
+      button.addEventListener('click', () => showView(button.dataset.nav));
+    });
+
+    document.getElementById('questionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      showView('home');
+    });
+
+    const compareModeButtons = [...document.querySelectorAll('[data-compare-mode]')];
+    const comparePanels = [...document.querySelectorAll('[data-compare-panel]')];
+
+    compareModeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.compareMode;
+        compareModeButtons.forEach((modeButton) => {
+          modeButton.classList.toggle('active', modeButton.dataset.compareMode === mode);
+        });
+        comparePanels.forEach((panel) => {
+          panel.classList.toggle('active', panel.dataset.comparePanel === mode);
+        });
+      });
+    });
+
+    const localWeatherButtons = [...document.querySelectorAll('[data-local-weather]')];
+    const localReportForm = document.getElementById('localReportForm');
+    const localReportInput = document.getElementById('localReportInput');
+    const localReportStatus = document.getElementById('localReportStatus');
+    let selectedLocalWeather = localWeatherButtons[0]?.dataset.localWeather || '비 안 와요';
+    let localReportCount = 14;
+
+    localWeatherButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        selectedLocalWeather = button.dataset.localWeather;
+        localWeatherButtons.forEach((option) => option.classList.toggle('active', option === button));
+        if (localReportInput && !localReportInput.value.trim()) {
+          localReportInput.placeholder = `${selectedLocalWeather}. 자세히 한줄 남겨주세요`;
+        }
+      });
+    });
+
+    localReportForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = localReportInput.value.trim() || selectedLocalWeather;
+      const live = document.createElement('div');
+      const title = document.createElement('b');
+      const detail = document.createElement('span');
+      live.className = 'live-item';
+      title.textContent = '내 현재 위치';
+      detail.textContent = `방금 · ${text}`;
+      live.append(title, detail);
+      document.getElementById('liveList')?.prepend(live);
+      localReportCount += 1;
+      const reportCountNode = document.querySelectorAll('.quick-stats .mini-card b')[1];
+      if (reportCountNode) reportCountNode.textContent = `근처 ${localReportCount}명`;
+      if (localReportStatus) localReportStatus.textContent = '방금 제보가 생생날씨특파원에 올라갔어요.';
+      localReportInput.value = '';
+    });
+
+    const requestItems = [...document.querySelectorAll('.request-item')];
+    const replyTarget = document.getElementById('replyTarget');
+
+    requestItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        requestItems.forEach((requestItem) => requestItem.classList.remove('is-selected'));
+        item.classList.add('is-selected');
+        replyTarget.textContent = `${item.querySelector('b').textContent} 요청에 현장 답변하기`;
+        document.getElementById('replyBox').classList.add('active');
+      });
+    });
+
+    document.getElementById('requestForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input = document.getElementById('requestInput');
+      const text = input.value.trim() || '잠실운동장 지금 비 와요?';
+      const button = document.createElement('button');
+      button.className = 'request-item';
+      button.type = 'button';
+      button.innerHTML = `<b>${text}</b><span>내 요청 · 답변 대기 · 방금</span>`;
+      document.getElementById('requestList').prepend(button);
+      button.click();
+      input.value = '';
+    });
+
+    document.getElementById('replySubmit').addEventListener('click', () => {
+      const live = document.createElement('div');
+      live.className = 'live-item';
+      live.innerHTML = '<b>내 제보가 반영됐어요</b><span>방금 · 현재 비 안 와요. 바닥도 말라있어요.</span>';
+      document.getElementById('liveList').prepend(live);
+      showView('report');
+    });
+
+    const weatherStates = {
+      sunny: {
+        className: 'weather-sunny',
+        accent: '#ffd36b',
+        accentInk: '#2b1408',
+        meta: '현재 위치 · 송파구',
+        verdict: '맑음',
+        title: '현재는 맑은 쪽이 우세해요',
+        summary: '예보 3곳과 현장 제보 모두 비 신호가 약합니다.',
+        temp: '27°',
+        stats: ['확실해요', '근처 14명', '비 약함'],
+        evidence: ['맑음', '비 없음', '맑음', '우세']
+      },
+      cloudy: {
+        className: 'weather-cloudy',
+        accent: '#ffb7a2',
+        accentInk: '#2a1712',
+        meta: '구름 많음 · 송파구',
+        verdict: '구름',
+        title: '구름은 많지만 비 신호는 약해요',
+        summary: '구름은 많지만 강수 신호와 현장 제보는 아직 약합니다.',
+        temp: '24°',
+        stats: ['대체로', '근처 11명', '비 약함'],
+        evidence: ['흐림', '약함', '구름', '우세']
+      },
+      overcast: {
+        className: 'weather-overcast',
+        accent: '#b7b3c6',
+        accentInk: '#1b1b22',
+        meta: '흐림 · 송파구',
+        verdict: '흐림',
+        title: '하늘은 흐리지만 비는 애매해요',
+        summary: '국내외 예보는 흐림으로 모이고, 현장 제보는 비 없음이 조금 많습니다.',
+        temp: '22°',
+        stats: ['애매해요', '근처 9명', '비 낮음'],
+        evidence: ['흐림', '흐림', '구름', '흐림']
+      },
+      rain: {
+        className: 'weather-rain',
+        accent: '#4aa3ff',
+        accentInk: '#061729',
+        meta: '비 · 송파구',
+        verdict: '비',
+        title: '현재는 비 오는 쪽이 우세해요',
+        summary: '세 예보의 강수 신호와 근처 제보가 같은 방향으로 모였습니다.',
+        temp: '19°',
+        stats: ['확실해요', '근처 18명', '강수 강함'],
+        evidence: ['비', '비', '비구름', '우세']
+      },
+      shower: {
+        className: 'weather-shower',
+        accent: '#ffbf66',
+        accentInk: '#221405',
+        meta: '소나기 가능 · 송파구',
+        verdict: '소나기',
+        title: '짧은 소나기 가능성이 있어요',
+        summary: '강수 구름은 작지만 이동 속도가 빨라 30분 안팎 변동성이 큽니다.',
+        temp: '21°',
+        stats: ['애매해요', '근처 7명', '소나기 가능'],
+        evidence: ['소나기', '약한 비', '비구름', '대기']
+      },
+      snow: {
+        className: 'weather-snow',
+        accent: '#dff6ff',
+        accentInk: '#15222c',
+        meta: '눈 · 송파구',
+        verdict: '눈',
+        title: '현재는 눈 오는 쪽이 우세해요',
+        summary: '기온이 낮고 습도가 높아 비보다 눈 제보가 더 많이 잡힙니다.',
+        temp: '-1°',
+        stats: ['확실해요', '근처 6명', '눈 가능'],
+        evidence: ['눈', '눈', '습설', '주의']
+      },
+      thunder: {
+        className: 'weather-thunder',
+        accent: '#ffd33d',
+        accentInk: '#201200',
+        meta: '천둥번개 · 송파구',
+        verdict: '번개',
+        title: '천둥번개 동반 비 신호가 강해요',
+        summary: '번개 탐지와 강한 강수 예보가 겹쳐 야외 활동 주의가 필요합니다.',
+        temp: '20°',
+        stats: ['주의', '근처 5명', '번개 강함'],
+        evidence: ['뇌우', '강한 비', '번개', '경고']
+      },
+      fog: {
+        className: 'weather-fog',
+        accent: '#d2c9c2',
+        accentInk: '#2d2c31',
+        meta: '안개 · 송파구',
+        verdict: '안개',
+        title: '안개와 낮은 시야가 우세해요',
+        summary: '습도와 풍속 조건이 안개에 유리하고, 현장 제보도 시야 저하를 말합니다.',
+        temp: '15°',
+        stats: ['주의', '근처 4명', '시야 낮음'],
+        evidence: ['안개', '박무', '저시정', '주의']
+      },
+      wind: {
+        className: 'weather-wind',
+        accent: '#32d5c4',
+        accentInk: '#041b18',
+        meta: '강풍 · 송파구',
+        verdict: '강풍',
+        title: '바람이 강한 쪽으로 판단돼요',
+        summary: '순간풍속 예보와 체감 제보가 함께 올라와 야외 시설물 주의가 필요합니다.',
+        temp: '18°',
+        stats: ['주의', '근처 8명', '9m/s 강풍'],
+        evidence: ['강풍', '돌풍', '바람', '주의']
+      },
+      heat: {
+        className: 'weather-heat',
+        accent: '#ff6f45',
+        accentInk: '#2b1005',
+        meta: '폭염 · 송파구',
+        verdict: '폭염',
+        title: '체감 더위가 강한 상태예요',
+        summary: '기온과 습도가 함께 높고, 현장 제보도 그늘 밖 체감 더위를 말합니다.',
+        temp: '34°',
+        stats: ['주의', '근처 12명', '체감 강함'],
+        evidence: ['폭염', '고온', '열감', '주의']
+      }
+    };
+    const reasonCopy = {
+      sunny: {
+        title: '비 신호가 약하다는 근거가 더 많아요',
+        text: '세 예보 모두 강한 강수 신호가 없고, 근처 제보도 비 없음 쪽으로 모이고 있어요.',
+        details: [
+          '흐림은 있지만 강수확률은 낮게 잡혀요.',
+          '예상 강수량이 거의 없거나 매우 적어요.',
+          '비구름이 약하거나 잠실을 벗어나 있어요.',
+          '근처 제보 대부분이 비 안 옴을 말해요.'
+        ],
+        badges: ['낮은 강수', '거의 없음', '구름 약함', '비 없음 많음']
+      },
+      cloudy: {
+        title: '비보다 구름 쪽 근거가 더 많아요',
+        text: '예보는 구름 많음으로 모이고, 현장 제보도 아직 비가 온다는 쪽은 약해요.',
+        details: [
+          '구름 많음으로 보지만 강수 신호는 약해요.',
+          '약한 비 가능성은 있으나 양이 작아요.',
+          '구름은 많지만 비구름 중심은 멀어요.',
+          '근처 제보는 비 없음 쪽이 조금 더 많아요.'
+        ],
+        badges: ['구름 우세', '약한 신호', '비구름 약함', '비 없음 많음']
+      },
+      overcast: {
+        title: '흐림은 맞지만 비 여부는 아직 갈려요',
+        text: '흐림 신호는 강하지만 비가 실제로 내리는지는 예보와 제보가 조금 갈립니다.',
+        details: [
+          '흐림으로 잡히지만 강수확률은 중간 수준이에요.',
+          '비 가능성은 낮거나 시간대별 차이가 있어요.',
+          '비구름보다 낮은 구름 신호가 더 커요.',
+          '현장 제보가 아직 충분히 모이지 않았어요.'
+        ],
+        badges: ['흐림', '비 낮음', '구름 강함', '제보 부족']
+      },
+      rain: {
+        title: '예보와 현장 제보가 같은 방향이에요',
+        text: '세 예보 모두 비 신호가 있고, 근처 제보도 비가 온다는 쪽으로 모이고 있어요.',
+        details: [
+          '초단기 예보에서 강수 가능성이 올라왔어요.',
+          '같은 시간대에 약한 비 가능성을 보고 있어요.',
+          '비구름이 잠실 쪽으로 걸쳐 있는 흐름이에요.',
+          '최근 제보가 예보와 같은 쪽으로 들어오고 있어요.'
+        ],
+        badges: ['예보 신호', '보조 근거', '구름 흐름', '비 제보 많음']
+      },
+      shower: {
+        title: '짧은 비 가능성은 있지만 변동성이 커요',
+        text: '소나기 구름이 작고 빠르게 움직여서 지금 위치에서는 제보가 더 중요해요.',
+        details: [
+          '짧은 강수 가능성이 일부 잡혀요.',
+          '강수량 예측은 작지만 시간 변동이 있어요.',
+          '좁은 비구름이 근처를 스쳐 지나갈 수 있어요.',
+          '현장 제보가 적어 더 모이면 판정이 바뀔 수 있어요.'
+        ],
+        badges: ['짧은 비', '변동 있음', '국지 구름', '제보 대기']
+      },
+      snow: {
+        title: '기온과 강수 신호가 눈 쪽으로 맞아요',
+        text: '기온이 낮고 강수 신호가 있어, 비보다 눈으로 볼 근거가 더 큽니다.',
+        details: [
+          '강수 신호와 낮은 기온이 함께 잡혀요.',
+          '눈 또는 진눈깨비 가능성을 보고 있어요.',
+          '찬 공기와 습한 구름대가 겹쳐 있어요.',
+          '근처 제보도 눈 또는 젖은 눈 쪽이에요.'
+        ],
+        badges: ['눈 신호', '낮은 기온', '습한 구름', '눈 제보 있음']
+      },
+      thunder: {
+        title: '위험 신호가 있어 주의 쪽으로 올렸어요',
+        text: '번개와 강한 강수 신호가 함께 잡히면 확신도보다 안전 판단이 먼저입니다.',
+        details: [
+          '뇌우 또는 강한 비 가능성이 보여요.',
+          '짧은 시간 강한 강수 신호가 있어요.',
+          '번개성 구름대가 가까운 쪽으로 잡혀요.',
+          '현장 제보는 적어도 위험 신호가 우선이에요.'
+        ],
+        badges: ['뇌우 가능', '강한 비', '번개 구름', '주의 우선']
+      },
+      fog: {
+        title: '시야가 낮아질 조건이 맞아요',
+        text: '습도, 바람, 현장 제보가 안개 또는 낮은 시야 쪽으로 같이 움직입니다.',
+        details: [
+          '습도와 기온 조건이 안개에 가까워요.',
+          '박무 또는 낮은 구름 가능성이 있어요.',
+          '바람이 약해 안개가 머물기 쉬워요.',
+          '현장 제보가 시야 저하를 말하고 있어요.'
+        ],
+        badges: ['안개 조건', '박무 가능', '바람 약함', '안개 제보']
+      },
+      wind: {
+        title: '바람 관련 신호가 안전 기준에 걸려요',
+        text: '예보와 체감 제보가 강풍 쪽으로 모이면 야외 활동 주의로 보여줍니다.',
+        details: [
+          '순간풍속이 평소보다 높게 잡혀요.',
+          '돌풍 가능성이 일부 시간대에 보여요.',
+          '바람 흐름이 넓게 이어지는 패턴이에요.',
+          '현장 제보도 바람이 강하다는 쪽이에요.'
+        ],
+        badges: ['강풍 신호', '돌풍 가능', '흐름 지속', '강풍 제보']
+      },
+      heat: {
+        title: '기온보다 체감 더위가 문제예요',
+        text: '높은 기온과 습도, 현장 체감 제보를 같이 보면 주의가 필요한 더위입니다.',
+        details: [
+          '기온이 높고 낮 동안 더 오를 수 있어요.',
+          '습도 때문에 체감온도가 더 높게 느껴져요.',
+          '바람이 약하면 열감이 오래 남을 수 있어요.',
+          '현장 제보도 그늘 밖 더위를 말해요.'
+        ],
+        badges: ['고온', '체감 상승', '열감 지속', '더위 제보']
+      }
+    };
+    const serviceWeatherByState = {
+      sunny: [
+        { icon: 'cloudy', temp: '27°' },
+        { icon: 'sunny', temp: '26°' },
+        { icon: 'sunny', temp: '27°' }
+      ],
+      cloudy: [
+        { icon: 'cloudy', temp: '24°' },
+        { icon: 'cloudy', temp: '23°' },
+        { icon: 'cloudy', temp: '24°' }
+      ],
+      overcast: [
+        { icon: 'overcast', temp: '22°' },
+        { icon: 'cloudy', temp: '22°' },
+        { icon: 'overcast', temp: '21°' }
+      ],
+      rain: [
+        { icon: 'rain', temp: '19°' },
+        { icon: 'rain', temp: '18°' },
+        { icon: 'rain', temp: '19°' }
+      ],
+      shower: [
+        { icon: 'shower', temp: '21°' },
+        { icon: 'rain', temp: '20°' },
+        { icon: 'shower', temp: '21°' }
+      ],
+      snow: [
+        { icon: 'snow', temp: '-1°' },
+        { icon: 'snow', temp: '-2°' },
+        { icon: 'snow', temp: '-1°' }
+      ],
+      thunder: [
+        { icon: 'thunder', temp: '20°' },
+        { icon: 'rain', temp: '19°' },
+        { icon: 'thunder', temp: '20°' }
+      ],
+      fog: [
+        { icon: 'fog', temp: '15°' },
+        { icon: 'fog', temp: '14°' },
+        { icon: 'fog', temp: '15°' }
+      ],
+      wind: [
+        { icon: 'wind', temp: '18°' },
+        { icon: 'cloudy', temp: '17°' },
+        { icon: 'wind', temp: '18°' }
+      ],
+      heat: [
+        { icon: 'heat', temp: '34°' },
+        { icon: 'sunny', temp: '33°' },
+        { icon: 'heat', temp: '35°' }
+      ]
+    };
+    const forecastByState = {
+      sunny: {
+        summary: '비 걱정은 낮고, 밤에는 흐려져요',
+        now: { icon: 'sunny', window: '지금~2시간', title: '비 걱정 적어요', action: '외출 무난' },
+        rows: [
+          { time: '15시', icon: 'sunny', title: '맑음 유지', temp: '27°', note: '가벼운 외출' },
+          { time: '18시', icon: 'cloudy', title: '구름 늘어남', temp: '26°', note: '우산 불필요' },
+          { time: '21시', icon: 'overcast', title: '흐려짐', temp: '24°', note: '비 낮음' }
+        ]
+      },
+      cloudy: {
+        summary: '구름은 많지만 당장 비 신호는 약해요',
+        now: { icon: 'cloudy', window: '지금~2시간', title: '구름이 많아요', action: '비 낮음' },
+        rows: [
+          { time: '15시', icon: 'cloudy', title: '구름 계속', temp: '24°', note: '외출 무난' },
+          { time: '18시', icon: 'overcast', title: '더 흐려짐', temp: '23°', note: '재확인' },
+          { time: '21시', icon: 'cloudy', title: '비 신호 약함', temp: '22°', note: '우산 선택' }
+        ]
+      },
+      overcast: {
+        summary: '흐림은 계속되고, 저녁 비 가능성은 다시 확인이 필요해요',
+        now: { icon: 'overcast', window: '지금~1시간', title: '흐림이 이어져요', action: '애매함' },
+        rows: [
+          { time: '15시', icon: 'overcast', title: '흐림 유지', temp: '22°', note: '비 낮음' },
+          { time: '18시', icon: 'rain', title: '비 가능성 생김', temp: '21°', note: '재확인' },
+          { time: '21시', icon: 'cloudy', title: '다시 약해짐', temp: '20°', note: '변동 있음' }
+        ]
+      },
+      rain: {
+        summary: '지금 비가 이어지고, 저녁에는 더 강해질 수 있어요',
+        now: { icon: 'rain', window: '지금~1시간', title: '비가 이어져요', action: '우산 필요' },
+        rows: [
+          { time: '15시', icon: 'rain', title: '약한 비', temp: '19°', note: '계속' },
+          { time: '18시', icon: 'rain', title: '빗줄기 강해짐', temp: '18°', note: '주의' },
+          { time: '21시', icon: 'cloudy', title: '비 약해짐', temp: '18°', note: '재확인' }
+        ]
+      },
+      shower: {
+        summary: '짧게 쏟아질 수 있어 위치 제보를 계속 봐야 해요',
+        now: { icon: 'shower', window: '30분 안', title: '소나기 가능', action: '변동 큼' },
+        rows: [
+          { time: '15시', icon: 'shower', title: '짧게 올 수 있음', temp: '21°', note: '대기' },
+          { time: '18시', icon: 'rain', title: '한때 강해짐', temp: '20°', note: '우산 필요' },
+          { time: '21시', icon: 'cloudy', title: '그친 뒤 흐림', temp: '20°', note: '완화' }
+        ]
+      },
+      snow: {
+        summary: '눈이 이어져 미끄럼과 도로 상태를 조심해야 해요',
+        now: { icon: 'snow', window: '지금~1시간', title: '눈이 이어져요', action: '미끄럼 주의' },
+        rows: [
+          { time: '15시', icon: 'snow', title: '눈 계속', temp: '-1°', note: '주의' },
+          { time: '18시', icon: 'snow', title: '습설 가능', temp: '-2°', note: '도로 주의' },
+          { time: '21시', icon: 'overcast', title: '눈 약해짐', temp: '-2°', note: '재확인' }
+        ]
+      },
+      thunder: {
+        summary: '번개성 비 신호가 있어 지금은 실내 대기가 좋아요',
+        now: { icon: 'thunder', window: '지금~1시간', title: '번개성 비 주의', action: '실내 권장' },
+        rows: [
+          { time: '15시', icon: 'thunder', title: '천둥번개 가능', temp: '20°', note: '주의' },
+          { time: '18시', icon: 'rain', title: '강한 비', temp: '19°', note: '외출 주의' },
+          { time: '21시', icon: 'rain', title: '비는 남음', temp: '19°', note: '재확인' }
+        ]
+      },
+      fog: {
+        summary: '시야가 낮은 시간이 이어져 이동할 때 조심해야 해요',
+        now: { icon: 'fog', window: '지금~2시간', title: '시야가 낮아요', action: '이동 주의' },
+        rows: [
+          { time: '15시', icon: 'fog', title: '안개 유지', temp: '15°', note: '서행' },
+          { time: '18시', icon: 'cloudy', title: '조금 걷힘', temp: '16°', note: '완화' },
+          { time: '21시', icon: 'fog', title: '다시 짙어질 수 있음', temp: '14°', note: '재확인' }
+        ]
+      },
+      wind: {
+        summary: '강한 바람이 이어져 야외 시설물과 이동을 조심해야 해요',
+        now: { icon: 'wind', window: '지금~2시간', title: '바람이 강해요', action: '시설물 주의' },
+        rows: [
+          { time: '15시', icon: 'wind', title: '강풍 계속', temp: '18°', note: '주의' },
+          { time: '18시', icon: 'wind', title: '돌풍 가능', temp: '17°', note: '야외 주의' },
+          { time: '21시', icon: 'cloudy', title: '조금 약해짐', temp: '16°', note: '완화' }
+        ]
+      },
+      heat: {
+        summary: '낮 동안 체감 더위가 강해 수분 보충이 필요해요',
+        now: { icon: 'heat', window: '낮 동안', title: '체감 더위 강함', action: '수분 보충' },
+        rows: [
+          { time: '15시', icon: 'heat', title: '가장 더움', temp: '34°', note: '주의' },
+          { time: '18시', icon: 'sunny', title: '열감 남음', temp: '32°', note: '그늘 권장' },
+          { time: '21시', icon: 'cloudy', title: '조금 내려감', temp: '29°', note: '완화' }
+        ]
+      }
+    };
+    const weatherClassNames = Object.values(weatherStates).map((state) => state.className);
+    const weatherCard = document.getElementById('weatherDecisionCard');
+    const weatherSwitch = document.querySelector('.weather-switch');
+    const forecastPanel = document.getElementById('forecastNow')?.closest('.section');
+    const weatherButtons = [...document.querySelectorAll('[data-weather-option]')];
+    const refreshWeatherButton = document.getElementById('refreshWeatherButton');
+    const updatedAtChip = weatherCard?.querySelector('.meta-row .chip:not(.amber)');
+
+    function applyWeatherState(name) {
+      const state = weatherStates[name] || weatherStates.sunny;
+      if (!weatherCard) return;
+
+      weatherCard.classList.remove(...weatherClassNames);
+      weatherCard.classList.add(state.className);
+
+      const metaChip = weatherCard.querySelector('.meta-row .chip.amber');
+      const verdict = weatherCard.querySelector('.center-answer b');
+      const title = weatherCard.querySelector('.hero-summary h1');
+      const summary = weatherCard.querySelector('.hero-summary p');
+      const temp = weatherCard.querySelector('.big-temp');
+
+      if (metaChip) metaChip.textContent = state.meta;
+      if (verdict) verdict.innerHTML = state.verdict.replace(/\s+/, '<br>');
+      if (title) title.textContent = state.title;
+      if (summary) summary.textContent = state.summary;
+      if (temp) {
+        const tempValue = temp.querySelector('.temp-value');
+        const normalizedTemp = state.temp.replace('°', '');
+        if (tempValue) tempValue.textContent = normalizedTemp;
+        else temp.textContent = normalizedTemp;
+      }
+
+      document.querySelectorAll('.quick-stats .mini-card b').forEach((node, index) => {
+        if (state.stats[index]) node.textContent = state.stats[index];
+      });
+      const reportCountMatch = state.stats[1]?.match(/\d+/);
+      if (reportCountMatch) localReportCount = Number(reportCountMatch[0]);
+
+      const reason = reasonCopy[name] || reasonCopy.sunny;
+      const reasonSummary = document.getElementById('reasonSummary');
+      if (reasonSummary) {
+        reasonSummary.querySelector('b').textContent = reason.title;
+        reasonSummary.querySelector('span').textContent = reason.text;
+      }
+      document.querySelectorAll('.view[data-view="home"] .evidence-list .evidence').forEach((row, index) => {
+        const detail = row.children[1]?.querySelector('span');
+        const badge = row.querySelector('strong');
+        const weatherChip = row.querySelector('.source-weather');
+        const serviceWeather = serviceWeatherByState[name] || serviceWeatherByState.sunny;
+        if (detail && reason.details[index]) detail.textContent = reason.details[index];
+        if (weatherChip && serviceWeather[index]) {
+          const icon = weatherChip.querySelector('.mini-weather-icon');
+          const temp = weatherChip.querySelector('span');
+          if (icon) icon.className = `mini-weather-icon ${serviceWeather[index].icon}`;
+          if (temp) temp.textContent = serviceWeather[index].temp;
+        } else if (badge && reason.badges[index]) {
+          badge.textContent = reason.badges[index];
+        }
+      });
+
+      const forecast = forecastByState[name] || forecastByState.sunny;
+      const forecastSummary = document.getElementById('forecastSummary');
+      if (forecastSummary) {
+        const summaryText = forecastSummary.querySelector('b');
+        if (summaryText) summaryText.textContent = forecast.summary;
+      }
+      const forecastNow = document.getElementById('forecastNow');
+      if (forecastNow) {
+        const nowIcon = forecastNow.querySelector('.mini-weather-icon');
+        const nowWindow = forecastNow.querySelector('span');
+        const nowTitle = forecastNow.querySelector('b');
+        const nowAction = forecastNow.querySelector('strong');
+        if (nowIcon) nowIcon.className = `mini-weather-icon ${forecast.now.icon}`;
+        if (nowWindow) nowWindow.textContent = forecast.now.window;
+        if (nowTitle) nowTitle.textContent = forecast.now.title;
+        if (nowAction) nowAction.textContent = forecast.now.action;
+      }
+      document.querySelectorAll('#forecastList .forecast-row').forEach((row, index) => {
+        const item = forecast.rows[index];
+        if (!item) return;
+        const rowIcon = row.querySelector('.forecast-main .mini-weather-icon');
+        const rowTime = row.querySelector('.forecast-main span');
+        const rowTitle = row.querySelector('.forecast-main b');
+        const rowTemp = row.querySelector('.forecast-side span');
+        const rowNote = row.querySelector('.forecast-side strong');
+        if (rowIcon) rowIcon.className = `mini-weather-icon ${item.icon}`;
+        if (rowTime) rowTime.textContent = item.time;
+        if (rowTitle) rowTitle.textContent = item.title;
+        if (rowTemp) rowTemp.textContent = item.temp;
+        if (rowNote) rowNote.textContent = item.note;
+      });
+
+      if (weatherSwitch) {
+        weatherSwitch.style.setProperty('--weather-accent', state.accent);
+        weatherSwitch.style.setProperty('--weather-accent-ink', state.accentInk);
+      }
+      if (forecastPanel) {
+        forecastPanel.style.setProperty('--weather-accent', state.accent);
+        forecastPanel.style.setProperty('--weather-accent-ink', state.accentInk);
+      }
+
+      weatherButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.weatherOption === name);
+      });
+    }
+
+    weatherButtons.forEach((button) => {
+      button.addEventListener('click', () => applyWeatherState(button.dataset.weatherOption));
+    });
+    refreshWeatherButton?.addEventListener('click', () => {
+      refreshWeatherButton.classList.remove('is-refreshing');
+      void refreshWeatherButton.offsetWidth;
+      refreshWeatherButton.classList.add('is-refreshing');
+      if (updatedAtChip) updatedAtChip.textContent = '방금 갱신';
+    });
+    applyWeatherState('sunny');
+
+    document.querySelectorAll('.service-logo img').forEach((img) => {
+      img.addEventListener('error', () => {
+        img.closest('.service-logo')?.classList.add('is-fallback');
+      });
+    });
+  </script>
+</body>
+</html>

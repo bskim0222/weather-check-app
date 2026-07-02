@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>웨더체크 반전톤 컬러 샘플</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255, 190, 102, 0.16), transparent 32rem),
+        radial-gradient(circle at 88% 10%, rgba(125, 212, 255, 0.12), transparent 34rem),
+        #151515;
+      color: #f5ead7;
+    }
+
+    .page {
+      width: min(1680px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding: 0 4px 28px;
+      border-bottom: 1px solid rgba(245, 234, 215, 0.18);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 72px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 780px;
+      margin: 16px 0 0;
+      color: rgba(245, 234, 215, 0.68);
+      font-size: 16px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .count {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid rgba(245, 234, 215, 0.2);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(245, 234, 215, 0.08);
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(302px, 1fr));
+      gap: 30px;
+      padding-top: 34px;
+    }
+
+    .phone {
+      position: relative;
+      width: min(100%, 350px);
+      aspect-ratio: 350 / 742;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 9px solid var(--frame);
+      border-radius: 38px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 50% 31%, color-mix(in srgb, var(--glow) 33%, transparent), transparent 11rem),
+        radial-gradient(circle at 8% 12%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 9rem),
+        radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--accent2) 18%, transparent), transparent 10rem),
+        var(--bg);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      z-index: 20;
+      width: 92px;
+      height: 25px;
+      border-radius: 999px;
+      background: var(--frame);
+      transform: translateX(-50%);
+    }
+
+    .status {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 15;
+      height: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 22px;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 52px 16px 84px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(from 30deg, var(--accent), rgba(255, 255, 255, 0.04), var(--accent2), rgba(255, 255, 255, 0.04), var(--accent));
+    }
+
+    .mark::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--center);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--bg) 78%, transparent);
+    }
+
+    .brand b {
+      display: block;
+      font-size: 16px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .temp {
+      flex: none;
+      min-width: 60px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--center-ink);
+      background: var(--center);
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .search {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 8px 0 14px;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel) 70%, transparent);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .search span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .search i {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-style: normal;
+      font-weight: 950;
+    }
+
+    .main-card {
+      position: relative;
+      min-height: 350px;
+      margin-top: 13px;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--center) 18%, transparent), transparent 8rem),
+        color-mix(in srgb, var(--panel) 78%, transparent);
+    }
+
+    .chip-row {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 27px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 10px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .chip.accent {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .compass {
+      position: relative;
+      height: 224px;
+      display: grid;
+      place-items: center;
+      margin-top: 2px;
+    }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+    }
+
+    .ring.one {
+      width: 218px;
+      height: 218px;
+    }
+
+    .ring.two {
+      width: 158px;
+      height: 158px;
+      border-style: dashed;
+    }
+
+    .ring.three {
+      width: 104px;
+      height: 104px;
+      border: 0;
+      background: conic-gradient(var(--accent) 0 74deg, rgba(255, 255, 255, 0.05) 74deg 224deg, var(--accent2) 224deg 294deg, rgba(255, 255, 255, 0.05) 294deg);
+      box-shadow: 0 0 0 1px var(--line);
+    }
+
+    .axis,
+    .axis::after {
+      position: absolute;
+      content: "";
+      width: 1px;
+      height: 218px;
+      background: linear-gradient(transparent, var(--line), transparent);
+    }
+
+    .axis::after {
+      transform: rotate(90deg);
+    }
+
+    .needle {
+      position: absolute;
+      z-index: 2;
+      width: 17px;
+      height: 88px;
+      clip-path: polygon(50% 0, 100% 48%, 50% 100%, 0 48%);
+      background: linear-gradient(180deg, var(--accent3) 0 48%, var(--accent2) 49% 100%);
+      transform: rotate(36deg);
+      filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.24));
+    }
+
+    .center {
+      position: relative;
+      z-index: 3;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--center-ink);
+      background: var(--center);
+      box-shadow: 0 17px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    .center span {
+      display: block;
+      color: color-mix(in srgb, var(--center-ink) 62%, transparent);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .center b {
+      display: block;
+      margin-top: 5px;
+      font-size: 25px;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .answer {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .answer h2 {
+      margin: 0;
+      font-size: 29px;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .answer p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.42;
+      font-weight: 760;
+    }
+
+    .big-temp {
+      color: var(--ink);
+      font-size: 46px;
+      line-height: 0.9;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      min-height: 70px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel) 72%, transparent);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 7px;
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .evidence {
+      display: grid;
+      gap: 7px;
+      margin-top: 10px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--panel) 72%, transparent);
+    }
+
+    .ev-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    .source {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--accent-ink);
+      background: var(--accent);
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .ev-row:nth-child(2) .source {
+      background: var(--accent2);
+    }
+
+    .ev-row:nth-child(3) .source {
+      background: var(--accent3);
+    }
+
+    .ev-row b {
+      display: block;
+      font-size: 12px;
+    }
+
+    .ev-row span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .ev-row strong {
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--nav) 86%, transparent);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
+    }
+
+    .bottom div {
+      height: 35px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 950;
+    }
+
+    .bottom div:first-child {
+      color: var(--center-ink);
+      background: var(--center);
+    }
+
+    .caption {
+      width: min(100%, 350px);
+      margin: 14px auto 0;
+    }
+
+    .caption strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .caption span {
+      display: block;
+      margin-top: 6px;
+      color: rgba(245, 234, 215, 0.66);
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 660;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 18px, 390px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        display: block;
+      }
+
+      .count {
+        display: inline-grid;
+        margin-top: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>반전톤은 유지하고<br />컬러감만 바꾸기</h1>
+        <p>원래 9번 시안의 핵심인 어두운 베이스, 밝은 중앙 판정 원, 선명한 나침반 포인트는 그대로 두고 색감만 바꿨습니다. 밝은 테마가 아니라 같은 반전톤 안에서 어느 컬러 무드가 맞는지 보는 샘플입니다.</p>
+      </div>
+      <div class="count">12 inverted tones</div>
+    </section>
+
+    <section class="grid" id="toneGrid" aria-label="반전톤 컬러 샘플"></section>
+  </main>
+
+  <script>
+    const tones = [
+      {
+        name: '01. 오리지널 컴퍼스',
+        note: '처음 9번에 가장 가까운 기준안. 전문적이고 차분한 관제 느낌입니다.',
+        vars: {
+          bg: '#27303c', panel: '#333d4b', nav: '#171d26', frame: '#0f1218',
+          ink: '#f5ead7', muted: 'rgba(245,234,215,.68)', line: 'rgba(245,234,215,.18)',
+          center: '#f5ead7', centerInk: '#27303c', accent: '#ffbf66', accent2: '#7dd4ff',
+          accent3: '#ff795f', accentInk: '#23180a', glow: '#7dd4ff'
+        }
+      },
+      {
+        name: '02. 딥 네이비 레이더',
+        note: '파란 기상 레이더 느낌을 더 강하게 만든 안. 어둡지만 더 선명합니다.',
+        vars: {
+          bg: '#111d2b', panel: '#1d2d40', nav: '#0d1622', frame: '#08101a',
+          ink: '#eaf6ff', muted: 'rgba(234,246,255,.67)', line: 'rgba(234,246,255,.17)',
+          center: '#f5fbff', centerInk: '#112033', accent: '#4aa3ff', accent2: '#7de0ff',
+          accent3: '#ffc861', accentInk: '#061729', glow: '#4aa3ff'
+        }
+      },
+      {
+        name: '03. 포레스트 나이트',
+        note: '현장 제보와 동네감이 조금 더 따뜻하게 붙는 어두운 녹색 톤입니다.',
+        vars: {
+          bg: '#14251f', panel: '#20342d', nav: '#0f1b17', frame: '#08130f',
+          ink: '#edf8ee', muted: 'rgba(237,248,238,.66)', line: 'rgba(237,248,238,.17)',
+          center: '#f2f6df', centerInk: '#15251e', accent: '#6ee7a8', accent2: '#ffc36b',
+          accent3: '#5db8ff', accentInk: '#062016', glow: '#6ee7a8'
+        }
+      },
+      {
+        name: '04. 스톰 코럴',
+        note: '비상 알림과 판정성이 더 강해지는 색감. 기억에는 잘 남습니다.',
+        vars: {
+          bg: '#272a31', panel: '#383943', nav: '#1a1c22', frame: '#101116',
+          ink: '#fff0e8', muted: 'rgba(255,240,232,.66)', line: 'rgba(255,240,232,.17)',
+          center: '#fff0e8', centerInk: '#2b2528', accent: '#ff6f59', accent2: '#7fd8d0',
+          accent3: '#ffd166', accentInk: '#2a1009', glow: '#ff6f59'
+        }
+      },
+      {
+        name: '05. 플럼 덕스',
+        note: '좀 더 앱스토어적인 세련미. 날씨앱보다는 프리미엄 도구 느낌입니다.',
+        vars: {
+          bg: '#241b32', panel: '#342744', nav: '#191225', frame: '#100a18',
+          ink: '#f8eeff', muted: 'rgba(248,238,255,.66)', line: 'rgba(248,238,255,.17)',
+          center: '#fbf2ff', centerInk: '#251b33', accent: '#b58cff', accent2: '#ffcf73',
+          accent3: '#75e0c0', accentInk: '#1b102a', glow: '#b58cff'
+        }
+      },
+      {
+        name: '06. 레인 슬레이트',
+        note: '비 오는 날에도 잘 맞는 회청색. 어둡지만 답답함은 덜합니다.',
+        vars: {
+          bg: '#26313a', panel: '#34434d', nav: '#1a232b', frame: '#0d141a',
+          ink: '#edf7fb', muted: 'rgba(237,247,251,.67)', line: 'rgba(237,247,251,.17)',
+          center: '#f7fbfc', centerInk: '#26313a', accent: '#5aa9e6', accent2: '#9bf1d1',
+          accent3: '#f6b45b', accentInk: '#071829', glow: '#5aa9e6'
+        }
+      },
+      {
+        name: '07. 올리브 시그널',
+        note: '야외 일정, 등산, 산책 쪽으로 확장할 때 잘 맞는 자연계 어두운 톤입니다.',
+        vars: {
+          bg: '#24291b', panel: '#343b27', nav: '#171c10', frame: '#0d1108',
+          ink: '#f4f0da', muted: 'rgba(244,240,218,.66)', line: 'rgba(244,240,218,.17)',
+          center: '#f5efcf', centerInk: '#24291b', accent: '#b8d95b', accent2: '#ff9f5f',
+          accent3: '#69c6ff', accentInk: '#1c2508', glow: '#b8d95b'
+        }
+      },
+      {
+        name: '08. 버건디 스톰',
+        note: '강렬하고 고급스럽지만 날씨앱으로는 취향을 탈 수 있는 톤입니다.',
+        vars: {
+          bg: '#301a22', panel: '#442631', nav: '#211018', frame: '#12070c',
+          ink: '#fff0ed', muted: 'rgba(255,240,237,.66)', line: 'rgba(255,240,237,.17)',
+          center: '#fff2e9', centerInk: '#301a22', accent: '#ff7a8a', accent2: '#6bd7ff',
+          accent3: '#ffd36b', accentInk: '#2c080f', glow: '#ff7a8a'
+        }
+      },
+      {
+        name: '09. 코발트 크림',
+        note: '전문성은 유지하면서 포인트가 가장 또렷합니다. 비교/지도 화면에도 잘 버팁니다.',
+        vars: {
+          bg: '#18233d', panel: '#253255', nav: '#10172b', frame: '#090e1b',
+          ink: '#fff4df', muted: 'rgba(255,244,223,.67)', line: 'rgba(255,244,223,.17)',
+          center: '#fff4df', centerInk: '#18233d', accent: '#5c7cff', accent2: '#ffbf66',
+          accent3: '#5ee0bd', accentInk: '#ffffff', glow: '#5c7cff'
+        }
+      },
+      {
+        name: '10. 시안 옵저버',
+        note: '가장 미래적인 관측소 느낌. 너무 차갑지 않게 크림을 유지했습니다.',
+        vars: {
+          bg: '#10282d', panel: '#1d3a41', nav: '#0b1b20', frame: '#061115',
+          ink: '#ecffff', muted: 'rgba(236,255,255,.66)', line: 'rgba(236,255,255,.17)',
+          center: '#f2fff9', centerInk: '#10282d', accent: '#32d5c4', accent2: '#7aa7ff',
+          accent3: '#ffb65f', accentInk: '#041b18', glow: '#32d5c4'
+        }
+      },
+      {
+        name: '11. 블랙 앤 앰버',
+        note: '가장 단단하고 브랜드화하기 쉬운 안. 대신 조금 무겁게 느껴질 수 있습니다.',
+        vars: {
+          bg: '#161514', panel: '#252321', nav: '#0e0d0c', frame: '#070707',
+          ink: '#f5ead7', muted: 'rgba(245,234,215,.66)', line: 'rgba(245,234,215,.18)',
+          center: '#f5ead7', centerInk: '#161514', accent: '#ffb547', accent2: '#6ecbff',
+          accent3: '#ff664f', accentInk: '#1d1202', glow: '#ffb547'
+        }
+      },
+      {
+        name: '12. 소프트 미드나이트',
+        note: '원래보다 부드럽고 대중적인 어두운 톤. 전체 앱으로 밀기 가장 무난합니다.',
+        vars: {
+          bg: '#222a34', panel: '#303945', nav: '#171d25', frame: '#0d1015',
+          ink: '#f4efe7', muted: 'rgba(244,239,231,.68)', line: 'rgba(244,239,231,.17)',
+          center: '#f8f1e5', centerInk: '#222a34', accent: '#f0b76a', accent2: '#8bd4ee',
+          accent3: '#93dda9', accentInk: '#231707', glow: '#8bd4ee'
+        }
+      }
+    ];
+
+    function cssVars(vars) {
+      return Object.entries(vars)
+        .map(([key, value]) => `--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${value}`)
+        .join(';');
+    }
+
+    function renderTone(tone) {
+      return `
+        <article>
+          <div class="phone" style="${cssVars(tone.vars)}">
+            <div class="status"><span>9:41</span><span>5G</span></div>
+            <div class="app">
+              <div class="top">
+                <div class="brand">
+                  <div class="mark"></div>
+                  <div>
+                    <b>웨더체크</b>
+                    <span>기상 나침반 판정</span>
+                  </div>
+                </div>
+                <div class="temp">24°</div>
+              </div>
+
+              <div class="search">
+                <span>잠실운동장 지금 비 와?</span>
+                <i>↗</i>
+              </div>
+
+              <section class="main-card">
+                <div class="chip-row">
+                  <span class="chip accent">현재 위치 · 송파구</span>
+                  <span class="chip">3분 전</span>
+                </div>
+
+                <div class="compass">
+                  <div class="axis"></div>
+                  <div class="ring one"></div>
+                  <div class="ring two"></div>
+                  <div class="ring three"></div>
+                  <div class="needle"></div>
+                  <div class="center">
+                    <div>
+                      <span>판정</span>
+                      <b>비<br />없음</b>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="answer">
+                  <div>
+                    <h2>현재는 비 안 오는 쪽이 우세해요</h2>
+                    <p>예보 3곳과 현장 제보 12건을 함께 봤어요.</p>
+                  </div>
+                  <div class="big-temp">24°</div>
+                </div>
+              </section>
+
+              <div class="stats">
+                <div class="stat"><span>확신도</span><b>82%</b></div>
+                <div class="stat"><span>제보</span><b>12건</b></div>
+                <div class="stat"><span>강수</span><b>18%</b></div>
+              </div>
+
+              <section class="evidence">
+                <div class="ev-row"><div class="source">K</div><div><b>기상청</b><span>흐림 · 20%</span></div><strong>주의</strong></div>
+                <div class="ev-row"><div class="source">Yr</div><div><b>Yr.no</b><span>강수량 0.1mm 미만</span></div><strong>약함</strong></div>
+                <div class="ev-row"><div class="source">현</div><div><b>현장 제보</b><span>12명 중 9명 비 없음</span></div><strong>우세</strong></div>
+              </section>
+
+              <nav class="bottom">
+                <div>판정</div><div>지도</div><div>제보</div><div>비교</div>
+              </nav>
+            </div>
+          </div>
+          <div class="caption">
+            <strong>${tone.name}</strong>
+            <span>${tone.note}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    document.getElementById('toneGrid').innerHTML = tones.map(renderTone).join('');
+  </script>
+</body>
+</html>

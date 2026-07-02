@@ -1,0 +1,2885 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>웨더체크 - 예보 비교 현장 판정</title>
+  <style>
+    :root {
+      --bg: #e8f1fb;
+      --phone: #f6f9fd;
+      --ink: #111827;
+      --muted: #64748b;
+      --line: #dbe7f3;
+      --panel: #fff;
+      --blue: #2563eb;
+      --teal: #0ea5a4;
+      --acid: #a7f3d0;
+      --coral: #fb7185;
+      --lilac: #dbeafe;
+      --charcoal: #0f172a;
+      --green: #16a34a;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --navy: #1e3a8a;
+      --sky: #e9f8ff;
+      --cream: #fff7ed;
+      --shadow: 0 24px 70px rgba(15, 23, 42, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px 14px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 16%, rgba(96,165,250,.28), transparent 28%),
+        radial-gradient(circle at 82% 82%, rgba(45,212,191,.22), transparent 26%),
+        linear-gradient(145deg, #f8fbff 0%, #dcecff 52%, #eef7ff 100%);
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .phone {
+      width: min(430px, 100%);
+      min-height: 870px;
+      max-height: 930px;
+      overflow: hidden;
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background:
+        radial-gradient(circle at 16% 4%, rgba(147,197,253,.18), transparent 28%),
+        radial-gradient(circle at 96% 30%, rgba(125,211,252,.16), transparent 24%),
+        var(--phone);
+      border: 8px solid #101010;
+      border-radius: 34px;
+      box-shadow: 0 26px 80px rgba(0,0,0,.42);
+    }
+
+    .status {
+      height: 42px;
+      padding: 12px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .signal i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .82;
+    }
+
+    .battery {
+      width: 24px;
+      height: 12px;
+      border: 1.8px solid currentColor;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .battery:before {
+      content: "";
+      position: absolute;
+      inset: 2px 6px 2px 2px;
+      background: currentColor;
+      border-radius: 2px;
+    }
+
+    .battery:after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      right: -4px;
+      width: 2px;
+      height: 5px;
+      background: currentColor;
+      border-radius: 0 2px 2px 0;
+    }
+
+    .top {
+      padding: 8px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--blue);
+      background: #e8f1ff;
+      border-radius: 12px;
+      flex: 0 0 auto;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.1;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(15,23,42,.05);
+      flex: 0 0 auto;
+    }
+
+    .screen {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 4px 16px 92px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .screen[hidden] { display: none; }
+
+    .prompt,
+    .answer {
+      padding: 20px;
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      color: var(--ink);
+      background:
+        linear-gradient(160deg, #ffffff 0%, #eaf5ff 100%);
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 36px rgba(15,23,42,.08);
+    }
+
+    .prompt {
+      min-height: 260px;
+    }
+
+    .answer {
+      min-height: 360px;
+      color: #fff;
+      border-radius: 28px;
+      clip-path: none;
+      box-shadow: 0 22px 44px rgba(37,99,235,.18);
+    }
+
+    .answer.weather-sunny {
+      color: #151515;
+      background:
+        radial-gradient(circle at 80% 18%, rgba(255,255,255,.80) 0 42px, transparent 43px),
+        linear-gradient(155deg, #fde68a 0 46%, #fbbf24 100%);
+    }
+
+    .answer.weather-cloudy {
+      color: #151515;
+      background:
+        radial-gradient(ellipse at 86% 18%, rgba(255,255,255,.82) 0 54px, transparent 55px),
+        radial-gradient(ellipse at 70% 30%, rgba(255,255,255,.54) 0 62px, transparent 63px),
+        linear-gradient(150deg, #bfdbfe 0 46%, #e2e8f0 100%);
+    }
+
+    .answer.weather-rainy {
+      color: #fff;
+      background:
+        repeating-linear-gradient(115deg, rgba(255,255,255,.14) 0 2px, transparent 2px 18px),
+        radial-gradient(ellipse at 82% 24%, rgba(255,255,255,.20) 0 58px, transparent 59px),
+        linear-gradient(155deg, #2563eb 0 48%, #0f766e 100%);
+    }
+
+    .answer.weather-snowy {
+      color: #151515;
+      background:
+        radial-gradient(circle at 78% 24%, rgba(255,255,255,.96) 0 5px, transparent 6px),
+        radial-gradient(circle at 64% 38%, rgba(255,255,255,.88) 0 4px, transparent 5px),
+        radial-gradient(circle at 88% 42%, rgba(255,255,255,.90) 0 3px, transparent 4px),
+        linear-gradient(155deg, #ffffff, #dbeafe 58%, #eef2ff);
+    }
+
+    .answer.weather-thunder {
+      color: #f7fbff;
+      background:
+        linear-gradient(125deg, transparent 0 66%, #facc15 66% 73%, transparent 73%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,.16) 0 58px, transparent 60px),
+        linear-gradient(155deg, #111827, #3730a3 58%, #0f172a);
+    }
+
+    .answer.weather-thunder p,
+    .answer.weather-rainy p,
+    .answer.weather-rainy .decision-copy small,
+    .answer.weather-thunder .decision-copy small {
+      color: rgba(247,251,255,.78);
+    }
+
+    .answer.weather-foggy {
+      color: #151515;
+      background:
+        repeating-linear-gradient(180deg, rgba(255,255,255,.54) 0 7px, rgba(209,223,225,.28) 7px 15px, transparent 15px 28px),
+        linear-gradient(155deg, #f8fafc, #dbeafe 58%, #ffffff);
+    }
+
+    .prompt:after,
+    .answer:after {
+      content: "";
+      position: absolute;
+      right: -54px;
+      bottom: -62px;
+      width: 210px;
+      height: 150px;
+      border-radius: 80px;
+      background:
+        radial-gradient(circle at 32% 52%, rgba(255,255,255,.96) 0 28px, transparent 30px),
+        radial-gradient(circle at 54% 42%, rgba(255,255,255,.88) 0 42px, transparent 44px),
+        radial-gradient(circle at 76% 55%, rgba(255,255,255,.80) 0 31px, transparent 33px);
+      opacity: .58;
+    }
+
+    .prompt:before,
+    .answer:before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(251,191,36,.96) 0 31px, rgba(251,191,36,.18) 32px 48px, transparent 49px);
+      box-shadow: 0 16px 32px rgba(245,158,11,.14);
+    }
+
+    .prompt > *,
+    .answer > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-chip {
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.84);
+      color: #151515;
+      box-shadow: inset 0 0 0 1px rgba(37,99,235,.12);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .prompt h1,
+    .answer h1 {
+      margin: 12px 0 8px;
+      max-width: 330px;
+      font-size: 32px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .answer h1 {
+      max-width: 300px;
+      font-size: 38px;
+      line-height: .98;
+    }
+
+    .prompt p,
+    .answer p {
+      margin: 0;
+      color: rgba(22,22,22,.70);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 320px;
+    }
+
+    .answer.weather-rainy p {
+      color: rgba(255,255,255,.78);
+    }
+
+    #resultScreen > section:not(.answer) {
+      padding: 14px;
+      border-radius: 22px;
+      box-shadow: 0 12px 28px rgba(15,23,42,.06);
+    }
+
+    #resultScreen > section:nth-of-type(2) {
+      background: #fff;
+      border: 1px solid rgba(22,22,22,.08);
+    }
+
+    #resultScreen > section:nth-of-type(2) .section-head span,
+    #resultScreen > section:nth-of-type(2) .section-head button {
+      color: #151515;
+    }
+
+    #resultScreen #verifyBlock {
+      background: #ecfeff;
+      border: 1px solid rgba(14,165,164,.14);
+      color: var(--ink);
+    }
+
+    #resultScreen #verifyBlock .verify-title span,
+    #resultScreen #verifyBlock input::placeholder {
+      color: var(--muted);
+    }
+
+    #resultScreen #liveBlock {
+      background: #151515;
+      color: #fff;
+    }
+
+    #resultScreen #liveBlock .section-head button {
+      color: #93c5fd;
+    }
+
+    #resultScreen #liveBlock .panel {
+      background: transparent;
+      border-color: rgba(255,255,255,.12);
+    }
+
+    #resultScreen #liveBlock .live-item {
+      border-top-color: rgba(255,255,255,.12);
+    }
+
+    #resultScreen #liveBlock .live-item span {
+      color: rgba(255,255,255,.68);
+    }
+
+    #resultScreen > section:nth-of-type(5) {
+      background: #eef2ff;
+    }
+
+    .question-search {
+      min-height: 62px;
+      padding: 0 15px;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      color: #7d939c;
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(255,255,255,.78);
+      border-radius: 18px;
+      box-shadow: 0 16px 34px rgba(15,23,42,.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .question-search svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .question-search input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .question-search input::placeholder {
+      color: #8da2aa;
+      opacity: .78;
+      font-weight: 800;
+    }
+
+    .answer-search {
+      margin-bottom: 2px;
+      background: rgba(255,255,255,.82);
+    }
+
+    .query-bar {
+      margin: 0 18px 14px;
+      min-height: 52px;
+      padding: 8px 8px 8px 13px;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 999px;
+      box-shadow: 0 10px 26px rgba(15,23,42,.07);
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .query-bar:focus-within {
+      border-color: rgba(37,99,235,.46);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10), 0 12px 28px rgba(15,23,42,.08);
+    }
+
+    .query-pin {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #7a8b93;
+    }
+
+    .query-pin svg,
+    .home-actions svg {
+      width: 19px;
+      height: 19px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .query-bar input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .query-bar input::placeholder {
+      color: #8a9aa2;
+      opacity: 1;
+      font-weight: 800;
+    }
+
+    .query-submit {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--blue);
+      border-radius: 50%;
+    }
+
+    .query-submit svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .home-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .home-actions button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .home-actions button {
+      color: #fff;
+      background: var(--charcoal);
+    }
+
+    .prompt-hint {
+      margin-top: -8px;
+      color: rgba(83,106,115,.82);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .choice-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .choice {
+      min-height: 76px;
+      padding: 13px;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 11px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      text-align: left;
+    }
+
+    .choice.active {
+      border-color: rgba(37,99,235,.24);
+      background: #eff6ff;
+      box-shadow: 0 10px 24px rgba(37,99,235,.08);
+    }
+
+    .choice-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: #eef4f5;
+      color: var(--muted);
+    }
+
+    .choice.active .choice-icon {
+      color: var(--blue);
+      background: #dbeafe;
+    }
+
+    .choice strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .choice span span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .field {
+      min-height: 54px;
+      padding: 0 13px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+    }
+
+    .field input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 14px;
+    }
+
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .time-choice {
+      min-height: 70px;
+      padding: 12px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      text-align: left;
+    }
+
+    .time-choice.active {
+      color: var(--blue);
+      background: #eff6ff;
+      border-color: rgba(37,99,235,.22);
+    }
+
+    .time-choice strong {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .time-choice span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .primary {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #fff;
+      background: var(--blue);
+      border-radius: 17px;
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: 0 12px 24px rgba(37,99,235,.18);
+    }
+
+    .secondary {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .section-head {
+      margin: 1px 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .section-head button,
+    .section-head span {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .answer-bottom {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .decision-copy {
+      min-width: 0;
+    }
+
+    .decision-copy b,
+    .decision-copy small {
+      display: block;
+    }
+
+    .decision-copy b {
+      margin-bottom: 6px;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .decision-copy small {
+      color: #536a73;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .temp-bubble {
+      width: 92px;
+      height: 92px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      color: var(--teal);
+      background:
+        radial-gradient(circle, rgba(255,255,255,.9) 0 49%, transparent 50%),
+        conic-gradient(var(--teal) 0 72%, rgba(255,255,255,.82) 72% 100%);
+      border-radius: 50%;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .temp-bubble small {
+      color: #5f7279;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .temp-bubble strong {
+      font-size: 27px;
+    }
+
+    .answer-bottom > span {
+      position: absolute;
+      right: 19px;
+      bottom: 16px;
+      color: #087f7a;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .answer.weather-thunder .temp-bubble {
+      color: #f7fbff;
+      background:
+        radial-gradient(circle, rgba(37,50,67,.88) 0 49%, transparent 50%),
+        conic-gradient(#ffd666 0 72%, rgba(255,255,255,.22) 72% 100%);
+    }
+
+    .answer.weather-thunder .temp-bubble small,
+    .answer.weather-thunder .answer-bottom > span {
+      color: rgba(247,251,255,.78);
+    }
+
+    .infographic {
+      display: grid;
+      gap: 9px;
+    }
+
+    .service-timeline {
+      display: grid;
+      gap: 10px;
+    }
+
+    .service-line {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .service-line.leading {
+      border-color: rgba(37,99,235,.24);
+      box-shadow: 0 10px 24px rgba(37,99,235,.08);
+    }
+
+    .service-line-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .service-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .service-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      color: #fff;
+      background: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .service-name strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .service-line-head span {
+      min-height: 24px;
+      padding: 0 7px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #ecf9f0;
+      color: #2b7a3d;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .service-slots {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .slot {
+      min-height: 82px;
+      padding: 9px 4px;
+      display: grid;
+      justify-items: center;
+      align-content: space-between;
+      gap: 5px;
+      background: #f7fafb;
+      border: 1px solid #edf2f3;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.86);
+    }
+
+    .slot strong {
+      font-size: 12px;
+      line-height: 1.15;
+    }
+
+    .slot svg {
+      width: 22px;
+      height: 22px;
+      color: var(--blue);
+    }
+
+    .slot span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .slot b {
+      font-size: 12px;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .now-grid,
+    .daypart-grid,
+    .week-grid,
+    .month-grid {
+      display: grid;
+      gap: 9px;
+    }
+
+    .now-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .now-card {
+      min-height: 132px;
+      padding: 12px 8px;
+      display: grid;
+      justify-items: center;
+      align-content: space-between;
+      gap: 8px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(22,22,22,.08);
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .now-card.leading {
+      border-color: rgba(22,22,22,.20);
+      background: #fff;
+    }
+
+    .now-card strong {
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .now-card svg {
+      width: 30px;
+      height: 30px;
+      color: var(--blue);
+    }
+
+    .now-card b {
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .now-card span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .daypart-card {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .daypart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .daypart-head strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .daypart-head span {
+      min-height: 24px;
+      padding: 0 8px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #fff4df;
+      color: #9a5a00;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .daypart-sources {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .daypart-source {
+      min-height: 72px;
+      padding: 8px 4px;
+      display: grid;
+      justify-items: center;
+      align-content: space-between;
+      gap: 4px;
+      background: #f7fafb;
+      border: 1px solid #edf2f3;
+      border-radius: 15px;
+      text-align: center;
+    }
+
+    .daypart-source svg {
+      width: 21px;
+      height: 21px;
+      color: var(--blue);
+    }
+
+    .daypart-source strong {
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .daypart-source span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+
+    .week-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .week-day {
+      min-height: 132px;
+      padding: 10px 6px;
+      display: grid;
+      justify-items: center;
+      align-content: space-between;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      text-align: center;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .week-day.hot {
+      background: #fff8ed;
+      border-color: rgba(240,140,0,.26);
+    }
+
+    .week-day strong {
+      font-size: 13px;
+    }
+
+    .week-day svg {
+      width: 25px;
+      height: 25px;
+      color: var(--blue);
+    }
+
+    .week-day b {
+      font-size: 12px;
+      line-height: 1.15;
+    }
+
+    .week-day span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .trend-card {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .trend-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .trend-head strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .trend-head span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .trend-bars {
+      display: grid;
+      gap: 7px;
+    }
+
+    .trend-row {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 36px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .trend-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .trend-track i {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      background: var(--c);
+      border-radius: inherit;
+    }
+
+    .source-card {
+      min-height: 86px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .source-card.leading {
+      border-color: rgba(37,99,235,.24);
+      box-shadow: 0 10px 24px rgba(37,99,235,.08);
+    }
+
+    .weather-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 17px;
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+
+    .weather-icon.rain { background: #dbeafe; color: var(--blue); }
+    .weather-icon.shower { background: #ffedd5; color: #c2410c; }
+    .weather-icon.cloud { background: #e2e8f0; color: #475569; }
+    .weather-icon.sun { background: #fef3c7; color: #b45309; }
+
+    .source-main {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .source-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .source-title strong {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .source-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .bar {
+      height: 9px;
+      overflow: hidden;
+      background: #e2e8f0;
+      border-radius: 999px;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      width: var(--w, 50%);
+      background: var(--c, var(--blue));
+    }
+
+    .source-score {
+      display: grid;
+      justify-items: end;
+      gap: 5px;
+    }
+
+    .source-score b {
+      color: var(--blue);
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .source-score span {
+      min-height: 23px;
+      padding: 0 7px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .source-score span.warn {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .verify,
+    .ask-card {
+      padding: 13px;
+      background: #ecfeff;
+      border: 1px solid rgba(14,165,164,.14);
+      border-radius: 22px;
+      display: grid;
+      gap: 11px;
+    }
+
+    .verify-title,
+    .ask-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .verify-title strong,
+    .ask-card strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .verify-title span,
+    .ask-card span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .quick {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .quick button {
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid rgba(14,165,164,.16);
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .quick button.active {
+      color: #0f766e;
+      background: #ccfbf1;
+      border-color: rgba(14,165,164,.22);
+    }
+
+    .one-line-report {
+      min-height: 46px;
+      padding: 6px 6px 6px 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid rgba(14,165,164,.16);
+      border-radius: 999px;
+    }
+
+    .one-line-report input {
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .one-line-report input::placeholder {
+      color: #8da2aa;
+      opacity: 1;
+    }
+
+    .one-line-report button {
+      min-height: 34px;
+      padding: 0 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #fff;
+      background: var(--charcoal);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .one-line-report button svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.78);
+      border: 1px solid rgba(22,22,22,.08);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .row {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 44px 28px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      border-top: 1px solid rgba(22,22,22,.08);
+    }
+
+    .row:first-child { border-top: 0; }
+
+    .row strong {
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .row svg { color: var(--blue); }
+
+    .row-main b {
+      display: block;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .row-main span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .pill {
+      min-height: 25px;
+      padding: 0 8px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      background: #fff4df;
+      color: #9a5a00;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill.good {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .live-item {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border-top: 1px solid #edf2f3;
+    }
+
+    .live-item:first-child { border-top: 0; }
+
+    .live-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: #e0f2fe;
+      color: var(--blue);
+    }
+
+    .live-item strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .live-item span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .badge {
+      min-height: 24px;
+      padding: 0 7px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      color: #166534;
+      background: #dcfce7;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .ask-card button {
+      min-height: 38px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+      background: var(--blue);
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .report-page {
+      display: grid;
+      gap: 14px;
+    }
+
+    .report-request-card,
+    .reply-card {
+      padding: 14px;
+      display: grid;
+      gap: 11px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+    }
+
+    .report-request-card {
+      padding: 16px;
+      background:
+        radial-gradient(circle at 88% 12%, rgba(255,255,255,.72) 0 34px, transparent 35px),
+        linear-gradient(145deg, #dbeafe 0 55%, #ccfbf1 100%);
+      border: 1px solid rgba(37,99,235,.12);
+      color: #151515;
+      clip-path: none;
+      box-shadow: 0 16px 34px rgba(37,99,235,.10);
+    }
+
+    .report-request-card strong,
+    .reply-card strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .report-request-card span,
+    .reply-card span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .request-fields {
+      display: grid;
+      gap: 8px;
+    }
+
+    .request-fields input,
+    .reply-card input {
+      min-height: 44px;
+      min-width: 0;
+      padding: 0 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid rgba(22,22,22,.10);
+      border-radius: 999px;
+      outline: 0;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .request-fields input::placeholder,
+    .reply-card input::placeholder {
+      color: #8da2aa;
+      opacity: 1;
+    }
+
+    .request-fields button,
+    .reply-card button {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #fff;
+      background: var(--charcoal);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .request-list {
+      overflow: hidden;
+      background: transparent;
+      border: 0;
+      border-radius: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .request-item {
+      width: 100%;
+      padding: 13px;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 0;
+      border-radius: 14px;
+      background: #fff;
+      text-align: left;
+      box-shadow: 0 8px 18px rgba(15,23,42,.05);
+    }
+
+    .request-item:first-child { border-top: 0; }
+
+    .request-item:nth-child(1) {
+      background: #fff;
+    }
+
+    .request-item:nth-child(2) {
+      background: #f0f9ff;
+    }
+
+    .request-item:nth-child(3) {
+      background: #f8fafc;
+    }
+
+    .request-item.active {
+      background: var(--blue);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .request-item.active span,
+    .request-item.active .request-item span {
+      color: rgba(255,255,255,.72);
+    }
+
+    .request-item strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .request-item span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .request-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      color: #151515;
+      background: #dbeafe;
+      border-radius: 15px;
+    }
+
+    .request-icon svg,
+    .request-fields svg,
+    .reply-card svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .reply-card {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      border-width: 0;
+      transition: max-height .28s ease, padding .28s ease, opacity .22s ease, transform .22s ease, border-width .28s ease;
+    }
+
+    .reply-card.open {
+      max-height: 360px;
+      padding-top: 14px;
+      padding-bottom: 14px;
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      border-width: 1px;
+      background:
+        radial-gradient(circle at 88% 18%, rgba(255,255,255,.18) 0 44px, transparent 45px),
+        linear-gradient(145deg, #2563eb, #0ea5a4);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 18px 34px rgba(37,99,235,.18);
+    }
+
+    .reply-card.open span {
+      color: rgba(255,255,255,.78);
+    }
+
+    .toast {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 82px;
+      z-index: 20;
+      min-height: 48px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #fff;
+      background: rgba(19,41,61,.94);
+      border-radius: 16px;
+      box-shadow: 0 14px 36px rgba(19,41,61,.22);
+      font-size: 13px;
+      font-weight: 900;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity .22s ease, transform .22s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .compare-page {
+      display: grid;
+      gap: 18px;
+    }
+
+    .compare-hero {
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+      background:
+        radial-gradient(circle at 86% 18%, rgba(255,255,255,.70) 0 44px, transparent 45px),
+        linear-gradient(155deg, #dbeafe 0%, #ecfeff 64%, #fff 100%);
+      border-radius: 24px;
+      clip-path: none;
+      box-shadow: 0 18px 36px rgba(37,99,235,.09);
+    }
+
+    .compare-hero h1 {
+      margin: 0;
+      font-size: 27px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .compare-hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .compare-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(15,23,42,.04);
+    }
+
+    .compare-card-head {
+      min-height: 48px;
+      padding: 0 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .compare-card-head strong {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .compare-card-head span {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .compare-scroll {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .compare-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .compare-grid {
+      min-width: 760px;
+      display: grid;
+      grid-template-columns: 74px repeat(8, 86px);
+    }
+
+    .compare-grid.daily {
+      min-width: 720px;
+      grid-template-columns: 74px repeat(7, 92px);
+    }
+
+    .compare-cell {
+      min-height: 76px;
+      padding: 9px 6px;
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 4px;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .compare-head-cell {
+      min-height: 42px;
+      color: var(--blue);
+      background: #eff6ff;
+      font-weight: 900;
+    }
+
+    .compare-service {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 900;
+      box-shadow: 8px 0 16px rgba(15,23,42,.04);
+    }
+
+    .compare-service .logo {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--blue);
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .compare-cell svg {
+      width: 23px;
+      height: 23px;
+      color: var(--blue);
+    }
+
+    .compare-cell b {
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .compare-cell span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.15;
+    }
+
+    .rain-pct {
+      color: var(--blue) !important;
+      font-weight: 900;
+    }
+
+    .compare-note {
+      padding: 10px 13px 12px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      min-height: 70px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      background: rgba(255,255,255,.93);
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 24px;
+      box-shadow: 0 12px 30px rgba(15,23,42,.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .bottom-nav button {
+      min-width: 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      border-radius: 18px;
+    }
+
+    .bottom-nav button.active {
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .bottom-nav svg { width: 20px; height: 20px; }
+
+    @media (max-width: 440px) {
+      body { padding: 0; background: var(--phone); }
+      .phone {
+        width: 100%;
+        min-height: 100vh;
+        max-height: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div>
+      <div class="status"><span id="clock">13:08</span><div class="signal" aria-hidden="true"><i></i><i></i><i></i><span class="battery"></span></div></div>
+      <header class="top">
+        <div class="brand">
+          <div class="brand-mark"><svg viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg></div>
+          <div><strong id="appTitle">웨더체크</strong><span id="appSub">예보가 갈릴 때 현장 판정</span></div>
+        </div>
+        <button class="icon-btn" id="resetBtn" title="처음으로" aria-label="처음으로"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2"/><path d="M3 12A9 9 0 0 1 18.5 5.8"/><path d="M18 2v4h4"/><path d="M6 22v-4H2"/></svg></button>
+      </header>
+      <div class="query-bar">
+        <span class="query-pin"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+        <span>
+          <input id="locationInput" placeholder="잠실운동장 지금 비 와?" value="">
+        </span>
+        <button class="query-submit" id="queryBtn" type="button" title="검색" aria-label="검색"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
+
+    <main class="screen" id="locationScreen" hidden>
+      <section class="prompt">
+        <div>
+          <span class="step-chip">1단계</span>
+          <h1>어떤 날씨가 궁금한가요?</h1>
+          <p>장소와 시간을 문장으로 물어보면 세 서비스 예보와 현장 제보를 같이 확인합니다.</p>
+        </div>
+        <div class="prompt-hint">또는 아래에서 빠르게 선택하세요</div>
+      </section>
+      <div class="choice-grid">
+        <button class="choice active" data-location="서울 강남구" data-location-kind="여기">
+          <span class="choice-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <span><strong>여기</strong><span>서울 강남구 현재 위치</span></span>
+          <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button class="choice" data-location="잠실종합운동장" data-location-kind="다른 곳">
+          <span class="choice-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+          <span><strong>다른 곳</strong><span>잠실운동장, 회사, 캠핑장 검색</span></span>
+          <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+      <button class="primary" id="toTime">다음 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+    </main>
+
+    <main class="screen" id="timeScreen" hidden>
+      <section class="prompt">
+        <div>
+          <span class="step-chip">2단계</span>
+          <h1>언제 날씨가 궁금한가요?</h1>
+          <p>기간을 바꾸면 결과 화면의 인포그래픽과 비교 기준도 함께 바뀝니다.</p>
+        </div>
+      </section>
+      <div class="chips" id="timeChoices">
+        <button class="time-choice active" data-period="now"><strong>지금 현재</strong><span>현장 검증 포함</span></button>
+        <button class="time-choice" data-period="3h"><strong>향후 3시간</strong><span>초단기 판단</span></button>
+        <button class="time-choice" data-period="6h"><strong>향후 6시간</strong><span>외출 전 확인</span></button>
+        <button class="time-choice" data-period="12h"><strong>향후 12시간</strong><span>출퇴근/일정</span></button>
+        <button class="time-choice" data-period="24h"><strong>향후 24시간</strong><span>내일 계획</span></button>
+        <button class="time-choice" data-period="week"><strong>일주일</strong><span>여행/행사</span></button>
+        <button class="time-choice" data-period="month"><strong>한달</strong><span>장기 경향</span></button>
+      </div>
+      <button class="primary" id="showResult">비교 보기 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+      <button class="secondary" id="backLocation"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg> 장소 다시 선택</button>
+    </main>
+
+    <main class="screen" id="resultScreen">
+      <section class="answer" id="answerCard">
+        <div>
+          <span class="step-chip" id="resultChip">현장 판정</span>
+          <h1 id="resultTitle">15시 이후 비 가능성이 높아요</h1>
+          <p id="resultSummary">기상청은 흐림, Yr.no와 Windy는 비를 예측합니다. 현재 제보는 비 시작 쪽으로 기울고 있어요.</p>
+        </div>
+        <div class="answer-bottom">
+          <div class="decision-copy"><b>지금 출발은 가능</b><small>다만 2시간 뒤 비 가능성이 올라갑니다.</small></div>
+          <div class="temp-bubble"><small>현재</small><strong id="resultTemp">27°</strong></div>
+          <span id="resultRisk">예보 갈림 큼</span>
+        </div>
+        <div class="home-actions">
+          <button id="reportHereBtn"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>내 위치 제보</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head"><h2>왜 그렇게 판단했나요?</h2><span id="resultBasis">근거 3개</span></div>
+        <div class="infographic" id="sources"></div>
+      </section>
+
+      <section class="verify" id="verifyBlock">
+        <div class="verify-title"><div><strong>실제 날씨는요?</strong><span>현재 위치 검증</span></div><span id="verifyCount">제보 18건</span></div>
+        <div class="quick">
+          <button class="active" data-report-kind="비 와요"><svg viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>비 와요</button>
+          <button data-report-kind="안 와요"><svg viewBox="0 0 24 24"><path d="M12 2v2"/><path d="M18.4 5.6 17 7"/><path d="M21 12h-2"/><path d="M5 12H3"/><path d="m7 7-1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>안 와요</button>
+          <button data-report-kind="사진 있음"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>사진</button>
+        </div>
+        <div class="one-line-report">
+          <input id="reportInput" placeholder="한 줄 남기기: 빗방울 조금, 아직 안 와요">
+          <button id="submitReportBtn" type="button"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>등록</button>
+        </div>
+      </section>
+
+      <section id="liveBlock">
+        <div class="section-head"><h2>생생날씨특파원</h2><button>지도 보기</button></div>
+        <div class="panel" id="liveFeed"></div>
+      </section>
+
+      <section>
+        <div class="section-head"><h2 id="futureTitle">앞으로 어떻게 바뀌나요?</h2><button>전체</button></div>
+        <div class="panel" id="futureRows"></div>
+      </section>
+
+      <button class="secondary" id="backTime"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg> 기간 다시 선택</button>
+    </main>
+
+    <main class="screen" id="reportScreen" hidden>
+      <section class="report-page">
+        <section class="report-request-card">
+          <div>
+            <strong>제보 요청하기</strong>
+            <span>궁금한 장소를 올리면 근처 사용자가 제보 요청 목록에서 답변합니다.</span>
+          </div>
+          <div class="request-fields">
+            <input id="requestPlaceInput" placeholder="장소 예: 잠실종합운동장">
+            <input id="requestQuestionInput" placeholder="질문 예: 지금 비 와요?">
+            <button id="createRequestBtn" type="button"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>요청 올리기</button>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-head"><h2>제보 요청 리스트</h2><span id="requestCount">요청 3개</span></div>
+          <div class="request-list" id="requestList"></div>
+        </section>
+
+        <section class="reply-card" id="replyCard">
+          <div>
+            <strong id="replyTargetTitle">요청을 선택해 답변하세요</strong>
+            <span id="replyTargetMeta">주변 요청을 누르면 한 줄 제보를 남길 수 있습니다.</span>
+          </div>
+          <div class="quick">
+            <button class="active" data-request-reply-kind="비 와요"><svg viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>비 와요</button>
+            <button data-request-reply-kind="안 와요"><svg viewBox="0 0 24 24"><path d="M12 2v2"/><path d="M18.4 5.6 17 7"/><path d="M21 12h-2"/><path d="M5 12H3"/><path d="m7 7-1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>안 와요</button>
+            <button data-request-reply-kind="사진 있음"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>사진</button>
+          </div>
+          <input id="requestReplyInput" placeholder="한 줄 답변: 경기장 앞은 아직 안 와요">
+          <button id="submitRequestReplyBtn" type="button"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>선택한 요청에 제보</button>
+        </section>
+      </section>
+    </main>
+
+    <main class="screen" id="compareScreen" hidden>
+      <section class="compare-page">
+        <div class="compare-hero">
+          <span class="step-chip">예보 비교</span>
+          <h1>세 서비스가 같은 시간에 뭐라고 하나요?</h1>
+          <p>기상청, Yr.no, Windy의 시간별·일자별 예보를 한 화면에서 비교합니다.</p>
+        </div>
+
+        <article class="compare-card">
+          <div class="compare-card-head">
+            <strong>시간별</strong>
+            <span>가로로 밀어서 보기</span>
+          </div>
+          <div class="compare-scroll">
+            <div class="compare-grid" id="hourlyCompare"></div>
+          </div>
+          <div class="compare-note">2026.06.30 16:18 업데이트</div>
+        </article>
+
+        <article class="compare-card">
+          <div class="compare-card-head">
+            <strong>일자별</strong>
+            <span>오늘-일주일</span>
+          </div>
+          <div class="compare-scroll">
+            <div class="compare-grid daily" id="dailyCompare"></div>
+          </div>
+          <div class="compare-note">기온은 최저/최고, 강수확률은 오전/오후 기준</div>
+        </article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="하단 탭">
+      <button class="active" id="questionTab"><svg viewBox="0 0 24 24"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Z"/><circle cx="12" cy="9" r="2.5"/></svg>질문</button>
+      <button id="compareTab"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/></svg>비교</button>
+      <button id="reportTab"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg>제보</button>
+      <button><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.18.36.38.7.6 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-.5 1Z"/></svg>설정</button>
+    </nav>
+    <div class="toast" id="toast" aria-live="polite"></div>
+  </div>
+
+  <script>
+    const icons = {
+      cloud: '<svg viewBox="0 0 24 24"><path d="M17.5 19H8a5 5 0 1 1 1.5-9.8A6 6 0 0 1 21 12.5 3.5 3.5 0 0 1 17.5 19Z"/></svg>',
+      rain: '<svg viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>',
+      shower: '<svg viewBox="0 0 24 24"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M13 13 9 21"/><path d="m17 13-4 8"/></svg>',
+      sun: '<svg viewBox="0 0 24 24"><path d="M12 2v2"/><path d="M18.4 5.6 17 7"/><path d="M21 12h-2"/><path d="M5 12H3"/><path d="m7 7-1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>'
+    };
+
+    const data = {
+      now: {
+        label: '지금 현재',
+        basis: '근거 3개',
+        title: '현재는 비 안 오는 쪽이 우세해요',
+        summary: '예보는 갈리지만, 주변 특파원 8명 중 6명이 “비 안 옴”이라고 답했습니다.',
+        weather: 'cloudy',
+        temp: '28°',
+        risk: '확신도',
+        verify: true,
+        sources: [
+          ['기상청', '흐림', '20%', '소수', 'cloud', 20, '#2f9e44', false],
+          ['Yr.no', '약한 비', '48%', '상승', 'rain', 48, '#2563eb', true],
+          ['Windy', '소나기', '52%', '유사', 'shower', 52, '#f08c00', false]
+        ],
+        future: [
+          ['지금', '흐림', '제보 18건 중 비 7건', '확인'],
+          ['1시간', '비 가능성 상승', 'Yr/Windy가 강수 쪽', '주의'],
+          ['3시간', '소나기 가능', '예보 갈림 유지', '갈림']
+        ]
+      },
+      '3h': {
+        label: '향후 3시간',
+        basis: '15시 기준',
+        title: '15시 이후 비 가능성이 높아요',
+        summary: '기상청은 흐림, Yr.no와 Windy는 비를 예측합니다. 현재 제보는 비 시작 쪽으로 기울고 있어요.',
+        weather: 'rainy',
+        temp: '27°',
+        risk: '예보 갈림 큼',
+        verify: true,
+        sources: [
+          ['기상청', '흐림', '20%', '소수', 'cloud', 20, '#2f9e44', false],
+          ['Yr.no', '비', '70%', '선두', 'rain', 70, '#2563eb', true],
+          ['Windy', '소나기', '65%', '유사', 'shower', 65, '#f08c00', false]
+        ],
+        future: [
+          ['13시', '흐림 유지', '세 서비스 의견 비슷함', '안정'],
+          ['15시', '비 가능성 높음', '기상청만 낮게 예측', '갈림'],
+          ['16시', '약한 비 가능', 'Yr/Windy 유사', '주의']
+        ]
+      },
+      '6h': {
+        label: '향후 6시간',
+        basis: '18시까지',
+        title: '퇴근길 비 리스크가 커요',
+        summary: '15시부터 18시까지 Yr.no와 Windy가 계속 비를 보고 있습니다. 기상청은 늦게 비로 전환합니다.',
+        weather: 'rainy',
+        temp: '25°',
+        risk: '퇴근길 주의',
+        verify: false,
+        sources: [
+          ['기상청', '늦은 비', '45%', '후행', 'rain', 45, '#2f9e44', false],
+          ['Yr.no', '비', '76%', '선두', 'rain', 76, '#2563eb', true],
+          ['Windy', '비', '72%', '유사', 'rain', 72, '#f08c00', false]
+        ],
+        future: [
+          ['15시', '비 시작 가능', '두 서비스가 비 예측', '갈림'],
+          ['18시', '퇴근길 비', '강수 가능성 높음', '주의'],
+          ['21시', '약한 비', '강수량은 적음', '보통']
+        ]
+      },
+      '12h': {
+        label: '향후 12시간',
+        basis: '오늘 밤까지',
+        title: '오후에 비, 밤에는 약해져요',
+        summary: '오후 강수 가능성이 높고, 밤에는 약한 비 또는 흐림으로 내려갑니다. 바람 예측은 Windy가 더 강합니다.',
+        weather: 'rainy',
+        temp: '24°',
+        risk: '오후 집중',
+        verify: false,
+        sources: [
+          ['기상청', '오후 늦은 비', '55%', '보통', 'rain', 55, '#2f9e44', false],
+          ['Yr.no', '비 후 흐림', '68%', '선두', 'rain', 68, '#2563eb', true],
+          ['Windy', '비·강풍', '63%', '바람', 'shower', 63, '#f08c00', false]
+        ],
+        future: [
+          ['15시', '비 가능성 높음', '예보 갈림 큼', '갈림'],
+          ['18시', '비와 바람', 'Windy 강풍 신호', '주의'],
+          ['24시', '비 약화', '흐림 전환 가능', '완화']
+        ]
+      },
+      '24h': {
+        label: '향후 24시간',
+        basis: '내일까지',
+        title: '오늘 오후 비, 내일은 흐림 위주예요',
+        summary: '오늘 오후 강수가 핵심이고, 내일 오전은 흐림 또는 약한 비로 예측됩니다. 서비스 간 차이는 오늘 오후가 가장 큽니다.',
+        weather: 'cloudy',
+        temp: '24°',
+        risk: '오늘 오후 핵심',
+        verify: false,
+        sources: [
+          ['기상청', '흐림·비', '50%', '보통', 'cloud', 50, '#2f9e44', false],
+          ['Yr.no', '비 후 흐림', '64%', '선두', 'rain', 64, '#2563eb', true],
+          ['Windy', '소나기 후 흐림', '60%', '유사', 'shower', 60, '#f08c00', false]
+        ],
+        future: [
+          ['오늘 15시', '비 가능성 높음', '예보 갈림 큼', '주의'],
+          ['오늘 밤', '약한 비', '점차 약화', '보통'],
+          ['내일 오전', '흐림', '강수 낮음', '안정']
+        ]
+      },
+      week: {
+        label: '일주일',
+        basis: '7일 경향',
+        title: '이번 주는 중반 강수 신호가 있어요',
+        summary: '수요일과 목요일에 비 가능성이 높고, 주말은 서비스별 차이가 큽니다. 장기 예보는 신뢰도를 함께 봐야 합니다.',
+        weather: 'rainy',
+        temp: '25°',
+        risk: '중반 비',
+        verify: false,
+        sources: [
+          ['기상청', '수·목 비', '58%', '중간', 'rain', 58, '#2f9e44', false],
+          ['Yr.no', '수요일 비', '62%', '선두', 'rain', 62, '#2563eb', true],
+          ['Windy', '목요일 강수', '57%', '차이', 'shower', 57, '#f08c00', false]
+        ],
+        future: [
+          ['수', '비 가능성', '세 서비스 대체로 일치', '주의'],
+          ['목', '흐림·비', '강수 시간 차이', '갈림'],
+          ['주말', '불확실', '모델 차이 큼', '확인']
+        ]
+      },
+      month: {
+        label: '한달',
+        basis: '30일 경향',
+        title: '장기 경향은 비슷하지만 날짜는 불확실해요',
+        summary: '한달 예측은 일별 정확도보다 기온·강수 경향 중심으로 봐야 합니다. 서비스별 장기 신뢰도도 함께 표시합니다.',
+        weather: 'foggy',
+        temp: '26°',
+        risk: '경향 참고',
+        verify: false,
+        sources: [
+          ['기상청', '평년 비슷', '52%', '경향', 'cloud', 52, '#2f9e44', false],
+          ['Yr.no', '비 주기 있음', '55%', '경향', 'rain', 55, '#2563eb', true],
+          ['Windy', '변동성 큼', '49%', '불확실', 'shower', 49, '#f08c00', false]
+        ],
+        future: [
+          ['1주차', '평년 수준', '기온 큰 변화 없음', '안정'],
+          ['2주차', '강수 신호', '날짜 오차 큼', '참고'],
+          ['4주차', '불확실', '경향만 확인', '낮음']
+        ]
+      }
+    };
+
+    const state = {
+      location: '서울 강남구',
+      locationKind: '여기',
+      period: 'now',
+      weatherOverride: null,
+      reportKind: '비 와요',
+      reportCount: 18,
+      selectedRequestId: null,
+      requestReplyKind: '비 와요'
+    };
+    const reportRequests = [
+      { id: 'req-jamsil', place: '잠실종합운동장', question: '지금 비 와요?', distance: '1.2km', age: '2분 전', replies: 3, status: '대기' },
+      { id: 'req-gangnam', place: '강남역 11번 출구', question: '우산 필요할까요?', distance: '650m', age: '6분 전', replies: 5, status: '답변 중' },
+      { id: 'req-park', place: '탄천 산책로', question: '길 젖었나요?', distance: '2.4km', age: '12분 전', replies: 1, status: '대기' }
+    ];
+    const weatherJudgements = {
+      sunny: {
+        title: '맑은 쪽으로 판정돼요',
+        summary: '예보와 현장 제보 모두 비 신호가 약합니다. 야외 일정은 무난해 보여요.',
+        risk: '맑음 우세',
+        temp: '29°'
+      },
+      cloudy: {
+        title: '흐림 쪽으로 판정돼요',
+        summary: '비 신호는 약하지만 구름이 많은 상태입니다. 강수 가능성은 낮게 보고 있어요.',
+        risk: '흐림 우세',
+        temp: '28°'
+      },
+      rainy: {
+        title: '비 가능성이 높아요',
+        summary: '복수 예보와 주변 제보가 강수 쪽으로 기울고 있습니다. 우산을 챙기는 편이 좋아요.',
+        risk: '비 주의',
+        temp: '27°'
+      },
+      snowy: {
+        title: '눈 가능성이 있어요',
+        summary: '기온이 낮고 강수 신호가 있어 눈 또는 진눈깨비 가능성을 함께 봐야 합니다.',
+        risk: '눈 주의',
+        temp: '-1°'
+      },
+      thunder: {
+        title: '천둥번개 가능성이 있어요',
+        summary: '대기 불안정 신호가 강하게 잡혔습니다. 짧은 시간 강한 비와 번개 가능성을 주의하세요.',
+        risk: '낙뢰 주의',
+        temp: '27°'
+      },
+      foggy: {
+        title: '안개가 짙을 수 있어요',
+        summary: '시야가 나빠질 가능성이 있습니다. 이동 전 현장 제보와 가시거리 정보를 확인하세요.',
+        risk: '시야 주의',
+        temp: '24°'
+      }
+    };
+    const $ = (id) => document.getElementById(id);
+    const screens = ['locationScreen', 'timeScreen', 'resultScreen', 'reportScreen', 'compareScreen'];
+
+    function show(screenId) {
+      screens.forEach((id) => $(id).hidden = id !== screenId);
+      const sub = screenId === 'compareScreen'
+        ? `${state.location} 예보 비교`
+        : screenId === 'reportScreen'
+          ? '주변 제보 요청과 답변'
+          : '예보가 갈릴 때 현장 판정';
+      $('appTitle').textContent = '웨더체크';
+      $('appSub').textContent = sub;
+      document.querySelectorAll('.bottom-nav button').forEach((btn) => btn.classList.remove('active'));
+      if (screenId === 'compareScreen') {
+        $('compareTab').classList.add('active');
+      } else if (screenId === 'reportScreen') {
+        $('reportTab').classList.add('active');
+      } else {
+        $('questionTab').classList.add('active');
+      }
+    }
+
+    function sourceCard(item) {
+      const [name, condition, chance, badge, icon, width, color, leading] = item;
+      return `<div class="source-card ${leading ? 'leading' : ''}">
+        <div class="weather-icon ${icon}">${icons[icon]}</div>
+        <div class="source-main">
+          <div class="source-title"><strong>${name}</strong><span>${condition}</span></div>
+          <div class="bar" style="--w:${width}%;--c:${color}"><i></i></div>
+        </div>
+        <div class="source-score"><b>${chance}</b><span class="${badge === '소수' || badge === '불확실' ? 'warn' : ''}">${badge}</span></div>
+      </div>`;
+    }
+
+    function timelineFor(period) {
+      const sets = {
+        now: {
+          times: ['지금', '1시간', '2시간', '3시간'],
+          rows: [
+            ['기상청', 'K', '흐림', 'cloud', ['20%', '25%', '30%', '35%'], ['흐림', '흐림', '흐림', '약한 비'], false],
+            ['Yr.no', 'Y', '비 상승', 'rain', ['48%', '56%', '62%', '66%'], ['약한 비', '비', '비', '비'], true],
+            ['Windy', 'W', '소나기', 'shower', ['52%', '58%', '64%', '60%'], ['소나기', '비', '비', '약한 비'], false]
+          ]
+        },
+        '3h': {
+          times: ['13시', '14시', '15시', '16시'],
+          rows: [
+            ['기상청', 'K', '낮게 봄', 'cloud', ['20%', '20%', '20%', '30%'], ['흐림', '흐림', '흐림', '흐림'], false],
+            ['Yr.no', 'Y', '비 선두', 'rain', ['32%', '48%', '70%', '74%'], ['흐림', '약한 비', '비', '비'], true],
+            ['Windy', 'W', '유사', 'shower', ['40%', '52%', '65%', '68%'], ['약한 비', '소나기', '소나기', '비'], false]
+          ]
+        },
+        '6h': {
+          times: ['15시', '16시', '18시', '21시'],
+          rows: [
+            ['기상청', 'K', '늦은 전환', 'rain', ['30%', '35%', '45%', '55%'], ['흐림', '흐림', '약한 비', '비'], false],
+            ['Yr.no', 'Y', '계속 비', 'rain', ['70%', '74%', '76%', '68%'], ['비', '비', '비', '약한 비'], true],
+            ['Windy', 'W', '비·바람', 'rain', ['65%', '70%', '72%', '62%'], ['소나기', '비', '비', '약한 비'], false]
+          ]
+        },
+        '12h': {
+          times: ['15시', '18시', '21시', '24시'],
+          rows: [
+            ['기상청', 'K', '보통', 'rain', ['35%', '55%', '60%', '42%'], ['흐림', '약한 비', '비', '흐림'], false],
+            ['Yr.no', 'Y', '오후 비', 'rain', ['68%', '72%', '58%', '35%'], ['비', '비', '약한 비', '흐림'], true],
+            ['Windy', 'W', '강풍 신호', 'shower', ['63%', '70%', '52%', '30%'], ['소나기', '비·바람', '약한 비', '흐림'], false]
+          ]
+        },
+        '24h': {
+          times: ['오늘 15시', '오늘 밤', '내일 오전', '내일 오후'],
+          rows: [
+            ['기상청', 'K', '비 후 흐림', 'cloud', ['50%', '42%', '25%', '20%'], ['흐림·비', '약한 비', '흐림', '흐림'], false],
+            ['Yr.no', 'Y', '선두', 'rain', ['64%', '48%', '30%', '22%'], ['비', '약한 비', '흐림', '흐림'], true],
+            ['Windy', 'W', '소나기', 'shower', ['60%', '44%', '28%', '20%'], ['소나기', '약한 비', '흐림', '흐림'], false]
+          ]
+        },
+        week: {
+          times: ['월', '수', '목', '주말'],
+          rows: [
+            ['기상청', 'K', '수·목 비', 'rain', ['20%', '58%', '54%', '35%'], ['흐림', '비', '비', '흐림'], false],
+            ['Yr.no', 'Y', '수요일 비', 'rain', ['24%', '62%', '48%', '32%'], ['흐림', '비', '흐림·비', '흐림'], true],
+            ['Windy', 'W', '목요일 비', 'shower', ['22%', '45%', '57%', '40%'], ['흐림', '흐림·비', '소나기', '불확실'], false]
+          ]
+        },
+        month: {
+          times: ['1주차', '2주차', '3주차', '4주차'],
+          rows: [
+            ['기상청', 'K', '평년 비슷', 'cloud', ['52%', '48%', '50%', '46%'], ['평년', '흐림', '평년', '평년'], false],
+            ['Yr.no', 'Y', '비 주기', 'rain', ['55%', '58%', '45%', '50%'], ['흐림', '강수 신호', '평년', '흐림'], true],
+            ['Windy', 'W', '변동성 큼', 'shower', ['49%', '54%', '52%', '47%'], ['불확실', '강수 신호', '변동', '불확실'], false]
+          ]
+        }
+      };
+      return sets[period];
+    }
+
+    function serviceTimeline(period) {
+      const timeline = timelineFor(period);
+      return `<div class="service-timeline">${timeline.rows.map(([name, mark, badge, icon, chances, labels, leading]) => `
+        <div class="service-line ${leading ? 'leading' : ''}">
+          <div class="service-line-head">
+            <div class="service-name"><span class="service-mark">${mark}</span><strong>${name}</strong></div>
+            <span>${badge}</span>
+          </div>
+          <div class="service-slots">
+            ${timeline.times.map((time, index) => `
+              <div class="slot">
+                <strong>${time}</strong>
+                ${icons[labels[index].includes('흐림') || labels[index].includes('평년') || labels[index].includes('불확실') ? 'cloud' : labels[index].includes('소나기') ? 'shower' : icon]}
+                <b>${labels[index]}</b>
+                <span>${chances[index]}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function currentInfographic() {
+      const d = data[state.period];
+      return `<div class="now-grid">${d.sources.map(([name, condition, chance, badge, icon, width, color, leading]) => `
+        <div class="now-card ${leading ? 'leading' : ''}">
+          <strong>${name}</strong>
+          ${icons[icon]}
+          <b>${condition}</b>
+          <span>${chance} · ${badge}</span>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function daypartInfographic(period) {
+      const parts = period === '12h'
+        ? [
+          ['오후', '비 가능성 높음', '주의', [['기상청', '약한 비', '55%', 'rain'], ['Yr.no', '비', '72%', 'rain'], ['Windy', '비·바람', '70%', 'shower']]],
+          ['저녁', '퇴근길 영향', '주의', [['기상청', '비', '60%', 'rain'], ['Yr.no', '약한 비', '58%', 'rain'], ['Windy', '강풍', '52%', 'shower']]],
+          ['밤', '점차 약화', '완화', [['기상청', '흐림', '42%', 'cloud'], ['Yr.no', '흐림', '35%', 'cloud'], ['Windy', '흐림', '30%', 'cloud']]]
+        ]
+        : [
+          ['오늘 오후', '비 가능성 높음', '주의', [['기상청', '흐림·비', '50%', 'cloud'], ['Yr.no', '비', '64%', 'rain'], ['Windy', '소나기', '60%', 'shower']]],
+          ['오늘 밤', '약한 비 후 흐림', '보통', [['기상청', '약한 비', '42%', 'rain'], ['Yr.no', '약한 비', '48%', 'rain'], ['Windy', '약한 비', '44%', 'rain']]],
+          ['내일 오전', '흐림 위주', '안정', [['기상청', '흐림', '25%', 'cloud'], ['Yr.no', '흐림', '30%', 'cloud'], ['Windy', '흐림', '28%', 'cloud']]]
+        ];
+      return `<div class="daypart-grid">${parts.map(([part, title, risk, sources]) => `
+        <div class="daypart-card">
+          <div class="daypart-head"><strong>${part} · ${title}</strong><span>${risk}</span></div>
+          <div class="daypart-sources">
+            ${sources.map(([name, label, chance, icon]) => `
+              <div class="daypart-source">
+                <strong>${name}</strong>
+                ${icons[icon]}
+                <span>${label}<br>${chance}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function weekInfographic() {
+      const days = [
+        ['월', '흐림', '안정', 'cloud', false],
+        ['수', '비', '3사 일치', 'rain', true],
+        ['목', '흐림·비', '시간차', 'shower', true],
+        ['주말', '불확실', '갈림', 'cloud', false]
+      ];
+      return `<div class="week-grid">${days.map(([day, label, note, icon, hot]) => `
+        <div class="week-day ${hot ? 'hot' : ''}">
+          <strong>${day}</strong>
+          ${icons[icon]}
+          <b>${label}</b>
+          <span>${note}</span>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function monthInfographic() {
+      const weeks = [
+        ['1주차', '평년', 52, '#2f9e44'],
+        ['2주차', '강수', 58, '#2563eb'],
+        ['3주차', '변동', 45, '#f08c00'],
+        ['4주차', '불확실', 50, '#9aa8af']
+      ];
+      const services = [
+        ['기상청', '평년 비슷 · 보수적'],
+        ['Yr.no', '2주차 강수 신호 강함'],
+        ['Windy', '변동성 큼 · 날짜 오차 주의']
+      ];
+      return `<div class="month-grid">
+        <div class="trend-card">
+          <div class="trend-head"><strong>주차별 강수 신호</strong><span>경향 중심</span></div>
+          <div class="trend-bars">
+            ${weeks.map(([week, label, value, color]) => `
+              <div class="trend-row">
+                <span>${week}</span>
+                <div class="trend-track"><i style="--w:${value}%;--c:${color}"></i></div>
+                <span>${label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="panel">
+          ${services.map(([name, note]) => `
+            <div class="live-item">
+              <div class="live-icon">${icons.cloud}</div>
+              <div><strong>${name}</strong><span>${note}</span></div>
+              <span class="badge">경향</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    function infographicFor(period) {
+      if (period === 'now') return currentInfographic();
+      if (period === '3h' || period === '6h') return serviceTimeline(period);
+      if (period === '12h' || period === '24h') return daypartInfographic(period);
+      if (period === 'week') return weekInfographic();
+      if (period === 'month') return monthInfographic();
+      return serviceTimeline(period);
+    }
+
+    const compareHours = ['오늘', '17시', '18시', '19시', '20시', '21시', '22시', '23시'];
+    const compareDays = ['오늘', '수 7.01', '목 7.02', '금 7.03', '토 7.04', '일 7.05', '월 7.06'];
+    const compareServices = [
+      {
+        name: '기상청',
+        logo: 'K',
+        hourly: [
+          ['cloud', '31°', '-'], ['sun', '29°', '-'], ['sun', '27°', '-'], ['cloud', '25°', '20%'],
+          ['cloud', '24°', '20%'], ['shower', '23°', '20%'], ['cloud', '23°', '30%'], ['rain', '22°', '60%']
+        ],
+        daily: [
+          ['rain', '20°/33°', '60/60%'], ['cloud', '20°/33°', '30/20%'], ['sun', '19°/30°', '20/20%'],
+          ['cloud', '20°/28°', '30/30%'], ['cloud', '21°/30°', '40/40%'], ['cloud', '21°/31°', '40/40%'], ['rain', '21°/28°', '60/60%']
+        ]
+      },
+      {
+        name: 'Yr.no',
+        logo: 'Y',
+        hourly: [
+          ['cloud', '32°', '37%'], ['shower', '30°', '40%'], ['cloud', '29°', '25%'], ['cloud', '27°', '20%'],
+          ['cloud', '25°', '20%'], ['cloud', '24°', '20%'], ['cloud', '22°', '20%'], ['cloud', '21°', '15%']
+        ],
+        daily: [
+          ['shower', '18°/33°', '40/25%'], ['shower', '20°/31°', '60/12%'], ['sun', '18°/31°', '55/25%'],
+          ['shower', '21°/27°', '88/25%'], ['shower', '21°/29°', '60/25%'], ['sun', '21°/32°', '55/25%'], ['rain', '21°/31°', '65/72%']
+        ]
+      },
+      {
+        name: 'Windy',
+        logo: 'W',
+        hourly: [
+          ['cloud', '29°', '24%'], ['rain', '28°', '31%'], ['cloud', '26°', '14%'], ['cloud', '25°', '7%'],
+          ['cloud', '24°', '3%'], ['cloud', '23°', '3%'], ['cloud', '23°', '5%'], ['cloud', '23°', '8%']
+        ],
+        daily: [
+          ['rain', '20°/31°', '40/13%'], ['cloud', '19°/32°', '22/14%'], ['rain', '20°/30°', '68/50%'],
+          ['rain', '19°/30°', '44/46%'], ['rain', '20°/31°', '36/53%'], ['rain', '21°/28°', '74/81%'], ['rain', '21°/28°', '77/72%']
+        ]
+      }
+    ];
+
+    function compareCell(item) {
+      const [icon, temp, pct] = item;
+      return `<div class="compare-cell">${icons[icon]}<b>${temp}</b><span class="rain-pct">${pct}</span></div>`;
+    }
+
+    function renderCompare() {
+      $('hourlyCompare').innerHTML = [
+        '<div class="compare-cell compare-head-cell compare-service"></div>',
+        ...compareHours.map((hour) => `<div class="compare-cell compare-head-cell">${hour}</div>`),
+        ...compareServices.flatMap((service) => [
+          `<div class="compare-cell compare-service"><div class="logo">${service.logo}</div><span>${service.name}</span></div>`,
+          ...service.hourly.map(compareCell)
+        ])
+      ].join('');
+
+      $('dailyCompare').innerHTML = [
+        '<div class="compare-cell compare-head-cell compare-service"></div>',
+        ...compareDays.map((day) => `<div class="compare-cell compare-head-cell">${day}</div>`),
+        ...compareServices.flatMap((service) => [
+          `<div class="compare-cell compare-service"><div class="logo">${service.logo}</div><span>${service.name}</span></div>`,
+          ...service.daily.map(compareCell)
+        ])
+      ].join('');
+    }
+
+    function row(item) {
+      const [time, title, desc, pill] = item;
+      const good = pill === '안정' || pill === '완화';
+      const icon = title.includes('흐림') || title.includes('평년') ? icons.cloud : icons.rain;
+      return `<div class="row">
+        <strong>${time}</strong>
+        ${icon}
+        <div class="row-main"><b>${title}</b><span>${desc}</span></div>
+        <span class="pill ${good ? 'good' : ''}">${pill}</span>
+      </div>`;
+    }
+
+    function renderResult() {
+      const d = data[state.period];
+      const weather = state.weatherOverride || d.weather || 'cloudy';
+      const judgement = state.weatherOverride ? weatherJudgements[weather] : null;
+      state.reportCount = 18;
+      state.reportKind = '비 와요';
+      $('answerCard').className = `answer weather-${weather}`;
+      $('resultChip').textContent = state.period === 'now' ? '현장 판정' : `${state.location} · ${d.label}`;
+      $('resultTitle').textContent = judgement?.title || d.title;
+      $('resultSummary').textContent = judgement?.summary || d.summary;
+      $('resultTemp').textContent = judgement?.temp || d.temp;
+      $('resultRisk').textContent = judgement?.risk || d.risk;
+      $('resultBasis').textContent = d.basis;
+      $('sources').innerHTML = infographicFor(state.period);
+      $('futureTitle').textContent = state.period === 'month' ? '장기 경향은 어떤가요?' : '앞으로 어떻게 바뀌나요?';
+      $('futureRows').innerHTML = d.future.map(row).join('');
+      $('verifyBlock').style.display = d.verify ? 'grid' : 'none';
+      $('liveBlock').style.display = d.verify ? 'block' : 'none';
+      $('verifyCount').textContent = `제보 ${state.reportCount}건`;
+      document.querySelectorAll('[data-report-kind]').forEach((btn) => btn.classList.toggle('active', btn.dataset.reportKind === state.reportKind));
+      $('liveFeed').innerHTML = `<div class="live-item">
+        <div class="live-icon">${icons.rain}</div>
+        <div><strong>비 시작</strong><span>${state.location} 주변 · 3분 전 · 사진 있음</span></div>
+        <span class="badge">높음</span>
+      </div>
+      <div class="live-item">
+        <div class="live-icon"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg></div>
+        <div><strong>구름 잔뜩</strong><span>근처 사용자 · 8분 전 · 비 올 듯</span></div>
+        <span class="badge">보통</span>
+      </div>`;
+    }
+
+    function showToast(message) {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function prependLiveItem(title, detail, badge, icon = icons.cloud) {
+      if ($('liveBlock').style.display === 'none') $('liveBlock').style.display = 'block';
+      $('liveFeed').insertAdjacentHTML('afterbegin', `<div class="live-item">
+        <div class="live-icon">${icon}</div>
+        <div><strong>${title}</strong><span>${detail}</span></div>
+        <span class="badge">${badge}</span>
+      </div>`);
+    }
+
+    function askNearby() {
+      prependLiveItem('제보 요청 발송', `${state.location} 반경 1km 사용자에게 질문을 보냈어요`, '대기', icons.shower);
+      $('verifyCount').textContent = '제보 요청 중';
+      showToast('근처 사용자에게 지금 날씨를 물어봤어요');
+    }
+
+    function reportHere() {
+      prependLiveItem('내 제보 반영', `${state.location} · 방금 전 · 현재 비 안 와요`, '신규', icons.cloud);
+      state.reportCount += 1;
+      $('verifyCount').textContent = `제보 ${state.reportCount}건`;
+      showToast('내 위치 제보가 판정 근거에 추가됐어요');
+    }
+
+    function renderRequestList() {
+      $('requestCount').textContent = `요청 ${reportRequests.length}개`;
+      $('requestList').innerHTML = reportRequests.map((request) => `
+        <button class="request-item ${request.id === state.selectedRequestId ? 'active' : ''}" data-request-id="${request.id}" type="button">
+          <span class="request-icon">${icons.cloud}</span>
+          <span>
+            <strong>${request.place}</strong>
+            <span>${request.question} · ${request.distance} · ${request.age}</span>
+          </span>
+          <span class="badge">${request.status}</span>
+        </button>
+      `).join('');
+      document.querySelectorAll('[data-request-id]').forEach((btn) => {
+        btn.addEventListener('click', () => selectRequest(btn.dataset.requestId));
+      });
+      renderSelectedRequest();
+    }
+
+    function renderSelectedRequest() {
+      const request = reportRequests.find((item) => item.id === state.selectedRequestId);
+      if (!request) {
+        $('replyCard').classList.remove('open');
+        $('replyTargetTitle').textContent = '선택한 요청에 답변하기';
+        $('replyTargetMeta').textContent = '위 요청 리스트에서 하나를 누르면 답변 입력창이 열립니다.';
+        document.querySelectorAll('[data-request-id]').forEach((btn) => btn.classList.remove('active'));
+        return;
+      }
+      $('replyCard').classList.add('open');
+      $('replyTargetTitle').textContent = '선택한 요청에 답변하기';
+      $('replyTargetMeta').textContent = `${request.place} · ${request.question} · 현재 답변 ${request.replies}건`;
+      document.querySelectorAll('[data-request-reply-kind]').forEach((btn) => btn.classList.toggle('active', btn.dataset.requestReplyKind === state.requestReplyKind));
+      document.querySelectorAll('[data-request-id]').forEach((btn) => btn.classList.toggle('active', btn.dataset.requestId === state.selectedRequestId));
+    }
+
+    function selectRequest(id) {
+      state.selectedRequestId = id;
+      renderSelectedRequest();
+      setTimeout(() => $('replyCard').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 80);
+    }
+
+    function createReportRequest() {
+      const place = $('requestPlaceInput').value.trim() || state.location;
+      const question = $('requestQuestionInput').value.trim() || '지금 날씨 어때요?';
+      const request = {
+        id: `req-${Date.now()}`,
+        place,
+        question,
+        distance: '요청 위치',
+        age: '방금 전',
+        replies: 0,
+        status: '대기'
+      };
+      reportRequests.unshift(request);
+      state.selectedRequestId = null;
+      $('requestPlaceInput').value = '';
+      $('requestQuestionInput').value = '';
+      renderRequestList();
+      showToast('제보 요청이 목록 맨 위에 올라갔어요');
+    }
+
+    function submitRequestReply() {
+      const request = reportRequests.find((item) => item.id === state.selectedRequestId);
+      const text = $('requestReplyInput').value.trim();
+      if (!request) {
+        showToast('먼저 제보 요청을 선택해주세요');
+        return;
+      }
+      if (!text) {
+        showToast('답변을 한 줄로 남겨주세요');
+        $('requestReplyInput').focus();
+        return;
+      }
+      request.replies += 1;
+      request.status = '답변 완료';
+      $('requestReplyInput').value = '';
+      renderRequestList();
+      prependLiveItem(state.requestReplyKind, `${request.place} · 방금 전 · ${text}`, '요청 답변', selectedReportIcon(state.requestReplyKind));
+      state.reportCount += 1;
+      $('verifyCount').textContent = `제보 ${state.reportCount}건`;
+      showToast('요청 답변이 생생날씨특파원에 반영됐어요');
+    }
+
+    function selectedReportIcon(kind) {
+      if (kind === '비 와요') return icons.rain;
+      if (kind === '사진 있음') return '<svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>';
+      return icons.cloud;
+    }
+
+    function submitOneLineReport() {
+      const input = $('reportInput');
+      const text = input.value.trim();
+      if (!text) {
+        showToast('현장 상황을 한 줄로 남겨주세요');
+        input.focus();
+        return;
+      }
+      state.reportCount += 1;
+      prependLiveItem(state.reportKind, `${state.location} · 방금 전 · ${text}`, '내 제보', selectedReportIcon(state.reportKind));
+      $('verifyCount').textContent = `제보 ${state.reportCount}건`;
+      input.value = '';
+      showToast('한 줄 제보가 생생날씨특파원에 올라갔어요');
+    }
+
+    function readQuestion(value) {
+      const text = value.trim();
+      if (!text) return;
+      document.querySelectorAll('[data-location]').forEach((el) => el.classList.remove('active'));
+      if (text.includes('잠실')) state.location = '잠실종합운동장';
+      else if (text.includes('강남')) state.location = '서울 강남구';
+      else if (text.includes('회사')) state.location = '회사 주변';
+      else if (text.includes('캠핑')) state.location = '캠핑장 주변';
+      else state.location = text;
+      if (text.includes('한달') || text.includes('한 달')) state.period = 'month';
+      else if (text.includes('일주일') || text.includes('이번주')) state.period = 'week';
+      else if (text.includes('24')) state.period = '24h';
+      else if (text.includes('12')) state.period = '12h';
+      else if (text.includes('6')) state.period = '6h';
+      else if (text.includes('3')) state.period = '3h';
+      else state.period = 'now';
+      state.weatherOverride = inferWeatherFromText(text);
+      document.querySelectorAll('[data-period]').forEach((el) => el.classList.toggle('active', el.dataset.period === state.period));
+      state.locationKind = '검색';
+      renderResult();
+      show('resultScreen');
+    }
+
+    function inferWeatherFromText(text) {
+      if (text.includes('천둥') || text.includes('번개')) return 'thunder';
+      if (text.includes('눈')) return 'snowy';
+      if (text.includes('안개') || text.includes('미세먼지')) return 'foggy';
+      if (text.includes('맑') || text.includes('햇')) return 'sunny';
+      if (text.includes('비') || text.includes('소나기')) return 'rainy';
+      if (text.includes('흐림') || text.includes('구름')) return 'cloudy';
+      return null;
+    }
+
+    function scheduleQuestion(value) {
+      clearTimeout(scheduleQuestion.timer);
+      const text = value.trim();
+      if (text.length < 2) return;
+      scheduleQuestion.timer = setTimeout(() => readQuestion(text), 280);
+    }
+
+    document.querySelectorAll('[data-location]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-location]').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+        state.location = btn.dataset.location;
+        state.locationKind = btn.dataset.locationKind;
+      });
+    });
+
+    $('locationInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') readQuestion(event.target.value || event.target.placeholder);
+    });
+
+    $('locationInput').addEventListener('input', (event) => {
+      scheduleQuestion(event.target.value);
+    });
+
+    $('queryBtn').addEventListener('click', () => {
+      readQuestion($('locationInput').value || $('locationInput').placeholder);
+    });
+
+    $('reportHereBtn').addEventListener('click', reportHere);
+    $('submitReportBtn').addEventListener('click', submitOneLineReport);
+    $('reportInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') submitOneLineReport();
+    });
+
+    document.querySelectorAll('[data-report-kind]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.reportKind = btn.dataset.reportKind;
+        document.querySelectorAll('[data-report-kind]').forEach((el) => el.classList.toggle('active', el === btn));
+      });
+    });
+
+    document.querySelectorAll('[data-request-reply-kind]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.requestReplyKind = btn.dataset.requestReplyKind;
+        document.querySelectorAll('[data-request-reply-kind]').forEach((el) => el.classList.toggle('active', el === btn));
+      });
+    });
+
+    $('createRequestBtn').addEventListener('click', createReportRequest);
+    $('submitRequestReplyBtn').addEventListener('click', submitRequestReply);
+    $('requestReplyInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') submitRequestReply();
+    });
+
+    document.querySelectorAll('[data-period]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-period]').forEach((el) => el.classList.remove('active'));
+        btn.classList.add('active');
+        state.period = btn.dataset.period;
+      });
+    });
+
+    $('toTime').addEventListener('click', () => show('timeScreen'));
+    $('backLocation').addEventListener('click', () => show('resultScreen'));
+    $('showResult').addEventListener('click', () => {
+      renderResult();
+      show('resultScreen');
+    });
+    $('backTime').addEventListener('click', () => show('timeScreen'));
+    $('resetBtn').addEventListener('click', () => {
+      state.location = '서울 강남구';
+      state.locationKind = '여기';
+      state.period = 'now';
+      state.weatherOverride = null;
+      state.reportKind = '비 와요';
+      state.reportCount = 18;
+      $('locationInput').value = '';
+      renderResult();
+      show('resultScreen');
+    });
+    $('compareTab').addEventListener('click', () => {
+      renderCompare();
+      show('compareScreen');
+    });
+    $('reportTab').addEventListener('click', () => {
+      state.selectedRequestId = null;
+      renderRequestList();
+      show('reportScreen');
+    });
+    $('questionTab').addEventListener('click', () => {
+      renderResult();
+      show('resultScreen');
+    });
+    renderResult();
+    renderRequestList();
+    show('resultScreen');
+  </script>
+</body>
+</html>

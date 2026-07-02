@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>날씨체크 첫페이지 디자인 시안 10개</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #eef3f8;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+    svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+    .page {
+      max-width: 1760px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .intro {
+      margin: 0 0 22px;
+      display: grid;
+      gap: 8px;
+    }
+    .intro h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1.05;
+    }
+    .intro p {
+      margin: 0;
+      color: #64748b;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+    .concept {
+      display: grid;
+      gap: 10px;
+    }
+    .caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      padding: 0 4px;
+    }
+    .caption strong {
+      font-size: 15px;
+    }
+    .caption span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .phone {
+      min-height: 680px;
+      border: 8px solid #0b1020;
+      border-radius: 34px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+    }
+    .status {
+      height: 38px;
+      padding: 10px 18px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .dots i {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .75;
+    }
+    .content {
+      padding: 14px 16px 82px;
+      display: grid;
+      gap: 12px;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: grid;
+      gap: 2px;
+    }
+    .brand b {
+      font-size: 17px;
+      line-height: 1.1;
+    }
+    .brand span {
+      color: inherit;
+      opacity: .62;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .circle {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+    }
+    .search {
+      min-height: 48px;
+      padding: 0 13px;
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .hero {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      border-radius: 26px;
+      min-height: 225px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero h2 {
+      margin: 0;
+      max-width: 230px;
+      font-size: 31px;
+      line-height: 1.04;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 240px;
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: .72;
+    }
+    .chip {
+      width: fit-content;
+      min-height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .temp {
+      font-size: 56px;
+      font-weight: 950;
+      line-height: .88;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      min-height: 72px;
+      padding: 10px;
+      display: grid;
+      align-content: center;
+      gap: 3px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .metric b {
+      font-size: 18px;
+    }
+    .section {
+      padding: 14px;
+      border-radius: 22px;
+      display: grid;
+      gap: 10px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+    .section-head b {
+      font-size: 15px;
+    }
+    .section-head span {
+      font-size: 12px;
+      font-weight: 900;
+      opacity: .65;
+    }
+    .row {
+      min-height: 48px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 15px;
+      font-size: 12px;
+    }
+    .row strong { display: block; font-size: 13px; }
+    .row span { display: block; margin-top: 2px; opacity: .62; }
+    .icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+    }
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148,163,184,.22);
+    }
+    .bar i {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      background: currentColor;
+      border-radius: inherit;
+    }
+    .nav {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      min-height: 58px;
+      padding: 7px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+    }
+    .nav span {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+      border-radius: 15px;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .nav svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* 01: clean blue */
+    .v1 { background: #f7fbff; }
+    .v1 .search { background: #fff; border: 1px solid #dbeafe; color: #64748b; }
+    .v1 .hero { color: #0f172a; background: linear-gradient(150deg, #bfdbfe, #eff6ff 62%, #fff); }
+    .v1 .chip { background: rgba(255,255,255,.72); color: #2563eb; }
+    .v1 .metric, .v1 .section { background: #fff; border: 1px solid #dbeafe; }
+    .v1 .icon { background: #dbeafe; color: #2563eb; }
+    .v1 .row { background: #f8fafc; }
+    .v1 .nav { background: rgba(255,255,255,.88); border: 1px solid #dbeafe; }
+    .v1 .nav .active { background: #2563eb; color: #fff; }
+
+    /* 02: map first */
+    .v2 { background: #e8f5ef; color: #103328; }
+    .v2 .search { background: rgba(255,255,255,.86); color: #47685d; }
+    .map {
+      min-height: 300px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 34% 30%, rgba(14,165,164,.28) 0 44px, transparent 45px),
+        radial-gradient(circle at 78% 64%, rgba(37,99,235,.20) 0 56px, transparent 57px),
+        linear-gradient(140deg, #ccfbf1, #f0fdf4);
+    }
+    .map:before,
+    .map:after {
+      content: "";
+      position: absolute;
+      border: 2px solid rgba(15,118,110,.18);
+      border-radius: 50%;
+      transform: rotate(-18deg);
+    }
+    .map:before { width: 320px; height: 120px; left: -40px; top: 78px; }
+    .map:after { width: 260px; height: 96px; right: -68px; bottom: 44px; }
+    .pin-card {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.86);
+      box-shadow: 0 16px 30px rgba(16,51,40,.12);
+    }
+    .pin-card h2 { margin: 0; font-size: 26px; line-height: 1.08; }
+    .v2 .section { background: #fff; }
+    .v2 .row { background: #f0fdf4; }
+    .v2 .icon { background: #ccfbf1; color: #0f766e; }
+    .v2 .nav { background: rgba(255,255,255,.82); }
+    .v2 .nav .active { background: #0f766e; color: #fff; }
+
+    /* 03: question first */
+    .v3 { background: #0f172a; color: #e5e7eb; }
+    .v3 .content { gap: 16px; }
+    .v3 .search {
+      min-height: 64px;
+      background: #fff;
+      color: #0f172a;
+      box-shadow: 0 18px 38px rgba(0,0,0,.32);
+    }
+    .v3 .hero { background: linear-gradient(145deg, #1e293b, #2563eb); }
+    .v3 .hero h2 { color: #fff; }
+    .v3 .chip { background: rgba(255,255,255,.14); color: #bfdbfe; }
+    .bubble-list { display: grid; gap: 8px; }
+    .bubble {
+      width: fit-content;
+      max-width: 86%;
+      padding: 11px 13px;
+      border-radius: 18px;
+      background: #1e293b;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 850;
+    }
+    .bubble.me { justify-self: end; background: #dbeafe; color: #0f172a; }
+    .v3 .nav { background: rgba(15,23,42,.84); border: 1px solid rgba(255,255,255,.08); }
+    .v3 .nav .active { background: #fff; color: #0f172a; }
+
+    /* 04: data dashboard */
+    .v4 { background: #f8fafc; }
+    .v4 .search { background: #eef2ff; color: #475569; border-radius: 16px; }
+    .score {
+      min-height: 240px;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+      border-radius: 24px;
+      background: #0f172a;
+      color: #fff;
+    }
+    .score-ring {
+      width: 128px;
+      height: 128px;
+      display: grid;
+      place-items: center;
+      justify-self: center;
+      border-radius: 999px;
+      background: conic-gradient(#22c55e 0 74%, rgba(255,255,255,.16) 74% 100%);
+    }
+    .score-ring b {
+      width: 96px;
+      height: 96px;
+      display: grid;
+      place-items: center;
+      border-radius: inherit;
+      background: #0f172a;
+      font-size: 28px;
+    }
+    .v4 .section { background: #fff; border: 1px solid #e2e8f0; }
+    .v4 .row { background: #f8fafc; }
+    .v4 .icon { background: #eef2ff; color: #4f46e5; }
+    .v4 .nav { background: rgba(255,255,255,.88); border: 1px solid #e2e8f0; }
+    .v4 .nav .active { background: #0f172a; color: #fff; }
+
+    /* 05: community live */
+    .v5 { background: #fff7ed; color: #1c1917; }
+    .v5 .search { background: #fff; color: #78716c; border: 1px solid #fed7aa; }
+    .v5 .hero { background: linear-gradient(145deg, #fed7aa, #fff7ed); }
+    .v5 .chip { background: #fff; color: #c2410c; }
+    .avatar-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .avatar {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: 999px;
+      background: #fdba74;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .v5 .section { background: #fff; border: 1px solid #fed7aa; }
+    .v5 .row { background: #fff7ed; }
+    .v5 .icon { background: #fed7aa; color: #c2410c; }
+    .v5 .nav { background: rgba(255,255,255,.86); border: 1px solid #fed7aa; }
+    .v5 .nav .active { background: #ea580c; color: #fff; }
+
+    /* 06: storm pro */
+    .v6 { background: #08111f; color: #e5edf8; }
+    .v6 .search { background: rgba(255,255,255,.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,.10); }
+    .v6 .hero {
+      min-height: 285px;
+      background:
+        linear-gradient(120deg, transparent 0 62%, #facc15 62% 70%, transparent 70%),
+        radial-gradient(circle at 76% 20%, rgba(255,255,255,.14) 0 52px, transparent 53px),
+        linear-gradient(145deg, #1e1b4b, #020617);
+    }
+    .v6 .chip { background: rgba(255,255,255,.10); color: #fde68a; }
+    .v6 .metric, .v6 .section { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10); }
+    .v6 .row { background: rgba(255,255,255,.06); }
+    .v6 .icon { background: rgba(96,165,250,.18); color: #93c5fd; }
+    .v6 .nav { background: rgba(2,6,23,.80); border: 1px solid rgba(255,255,255,.10); }
+    .v6 .nav .active { background: #facc15; color: #111827; }
+
+    /* 07: soft wellness */
+    .v7 { background: #f8fafc; color: #334155; }
+    .v7 .top { justify-content: center; text-align: center; }
+    .v7 .circle { display: none; }
+    .v7 .search { background: #fff; color: #94a3b8; border: 1px solid #e2e8f0; }
+    .v7 .hero {
+      min-height: 260px;
+      justify-items: center;
+      text-align: center;
+      background: linear-gradient(145deg, #fdf2f8, #e0f2fe);
+    }
+    .v7 .hero h2 { max-width: 260px; }
+    .v7 .chip { background: #fff; color: #0ea5e9; }
+    .v7 .metrics { grid-template-columns: repeat(2, 1fr); }
+    .v7 .metric { background: #fff; text-align: center; }
+    .v7 .section { background: #fff; border: 1px solid #e2e8f0; }
+    .v7 .nav { background: rgba(255,255,255,.86); border: 1px solid #e2e8f0; }
+    .v7 .nav .active { background: #0ea5e9; color: #fff; }
+
+    /* 08: comparison first */
+    .v8 { background: #f8fafc; }
+    .v8 .search { background: #fff; border: 1px solid #e2e8f0; color: #64748b; }
+    .compare-first {
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      border-radius: 24px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+    }
+    .compare-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .service-grid {
+      display: grid;
+      grid-template-columns: 72px repeat(3, 1fr);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      font-size: 11px;
+      text-align: center;
+      font-weight: 900;
+    }
+    .service-grid span {
+      min-height: 42px;
+      padding: 7px 4px;
+      display: grid;
+      place-items: center;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .service-grid span:nth-child(4n) { border-right: 0; }
+    .service-grid .head { background: #eff6ff; color: #2563eb; }
+    .v8 .hero { min-height: 170px; background: linear-gradient(145deg, #dbeafe, #ecfeff); }
+    .v8 .chip { background: #fff; color: #2563eb; }
+    .v8 .nav { background: rgba(255,255,255,.88); border: 1px solid #e2e8f0; }
+    .v8 .nav .active { background: #2563eb; color: #fff; }
+
+    /* 09: editorial card */
+    .v9 { background: #f4f1ea; color: #1f2937; }
+    .v9 .search { background: #fff; color: #6b7280; border: 1px solid #e5e0d7; }
+    .v9 .hero {
+      min-height: 330px;
+      align-content: end;
+      color: #fff;
+      background:
+        linear-gradient(180deg, transparent 0 35%, rgba(15,23,42,.72) 100%),
+        radial-gradient(circle at 78% 18%, #fde68a 0 48px, transparent 49px),
+        linear-gradient(145deg, #93c5fd, #1e3a8a);
+    }
+    .v9 .hero h2 { font-size: 34px; }
+    .v9 .chip { background: rgba(255,255,255,.18); color: #fff; }
+    .v9 .section { background: #fff; border: 1px solid #e5e0d7; }
+    .v9 .row { background: #f9fafb; }
+    .v9 .icon { background: #f4f1ea; color: #1e3a8a; }
+    .v9 .nav { background: rgba(255,255,255,.86); border: 1px solid #e5e0d7; }
+    .v9 .nav .active { background: #1f2937; color: #fff; }
+
+    /* 10: radar playful */
+    .v10 { background: #eef2ff; color: #1e1b4b; }
+    .v10 .search { background: #fff; color: #64748b; border: 1px solid #c7d2fe; }
+    .radar {
+      min-height: 280px;
+      padding: 18px;
+      display: grid;
+      align-content: space-between;
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background:
+        conic-gradient(from 130deg at 62% 52%, rgba(34,197,94,.30), rgba(59,130,246,.20), rgba(244,63,94,.18), rgba(34,197,94,.30)),
+        radial-gradient(circle at 62% 52%, transparent 0 36px, rgba(255,255,255,.40) 37px 39px, transparent 40px 78px, rgba(255,255,255,.35) 79px 81px, transparent 82px),
+        #dbeafe;
+    }
+    .radar h2 { margin: 0; max-width: 220px; font-size: 30px; line-height: 1.06; }
+    .radar p { margin: 0; max-width: 240px; font-size: 13px; line-height: 1.45; opacity: .72; }
+    .v10 .chip { background: #fff; color: #4f46e5; }
+    .v10 .section { background: #fff; border: 1px solid #c7d2fe; }
+    .v10 .row { background: #f8fafc; }
+    .v10 .icon { background: #e0e7ff; color: #4f46e5; }
+    .v10 .nav { background: rgba(255,255,255,.86); border: 1px solid #c7d2fe; }
+    .v10 .nav .active { background: #4f46e5; color: #fff; }
+
+    @media (max-width: 720px) {
+      .page { padding: 18px 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .phone { min-height: 650px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="intro">
+      <h1>첫페이지 디자인 시안 10개</h1>
+      <p>같은 “잠실운동장 지금 비 와?” 판정 서비스를 서로 다른 스타일로 풀었습니다. 마음에 드는 방향 번호를 고르면 그 톤으로 실제 목업을 다시 정리하면 됩니다.</p>
+    </section>
+
+    <div class="grid">
+      <article class="concept">
+        <div class="caption"><strong>01. 클린 날씨앱</strong><span>밝고 익숙한 기본형</span></div>
+        <section class="phone v1">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크</b><span>예보보다 지금을 먼저</span></div><div class="circle"><svg viewBox="0 0 24 24"><path d="M12 2v2"/><path d="M18.4 5.6 17 7"/><circle cx="12" cy="12" r="4"/></svg></div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>잠실운동장 지금 비 와?</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="hero"><span class="chip">현재위치 판정</span><h2>지금은 비 안 오는 쪽이 우세해요</h2><p>기상청, Yr.no, Windy와 현장 제보를 같이 봤어요.</p><div class="temp">27°</div></div>
+            <div class="metrics"><div class="metric"><span>확신도</span><b>72%</b></div><div class="metric"><span>제보</span><b>18건</b></div><div class="metric"><span>강수</span><b>28%</b></div></div>
+            <div class="section"><div class="section-head"><b>판정 근거</b><span>3개 비교</span></div><div class="row"><span class="icon">K</span><span><strong>기상청</strong><span>흐림, 강수 낮음</span></span><b>24%</b></div><div class="row"><span class="icon">Y</span><span><strong>Yr.no</strong><span>약한 비 가능성</span></span><b>38%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">질문</span><span>비교</span><span>제보</span><span>설정</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>02. 지도 우선형</strong><span>지역 제보/현장감</span></div>
+        <section class="phone v2">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크</b><span>내 주변 제보 지도</span></div><div class="circle">📍</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>어디가 궁금하세요?</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="map"><span class="chip">강남구 1.2km 안</span><div class="pin-card"><h2>잠실운동장 근처 제보 18건</h2><p>10분 전부터 “빗방울 없음” 제보가 많아요.</p></div></div>
+            <div class="section"><div class="section-head"><b>근처 현장판정</b><span>실시간</span></div><div class="row"><span class="icon">☁</span><span><strong>잠실새내역</strong><span>비 안 옴 · 3분 전</span></span><b>5명</b></div><div class="row"><span class="icon">🌦</span><span><strong>삼성역</strong><span>약한 빗방울 · 7분 전</span></span><b>2명</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">지도</span><span>비교</span><span>제보</span><span>내정보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>03. 질문 채팅형</strong><span>자연어 질의 중심</span></div>
+        <section class="phone v3">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크 AI</b><span>물어보면 바로 판정</span></div><div class="circle">?</div></div>
+            <div class="bubble-list"><div class="bubble me">잠실운동장 지금 비 와?</div><div class="bubble">현재는 비 안 오는 쪽이 우세해요. 30분 뒤 약한 비 가능성이 있어요.</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>장소와 시간을 물어보세요</span><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg></div>
+            <div class="hero"><span class="chip">답변 근거</span><h2>예보 3개 중 2개가 흐림으로 봐요</h2><p>근처 제보 18건 중 14건은 “비 없음”이에요.</p></div>
+            <div class="metrics"><div class="metric"><span>KMA</span><b>30%</b></div><div class="metric"><span>Yr.no</span><b>42%</b></div><div class="metric"><span>Windy</span><b>24%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">질문</span><span>히스토리</span><span>제보</span><span>설정</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>04. 데이터 대시보드형</strong><span>신뢰/근거 강조</span></div>
+        <section class="phone v4">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨판정</b><span>예보 신뢰도 분석</span></div><div class="circle"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/></svg></div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>잠실운동장 지금 비 와?</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="score"><div class="section-head"><b>현재 판정 점수</b><span>실시간</span></div><div class="score-ring"><b>74</b></div><p>비 안 올 확률이 우세하지만 1시간 뒤 변동성이 있어요.</p></div>
+            <div class="section"><div class="section-head"><b>서비스별 강수확률</b><span>낮을수록 안전</span></div><div class="bar" style="color:#2563eb"><i style="--w:32%"></i></div><div class="bar" style="color:#0ea5a4"><i style="--w:48%"></i></div><div class="bar" style="color:#f59e0b"><i style="--w:24%"></i></div></div>
+          </div>
+          <nav class="nav"><span class="active">판정</span><span>비교</span><span>통계</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>05. 커뮤니티 라이브형</strong><span>생생날씨특파원 중심</span></div>
+        <section class="phone v5">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>생생날씨</b><span>근처 사람이 알려줘요</span></div><div class="circle">＋</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>잠실운동장에 물어보기</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="hero"><span class="chip">라이브 제보</span><h2>방금 14명이 “비 안 와요”라고 답했어요</h2><p>예보보다 현장 반응을 먼저 보여주는 첫화면.</p><div class="avatar-row"><span class="avatar">민</span><span class="avatar">J</span><span class="avatar">수</span><span class="avatar">+11</span></div></div>
+            <div class="section"><div class="section-head"><b>방금 올라온 글</b><span>지도 보기</span></div><div class="row"><span class="icon">💬</span><span><strong>잠실새내역 2번 출구</strong><span>바닥은 말라 있어요</span></span><b>1분</b></div><div class="row"><span class="icon">📷</span><span><strong>종합운동장</strong><span>구름 많고 비는 없음</span></span><b>3분</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">라이브</span><span>질문</span><span>요청</span><span>내글</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>06. 스톰 프로형</strong><span>강한 기상/위험 감지</span></div>
+        <section class="phone v6">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Storm Check</b><span>갑작스런 비와 번개 경고</span></div><div class="circle">⚡</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>천둥번개 가능성 알려줘</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="hero"><span class="chip">주의 모드</span><h2>30분 뒤 소나기 가능성이 커져요</h2><p>천둥 신호는 낮지만 돌풍 변동이 있어요.</p><div class="temp">26°</div></div>
+            <div class="metrics"><div class="metric"><span>비구름</span><b>68%</b></div><div class="metric"><span>낙뢰</span><b>12%</b></div><div class="metric"><span>돌풍</span><b>31%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">경보</span><span>레이더</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>07. 소프트 웰니스형</strong><span>일상/외출 판단</span></div>
+        <section class="phone v7">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>오늘 나갈까?</b><span>가볍게 보는 날씨 판정</span></div><div class="circle"></div></div>
+            <div class="hero"><span class="chip">외출 점수 82</span><h2>우산은 없어도 괜찮아 보여요</h2><p>해는 약하지만 습도와 바람이 편한 편이에요.</p><div class="temp">27°</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>장소를 바꿔서 확인하기</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="metrics"><div class="metric"><span>우산</span><b>불필요</b></div><div class="metric"><span>체감</span><b>쾌적</b></div></div>
+            <div class="section"><div class="section-head"><b>한줄 조언</b><span>개인화</span></div><p>저녁에는 습도가 올라가니 얇은 겉옷보다 통풍 좋은 옷이 나아요.</p></div>
+          </div>
+          <nav class="nav"><span class="active">오늘</span><span>질문</span><span>기록</span><span>설정</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>08. 예보비교 우선형</strong><span>네이버 비교표 감각</span></div>
+        <section class="phone v8">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>예보비교</b><span>국내외 예보 한눈에</span></div><div class="circle"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-7"/></svg></div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>잠실운동장 지금 비 와?</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="hero"><span class="chip">판정 요약</span><h2>3개 예보 중 2개는 비 없음</h2><p>현장 제보까지 반영하면 비 없음 쪽이 우세해요.</p></div>
+            <div class="compare-first"><div class="compare-title"><b>시간별 비교</b><span class="chip">17시 기준</span></div><div class="service-grid"><span class="head">서비스</span><span class="head">지금</span><span class="head">1시간</span><span class="head">3시간</span><span>KMA</span><span>흐림</span><span>30%</span><span>45%</span><span>Yr.no</span><span>구름</span><span>38%</span><span>52%</span><span>Windy</span><span>흐림</span><span>24%</span><span>34%</span></div></div>
+          </div>
+          <nav class="nav"><span>질문</span><span class="active">비교</span><span>제보</span><span>통계</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>09. 매거진 카드형</strong><span>감성/브랜딩 강조</span></div>
+        <section class="phone v9">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>날씨체크</b><span>오늘의 하늘 리포트</span></div><div class="circle">☁</div></div>
+            <div class="hero"><span class="chip">서울 송파</span><h2>비는 아직 멀고, 구름이 먼저 와 있어요</h2><p>현장 제보와 해외 예보를 섞어 읽은 오늘의 판단.</p></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>다른 장소의 하늘 읽기</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="section"><div class="section-head"><b>오늘의 근거</b><span>요약</span></div><div class="row"><span class="icon">1</span><span><strong>예보 불일치</strong><span>Yr.no만 약한 비를 봐요</span></span></div><div class="row"><span class="icon">2</span><span><strong>현장 우세</strong><span>비 없음 제보가 많아요</span></span></div></div>
+          </div>
+          <nav class="nav"><span class="active">홈</span><span>질문</span><span>제보</span><span>저장</span></nav>
+        </section>
+      </article>
+
+      <article class="concept">
+        <div class="caption"><strong>10. 레이더 플레이형</strong><span>시각적/인터랙티브</span></div>
+        <section class="phone v10">
+          <div class="status"><span>9:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+          <div class="content">
+            <div class="top"><div class="brand"><b>Radar Now</b><span>비구름을 먼저 보는 판정</span></div><div class="circle">◎</div></div>
+            <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span>잠실운동장 비구름 보여줘</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></div>
+            <div class="radar"><span class="chip">반경 3km</span><div><h2>비구름은 남동쪽으로 지나가요</h2><p>현재 위치에는 40분 안에 닿지 않을 가능성이 커요.</p></div></div>
+            <div class="section"><div class="section-head"><b>레이더 판정</b><span>실험 기능</span></div><div class="row"><span class="icon">↘</span><span><strong>이동 방향</strong><span>남동쪽, 현재 위치 회피</span></span><b>양호</b></div><div class="row"><span class="icon">☔</span><span><strong>강수 도달</strong><span>40분 내 낮음</span></span><b>22%</b></div></div>
+          </div>
+          <nav class="nav"><span class="active">레이더</span><span>질문</span><span>비교</span><span>제보</span></nav>
+        </section>
+      </article>
+    </div>
+  </div>
+</body>
+</html>

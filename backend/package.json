@@ -1,0 +1,18 @@
+{
+  "name": "weather-check-backend",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check:fmi-live": "node scripts/check-fmi-live.mjs",
+    "check:kma-live": "node scripts/check-kma-live.mjs",
+    "check:mvp-live": "node scripts/check-mvp-live.mjs",
+    "check:windy-live": "node scripts/check-windy-live.mjs",
+    "check:yr-live": "node scripts/check-yr-live.mjs",
+    "moderate": "node scripts/moderate-report.mjs",
+    "start:fmi": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-fmi-backend.ps1",
+    "start:mvp": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-mvp-backend.ps1",
+    "start": "node src/server.mjs",
+    "verify": "node scripts/verify.mjs"
+  }
+}

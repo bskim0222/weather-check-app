@@ -13,7 +13,7 @@ $env:EAS_NO_VCS = '1'
 Set-Location $projectRoot
 
 if (-not $env:EXPO_PUBLIC_API_BASE_URL) {
-  throw 'Set EXPO_PUBLIC_API_BASE_URL first. Example: $env:EXPO_PUBLIC_API_BASE_URL = "https://weather-check-backend.onrender.com"'
+  $env:EXPO_PUBLIC_API_BASE_URL = 'https://weather-check-backend-hvfs.onrender.com'
 }
 
 if (-not $env:EXPO_PUBLIC_API_BASE_URL.StartsWith('https://')) {

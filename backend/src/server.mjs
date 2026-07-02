@@ -30,7 +30,7 @@ export function createBackendServer() {
 async function routeRequest(request, response) {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 
-  if (request.method === 'GET' && url.pathname === '/health') {
+  if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/health')) {
     sendJson(response, 200, { ok: true, service: 'weather-check-backend' });
     return;
   }

@@ -69,8 +69,14 @@ export function useWeatherAppState() {
   const locationAutoRefreshRequestedRef = useRef(false);
 
   const current = useMemo(
-    () => createProviderAdjustedPreset(judgement.preset, providerSnapshot),
-    [judgement.preset, providerSnapshot],
+    () => {
+      const snapshotForCurrentContext = isSameWeatherContext(providerSnapshot.context, judgement.searchContext)
+        ? providerSnapshot
+        : getMockWeatherProviderSnapshot(judgement.searchContext);
+
+      return createProviderAdjustedPreset(judgement.preset, snapshotForCurrentContext);
+    },
+    [judgement.preset, judgement.searchContext, providerSnapshot],
   );
   const searchContext = judgement.searchContext;
   const weatherKey = judgement.weatherKey;
@@ -285,6 +291,7 @@ export function useWeatherAppState() {
     const token = refreshTokenRef.current + 1;
     refreshTokenRef.current = token;
     setRefreshLabel('확인 중');
+    setProviderSnapshot(getMockWeatherProviderSnapshot(nextSearchContext));
     setDataStatus({
       phase: 'loading',
       label: '날씨 확인 중',
@@ -460,4 +467,18 @@ function replaceReportById(reports: LocalReport[], reportId: string | undefined,
   if (!reportId) return reports;
 
   return reports.map((report) => (report.id === reportId ? replacement : report));
+}
+
+function isSameWeatherContext(
+  left: WeatherProviderSnapshot['context'] | undefined,
+  right: WeatherProviderSnapshot['context'] | undefined,
+) {
+  if (!left || !right) return false;
+
+  return (
+    left.place === right.place &&
+    left.timeLabel === right.timeLabel &&
+    left.target?.latitude === right.target?.latitude &&
+    left.target?.longitude === right.target?.longitude
+  );
 }

@@ -128,7 +128,7 @@ function createProviderTitle(consensus: WeatherVote, tone: JudgementTone) {
 
 function createProviderSummary(sources: ForecastSource[], consensus: WeatherVote, agreeingCount: number) {
   const sourceText = sources
-    .map((source) => `${normalizeProviderName(source.name)} ${source.condition}`)
+    .map((source) => `${normalizeProviderName(source.name)} ${source.condition} ${source.temp}`)
     .join(', ');
   const total = sources.length;
 

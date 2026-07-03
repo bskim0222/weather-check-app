@@ -160,7 +160,7 @@ export const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 178,
+    paddingBottom: 224,
   },
   searchResultCard: {
     borderRadius: 22,
@@ -2576,7 +2576,7 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     left: 18,
     right: 18,
-    bottom: 24,
+    bottom: 48,
     borderRadius: 24,
     backgroundColor: '#f3f4f1',
     minHeight: 58,

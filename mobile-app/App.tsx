@@ -13,12 +13,13 @@ import { styles } from './src/styles/appStyles';
 
 export default function App() {
   const appState = useWeatherAppState();
-  const androidTopInset = Platform.OS === 'android' ? NativeStatusBar.currentHeight ?? 0 : 0;
+  const androidTopInset =
+    Platform.OS === 'android' ? Math.max(38, (NativeStatusBar.currentHeight ?? 24) + 14) : 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
-      <View style={[styles.app, androidTopInset > 0 && { paddingTop: Math.max(8, androidTopInset - 4) }]}>
+      <View style={[styles.app, androidTopInset > 0 && { paddingTop: androidTopInset }]}>
         <AppHeader
           locationStatus={appState.locationStatus}
           refreshLabel={appState.refreshLabel}

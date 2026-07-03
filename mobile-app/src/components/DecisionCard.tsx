@@ -18,48 +18,44 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
 
   return (
     <View style={[styles.decisionCard, { backgroundColor: current.bg }]}>
-      <View style={[styles.decisionArtGlow, { backgroundColor: current.bg }]} />
-      <View style={[styles.decisionArtAccent, { backgroundColor: current.accent }]} />
+      <View style={[styles.decisionBackdropOrbLarge, { backgroundColor: current.accent }]} />
+      <View style={styles.decisionBackdropOrbSoft} />
 
-      <View style={styles.decisionMetaRow}>
-        <View style={[styles.decisionMetaChipPrimary, { backgroundColor: current.accent }]}>
-          <Text style={[styles.decisionMetaChipPrimaryText, { color: current.accentInk }]}>
-            {placeLabel} · {searchContext.timeLabel}
+      <View style={styles.decisionTopRow}>
+        <View style={styles.decisionPlaceBlock}>
+          <Text style={styles.decisionPlaceKicker}>판정 위치</Text>
+          <Text numberOfLines={1} style={styles.decisionPlaceText}>{placeLabel}</Text>
+        </View>
+        <View style={[styles.decisionTimeBadge, { backgroundColor: current.accent }]}>
+          <Text style={[styles.decisionTimeBadgeText, { color: current.accentInk }]}>
+            {searchContext.timeLabel}
           </Text>
         </View>
-        <View style={styles.decisionMetaChip}>
-          <Text style={styles.decisionMetaChipText}>3분 전 갱신</Text>
-        </View>
       </View>
 
-      <View style={styles.decisionHeroArea}>
-        <View style={styles.mockCompass}>
-          <View style={styles.mockCompassAxisVertical} />
-          <View style={styles.mockCompassAxisHorizontal} />
-          <View style={styles.mockRingOne} />
-          <View style={styles.mockRingTwo} />
-          <View style={[styles.mockRingThree, { borderColor: current.accent }]} />
-          <View style={[styles.mockNeedle, { backgroundColor: current.accent }]} />
-          <WeatherArtwork current={current} />
-          <View style={styles.centerAnswer}>
-            <Text style={styles.centerAnswerCaption}>판정</Text>
-            <Text style={styles.centerAnswerTitle}>{current.condition}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.heroSummary}>
-        <View style={styles.heroCopy}>
-          <View style={styles.decisionLabelRow}>
-            <Text style={styles.decisionLabel}>판정</Text>
-            <Text style={styles.decisionCondition}>{current.condition}</Text>
+      <View style={styles.decisionHeroLayout}>
+        <View style={styles.decisionHeroTextBlock}>
+          <View style={[styles.decisionConditionBadge, { backgroundColor: current.accent }]}>
+            <Text style={[styles.decisionConditionBadgeText, { color: current.accentInk }]}>
+              {current.condition}
+            </Text>
           </View>
           <Text style={styles.decisionTitle}>{title}</Text>
           <Text style={styles.decisionSummary}>{current.summary}</Text>
         </View>
+        <View style={styles.decisionVisualStage}>
+          <WeatherArtwork current={current} />
+        </View>
+      </View>
+
+      <View style={styles.decisionTempPanel}>
         <View style={styles.tempRow}>
           <Text style={styles.temperature}>{current.temp}</Text>
           <Text style={styles.degree}>°C</Text>
+        </View>
+        <View style={styles.decisionUpdateBlock}>
+          <Text style={styles.decisionUpdateLabel}>데이터</Text>
+          <Text style={styles.decisionUpdateText}>방금 갱신</Text>
         </View>
       </View>
 

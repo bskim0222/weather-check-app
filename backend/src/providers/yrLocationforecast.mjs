@@ -1,4 +1,4 @@
-import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { formatSeoulDateHour, getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
 
 const yrEndpoint = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 
@@ -181,7 +181,7 @@ function formatPrecipitation(value) {
 function formatHourLabel(value, index, targetMs = null) {
   if (!Number.isFinite(targetMs) && index === 0) return '지금';
   if (typeof value !== 'string') return `${index}시간 뒤`;
-  if (Number.isFinite(targetMs)) return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 13)}시`;
+  if (Number.isFinite(targetMs)) return formatSeoulDateHour(value);
 
   return `${value.slice(11, 13)}시`;
 }

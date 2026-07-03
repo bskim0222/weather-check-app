@@ -1,4 +1,4 @@
-import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { formatSeoulDateHour, getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
 
 const fmiEndpoint = 'https://opendata.fmi.fi/wfs';
 const storedQueryId = 'ecmwf::forecast::surface::point::timevaluepair';
@@ -191,7 +191,7 @@ function formatPrecipitation(value) {
 function formatHourLabel(value, index, targetMs = null) {
   if (!Number.isFinite(targetMs) && index === 0) return '지금';
   if (typeof value !== 'string') return '예보';
-  if (Number.isFinite(targetMs)) return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 13)}시`;
+  if (Number.isFinite(targetMs)) return formatSeoulDateHour(value);
 
   return `${value.slice(11, 13)}시`;
 }

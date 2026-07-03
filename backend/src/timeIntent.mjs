@@ -53,6 +53,16 @@ export function getSeoulParts(date) {
   };
 }
 
+export function formatSeoulDateHour(value) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '예보';
+
+  const parts = getSeoulParts(date);
+
+  return `${String(parts.month).padStart(2, '0')}/${String(parts.day).padStart(2, '0')} ${String(parts.hour).padStart(2, '0')}시`;
+}
+
 function getDayOffset(text, now) {
   if (text.includes('모레')) return 2;
   if (text.includes('내일')) return 1;

@@ -3,6 +3,7 @@ import { currentLocationReference, findKnownLocation } from './location';
 
 export const defaultQuestionSuggestions = [
   '잠실운동장 지금 비 와?',
+  '부산 내일 오후에 비 올 것 같아?',
   '석촌호수 내일 눈 와?',
   '잠실새내역 퇴근길 천둥번개 들려?',
   '송파 지금 안개 심해?',
@@ -94,12 +95,35 @@ function hasWeatherHint(question: string) {
 }
 
 function inferTimeLabel(question: string) {
-  if (question.includes('내일')) return '내일';
-  if (question.includes('모레')) return '모레';
-  if (question.includes('주말')) return '주말';
-  if (question.includes('퇴근')) return '퇴근길';
+  const dayLabel = inferDayLabel(question);
+  const dayPartLabel = inferDayPartLabel(question);
+
+  if (dayLabel && dayPartLabel) return `${dayLabel} ${dayPartLabel}`;
+  if (dayLabel) return dayLabel;
+  if (dayPartLabel) return dayPartLabel;
   if (question.includes('저녁')) return '저녁';
   if (question.includes('오늘')) return '오늘';
 
   return '지금';
+}
+
+function inferDayLabel(question: string) {
+  if (question.includes('내일')) return '내일';
+  if (question.includes('모레')) return '모레';
+  if (question.includes('주말')) return '주말';
+  if (question.includes('오늘')) return '오늘';
+
+  return '';
+}
+
+function inferDayPartLabel(question: string) {
+  if (question.includes('퇴근')) return '퇴근길';
+  if (question.includes('오전') || question.includes('아침')) return '오전';
+  if (question.includes('점심') || question.includes('낮')) return '낮';
+  if (question.includes('오후')) return '오후';
+  if (question.includes('저녁')) return '저녁';
+  if (question.includes('밤')) return '밤';
+  if (question.includes('새벽')) return '새벽';
+
+  return '';
 }

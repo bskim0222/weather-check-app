@@ -1,3 +1,5 @@
+import { getForecastWindow, getTargetTimestampMs, getSeoulParts, pickTargetItem } from '../timeIntent.mjs';
+
 const kmaBaseUrl = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0';
 
 export async function fetchKmaShortForecast(context) {
@@ -17,30 +19,45 @@ export async function fetchKmaShortForecast(context) {
       ny: grid.ny,
       serviceKey,
     }),
-    fetchKmaEndpoint('/getUltraSrtFcst', {
-      ...createKmaBaseTime(now, 'forecast'),
+    fetchKmaEndpoint('/getVilageFcst', {
+      ...createKmaForecastBaseTime(now),
       nx: grid.nx,
       ny: grid.ny,
       serviceKey,
     }),
   ]);
 
-  return createKmaForecastModel(current, forecast);
+  return createKmaForecastModel(current, forecast, context);
 }
 
-export function createKmaForecastModel(currentPayload, forecastPayload = currentPayload) {
+export function createKmaForecastModel(currentPayload, forecastPayload = currentPayload, context = null) {
   const currentItems = getItems(currentPayload);
   const forecastItems = getItems(forecastPayload);
   const currentByCategory = groupLatestByCategory(currentItems, 'obsrValue');
-  const forecastRows = createForecastRows(forecastItems);
-  const firstForecast = forecastRows[0];
-  const condition = conditionFromKmaValues({
-    pty: currentByCategory.PTY ?? firstForecast?.pty,
-    sky: firstForecast?.sky ?? currentByCategory.SKY,
-    rn1: currentByCategory.RN1 ?? firstForecast?.rn1,
-  });
-  const temp = currentByCategory.T1H ?? firstForecast?.temperature ?? null;
-  const rain = currentByCategory.RN1 ?? firstForecast?.rn1 ?? '0';
+  const allForecastRows = createForecastRows(forecastItems);
+  const targetMs = getTargetTimestampMs(context);
+  const forecastRows = getForecastWindow(allForecastRows, getForecastRowTimeMs, targetMs, 8);
+  const targetForecast = pickTargetItem(allForecastRows, getForecastRowTimeMs, targetMs) ?? forecastRows[0];
+  const currentValues = {
+    pty: currentByCategory.PTY ?? targetForecast?.pty,
+    sky: currentByCategory.SKY ?? targetForecast?.sky,
+    rn1: currentByCategory.RN1 ?? targetForecast?.rn1,
+  };
+  const targetValues = targetForecast
+    ? {
+        pty: targetForecast.pty,
+        sky: targetForecast.sky,
+        rn1: targetForecast.rn1,
+      }
+    : currentValues;
+  const representativeValues = Number.isFinite(targetMs) ? targetValues : currentValues;
+  const condition = conditionFromKmaValues(representativeValues);
+  const temp = Number.isFinite(targetMs)
+    ? targetForecast?.temperature ?? currentByCategory.T1H ?? null
+    : currentByCategory.T1H ?? targetForecast?.temperature ?? null;
+  const rain = Number.isFinite(targetMs)
+    ? targetForecast?.rn1 ?? currentByCategory.RN1 ?? '0'
+    : currentByCategory.RN1 ?? targetForecast?.rn1 ?? '0';
   const wind = currentByCategory.WSD ?? null;
 
   return {
@@ -54,13 +71,13 @@ export function createKmaForecastModel(currentPayload, forecastPayload = current
       tone: conditionToTone(condition),
     },
     hourlyRows: forecastRows.map((row, index) => ({
-      label: index === 0 ? '지금' : formatKmaHour(row.time),
+      label: formatKmaRowLabel(row, index, targetMs),
       weather: conditionFromKmaValues(row),
       detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
       mark: conditionToMark(conditionFromKmaValues(row)),
       tone: conditionToTone(conditionFromKmaValues(row)),
     })),
-    dailyRows: createDailyRows(forecastRows),
+    dailyRows: createDailyRows(allForecastRows),
   };
 }
 
@@ -141,22 +158,24 @@ function createKmaBaseTime(date, type) {
   };
 }
 
-function getSeoulParts(date) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date);
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+function createKmaForecastBaseTime(date) {
+  const base = new Date(date.getTime() - 20 * 60 * 1000);
+  const parts = getSeoulParts(base);
+  const baseHours = [2, 5, 8, 11, 14, 17, 20, 23];
+  let baseHour = [...baseHours].reverse().find((hour) => hour <= parts.hour);
+  let dayOffset = 0;
+
+  if (baseHour === undefined) {
+    baseHour = 23;
+    dayOffset = -1;
+  }
+
+  const baseDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, 12));
+  const baseDateParts = getSeoulParts(baseDate);
 
   return {
-    year: Number(value.year),
-    month: Number(value.month),
-    day: Number(value.day),
-    hour: Number(value.hour),
+    baseDate: `${baseDateParts.year}${String(baseDateParts.month).padStart(2, '0')}${String(baseDateParts.day).padStart(2, '0')}`,
+    baseTime: `${String(baseHour).padStart(2, '0')}00`,
   };
 }
 
@@ -200,13 +219,27 @@ function createForecastRows(items) {
     }
 
     const row = rows.get(key);
-    if (item.category === 'T1H') row.temperature = item.fcstValue;
-    if (item.category === 'RN1') row.rn1 = item.fcstValue;
+    if (item.category === 'T1H' || item.category === 'TMP') row.temperature = item.fcstValue;
+    if (item.category === 'RN1' || item.category === 'PCP') row.rn1 = item.fcstValue;
     if (item.category === 'PTY') row.pty = item.fcstValue;
     if (item.category === 'SKY') row.sky = item.fcstValue;
   });
 
-  return [...rows.values()].filter((row) => row.time).slice(0, 8);
+  return [...rows.values()].filter((row) => row.time);
+}
+
+function getForecastRowTimeMs(row) {
+  const date = String(row?.date ?? '');
+  const time = String(row?.time ?? '');
+
+  if (date.length !== 8 || time.length < 2) return NaN;
+
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(4, 6));
+  const day = Number(date.slice(6, 8));
+  const hour = Number(time.slice(0, 2));
+
+  return Date.UTC(year, month - 1, day, hour - 9, 0, 0);
 }
 
 function createDailyRows(hourlyRows) {
@@ -279,6 +312,15 @@ function formatKmaRain(value) {
 
 function formatKmaHour(value) {
   return typeof value === 'string' && value.length >= 2 ? `${value.slice(0, 2)}시` : '예보';
+}
+
+function formatKmaRowLabel(row, index, targetMs) {
+  if (!Number.isFinite(targetMs) && index === 0) return '지금';
+  if (typeof row?.date === 'string' && row.date.length === 8 && typeof row?.time === 'string') {
+    return `${row.date.slice(4, 6)}/${row.date.slice(6, 8)} ${formatKmaHour(row.time)}`;
+  }
+
+  return formatKmaHour(row?.time);
 }
 
 function conditionToMark(condition) {

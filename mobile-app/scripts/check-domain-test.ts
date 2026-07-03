@@ -45,6 +45,13 @@ expectEqual(thunderJudgement.searchContext.place, '잠실새내역', 'thunder qu
 expectEqual(thunderJudgement.searchContext.target.id, 'jamsil-sae-nae', 'thunder question target');
 expectEqual(thunderJudgement.searchContext.timeLabel, '퇴근길', 'thunder question time');
 
+const busanTomorrowAfternoonJudgement = createQuestionJudgement('부산 내일 오후에 비 올 것 같아?');
+expectEqual(busanTomorrowAfternoonJudgement.weatherKey, 'rain', 'busan question weather');
+expectEqual(busanTomorrowAfternoonJudgement.searchContext.place, '부산', 'busan question place');
+expectEqual(busanTomorrowAfternoonJudgement.searchContext.target.id, 'busan', 'busan question target');
+expectEqual(busanTomorrowAfternoonJudgement.searchContext.timeLabel, '내일 오후', 'busan question time');
+expectEqual(busanTomorrowAfternoonJudgement.searchContext.needsClarification, false, 'busan question clarification');
+
 const manualJudgement = updateJudgementWeather(snowJudgement, 'fog');
 expectEqual(manualJudgement.weatherKey, 'fog', 'manual weather');
 expectEqual(manualJudgement.searchContext.detectedWeather, '안개', 'manual detected weather');

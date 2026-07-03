@@ -1,3 +1,5 @@
+import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+
 const fmiEndpoint = 'https://opendata.fmi.fi/wfs';
 const storedQueryId = 'ecmwf::forecast::surface::point::timevaluepair';
 
@@ -23,14 +25,15 @@ export async function fetchFmiEcmwfForecast(context) {
     throw new Error(`FMI request failed with ${response.status}.`);
   }
 
-  return createFmiForecastModel(await response.text());
+  return createFmiForecastModel(await response.text(), context);
 }
 
-export function createFmiForecastModel(xml) {
+export function createFmiForecastModel(xml, context = null) {
   const series = parseFmiTimeValueSeries(xml);
   const rows = mergeFmiRows(series);
-  const hourlyRows = rows.slice(0, 8);
-  const current = rows[0] ?? {};
+  const targetMs = getTargetTimestampMs(context);
+  const hourlyRows = getForecastWindow(rows, getRowTimeMs, targetMs, 8);
+  const current = pickTargetItem(rows, getRowTimeMs, targetMs) ?? {};
   const condition = conditionFromFmiValues(current);
 
   return {
@@ -47,7 +50,7 @@ export function createFmiForecastModel(xml) {
       const rowCondition = conditionFromFmiValues(row);
 
       return {
-        label: index === 0 ? '지금' : formatHourLabel(row.time),
+        label: formatHourLabel(row.time, index, targetMs),
         weather: rowCondition,
         detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
         mark: conditionToMark(rowCondition),
@@ -56,6 +59,12 @@ export function createFmiForecastModel(xml) {
     }),
     dailyRows: createDailyRows(rows),
   };
+}
+
+function getRowTimeMs(row) {
+  const value = typeof row?.time === 'string' ? Date.parse(row.time) : NaN;
+
+  return Number.isFinite(value) ? value : NaN;
 }
 
 export function shouldUseFmiProvider() {
@@ -179,8 +188,12 @@ function formatPrecipitation(value) {
   return Number.isFinite(number) ? `${roundOneDecimal(number)}mm` : '0mm';
 }
 
-function formatHourLabel(value) {
-  return typeof value === 'string' ? `${value.slice(11, 13)}시` : '예보';
+function formatHourLabel(value, index, targetMs = null) {
+  if (!Number.isFinite(targetMs) && index === 0) return '지금';
+  if (typeof value !== 'string') return '예보';
+  if (Number.isFinite(targetMs)) return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 13)}시`;
+
+  return `${value.slice(11, 13)}시`;
 }
 
 function conditionToMark(condition) {

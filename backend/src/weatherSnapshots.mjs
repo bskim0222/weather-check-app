@@ -85,9 +85,9 @@ function createBaseWeatherProviderSnapshot(context, weather, thirdProvider = cre
       createSource(thirdProvider.providerId, thirdProvider.name, thirdProvider.mark, weather.windy, thirdProvider.color),
     ],
     summaries: [
-      createSummary('대한민국 기상청', 'K', 'KMA', weather.kma, providerColors.kma),
-      createSummary('노르웨이 기상청', 'Yr', 'MET Norway', weather.yr, providerColors.yr),
-      createSummary(thirdProvider.name, thirdProvider.mark, thirdProvider.subtitle, weather.windy, thirdProvider.color),
+      createSummary(context, '대한민국 기상청', 'K', 'KMA', weather.kma, providerColors.kma),
+      createSummary(context, '노르웨이 기상청', 'Yr', 'MET Norway', weather.yr, providerColors.yr),
+      createSummary(context, thirdProvider.name, thirdProvider.mark, thirdProvider.subtitle, weather.windy, thirdProvider.color),
     ],
     differences: [
       {
@@ -219,12 +219,15 @@ function createSource(providerId, name, mark, weather, color) {
   };
 }
 
-function createSummary(name, mark, subtitle, weather, color) {
+function createSummary(context, name, mark, subtitle, weather, color) {
+  const place = context?.place ?? '현재 위치';
+  const timeLabel = context?.timeLabel ?? '지금';
+
   return {
     name,
     mark,
     subtitle,
-    summary: `${weather.condition} 기준으로 현재 위치 주변을 보고 있어요.`,
+    summary: `${place} · ${timeLabel} 기준으로 보고 있어요.`,
     weather: weather.condition,
     value: weather.value,
     color,

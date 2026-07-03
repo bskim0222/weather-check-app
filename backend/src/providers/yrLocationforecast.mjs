@@ -1,3 +1,5 @@
+import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+
 const yrEndpoint = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 
 export async function fetchYrLocationforecast(context) {
@@ -23,14 +25,16 @@ export async function fetchYrLocationforecast(context) {
     throw new Error(`Yr.no request failed with ${response.status}.`);
   }
 
-  return createYrForecastModel(await response.json());
+  return createYrForecastModel(await response.json(), context);
 }
 
-export function createYrForecastModel(payload) {
+export function createYrForecastModel(payload, context = null) {
   const timeseries = Array.isArray(payload?.properties?.timeseries)
     ? payload.properties.timeseries
     : [];
-  const current = timeseries[0];
+  const targetMs = getTargetTimestampMs(context);
+  const forecastWindow = getForecastWindow(timeseries, getItemTimeMs, targetMs, 8);
+  const current = pickTargetItem(timeseries, getItemTimeMs, targetMs);
   const currentDetails = current?.data?.instant?.details ?? {};
   const currentSymbol = getSymbolCode(current);
   const currentPrecipitation = getPrecipitationAmount(current);
@@ -48,7 +52,7 @@ export function createYrForecastModel(payload) {
       mark: symbolToMark(currentSymbol),
       tone: symbolToTone(currentSymbol),
     },
-    hourlyRows: createRows(timeseries.slice(0, 8), 'hourly'),
+    hourlyRows: createRows(forecastWindow, 'hourly', targetMs),
     dailyRows: createDailyRows(timeseries),
   };
 }
@@ -59,14 +63,14 @@ export function shouldUseYrProvider() {
   return mode === 'yr' || mode === 'real' || mode.split(',').map((item) => item.trim()).includes('yr');
 }
 
-function createRows(items, mode) {
+function createRows(items, mode, targetMs = null) {
   return items.slice(0, 6).map((item, index) => {
     const symbol = getSymbolCode(item);
     const details = item?.data?.instant?.details ?? {};
     const precipitation = getPrecipitationAmount(item);
 
     return {
-      label: mode === 'hourly' ? formatHourLabel(item?.time, index) : formatDayLabel(item?.time, index),
+      label: mode === 'hourly' ? formatHourLabel(item?.time, index, targetMs) : formatDayLabel(item?.time, index),
       weather: symbolToCondition(symbol),
       detail: `${formatTemperature(numberOrNull(details.air_temperature))} · ${formatPrecipitation(precipitation)}`,
       mark: symbolToMark(symbol),
@@ -89,6 +93,12 @@ function createDailyRows(timeseries) {
   });
 
   return createRows([...byDate.values()].slice(0, 6), 'daily');
+}
+
+function getItemTimeMs(item) {
+  const value = typeof item?.time === 'string' ? Date.parse(item.time) : NaN;
+
+  return Number.isFinite(value) ? value : NaN;
 }
 
 function getCoordinates(context) {
@@ -168,9 +178,10 @@ function formatPrecipitation(value) {
   return value === null ? '0mm' : `${roundOneDecimal(value)}mm`;
 }
 
-function formatHourLabel(value, index) {
-  if (index === 0) return '지금';
+function formatHourLabel(value, index, targetMs = null) {
+  if (!Number.isFinite(targetMs) && index === 0) return '지금';
   if (typeof value !== 'string') return `${index}시간 뒤`;
+  if (Number.isFinite(targetMs)) return `${value.slice(5, 7)}/${value.slice(8, 10)} ${value.slice(11, 13)}시`;
 
   return `${value.slice(11, 13)}시`;
 }

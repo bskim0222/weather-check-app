@@ -1,6 +1,7 @@
 services:
-  - type: static_site
+  - type: web
     name: weather-check-web
+    runtime: static
     rootDir: mobile-app
     buildCommand: npm install && npm run export:web:api:node
     staticPublishPath: dist-phone

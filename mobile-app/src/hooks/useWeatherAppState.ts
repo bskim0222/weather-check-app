@@ -20,6 +20,7 @@ import {
   writePersistedAppSnapshot,
 } from '../services/appPersistence';
 import { createRemoteFieldReport, fetchFieldReportSnapshot, moderateRemoteFieldReport } from '../services/fieldReports';
+import { resolveRemoteLocation } from '../services/geocoding';
 import {
   createCheckingLocationStatus,
   createFallbackLocationStatus,
@@ -227,6 +228,7 @@ export function useWeatherAppState() {
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
     setActiveTab('decision');
     refreshData('질문 기준', nextJudgement.searchContext);
+    resolveQuestionLocation(nextJudgement);
   };
 
   const submitQuestion = () => {
@@ -332,6 +334,32 @@ export function useWeatherAppState() {
     }
   };
 
+  const resolveQuestionLocation = async (nextJudgement: ReturnType<typeof createQuestionJudgement>) => {
+    const resolvedLocation = await resolveRemoteLocation(nextJudgement.searchContext);
+
+    if (!resolvedLocation) return;
+
+    const resolvedSearchContext = {
+      ...nextJudgement.searchContext,
+      place: resolvedLocation.label,
+      target: resolvedLocation,
+      locationQuery: resolvedLocation.label,
+      interpretationNote: `${resolvedLocation.label}의 ${nextJudgement.searchContext.timeLabel} 날씨를 ${nextJudgement.searchContext.detectedWeather} 기준으로 봤어요.`,
+      needsClarification: !hasWeatherIntent(nextJudgement.searchContext),
+    };
+    const resolvedJudgement = restoreJudgement(
+      nextJudgement.weatherKey,
+      resolvedSearchContext,
+      nextJudgement.source,
+      nextJudgement.createdAt,
+    );
+
+    setJudgement((currentJudgement) =>
+      currentJudgement.createdAt === nextJudgement.createdAt ? resolvedJudgement : currentJudgement,
+    );
+    refreshData('장소 확인', resolvedSearchContext);
+  };
+
   return {
     activeTab,
     changeWeather,
@@ -362,6 +390,10 @@ export function useWeatherAppState() {
     weatherKey,
     addLocalReport,
   };
+}
+
+function hasWeatherIntent(searchContext: ReturnType<typeof createQuestionJudgement>['searchContext']) {
+  return Boolean(searchContext.detectedWeather);
 }
 
 function createReadyStatusMessage(providerIds: ForecastProviderId[]) {

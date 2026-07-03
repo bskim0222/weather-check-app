@@ -17,6 +17,7 @@ export type SearchContext = {
   raw: string;
   place: string;
   target: LocationReference;
+  locationQuery?: string;
   timeLabel: string;
   detectedWeather: string;
   interpretationNote: string;

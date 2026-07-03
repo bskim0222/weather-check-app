@@ -66,6 +66,7 @@ export function inferSearchContext(question: string, weatherKey: WeatherKey): Se
   const matchedLocation = findKnownLocation(clean);
   const place = matchedLocation?.label ?? '현재 위치';
   const target = matchedLocation ?? currentLocationReference;
+  const locationQuery = matchedLocation?.label ?? extractLocationCandidate(clean);
   const timeLabel = inferTimeLabel(clean);
   const weatherHintFound = hasWeatherHint(clean);
   const weatherLabel = getDetectedWeatherLabel(weatherKey);
@@ -79,6 +80,7 @@ export function inferSearchContext(question: string, weatherKey: WeatherKey): Se
     raw: clean,
     place,
     target,
+    locationQuery,
     timeLabel,
     detectedWeather: weatherLabel,
     interpretationNote,
@@ -92,6 +94,31 @@ export function resolveReportPlace(place: string) {
 
 function hasWeatherHint(question: string) {
   return weatherHintWords.some((word) => question.includes(word));
+}
+
+function extractLocationCandidate(question: string) {
+  const normalized = question
+    .replace(/[?？!！]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const matches = [...normalized.matchAll(/([가-힣A-Za-z0-9·.\-\s]{2,40}?)(?:에|에서|근처|주변)\s*(?:비|눈|안개|날씨|기온|우산|소나기|천둥|번개)/g)];
+  const lastMatch = matches.at(-1)?.[1] ?? '';
+  const cleaned = cleanLocationCandidate(lastMatch);
+
+  if (cleaned) return cleaned;
+
+  const compactMatches = [...normalized.matchAll(/([가-힣A-Za-z0-9·.\-]{2,24}?)(?:에|에서)\s/g)];
+  const compactCandidate = cleanLocationCandidate(compactMatches.at(-1)?.[1] ?? '');
+
+  return compactCandidate;
+}
+
+function cleanLocationCandidate(value: string) {
+  return value
+    .replace(/.*(?:건데|인데|라면|이면|때|하고|그리고|,)/, '')
+    .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|\d{1,2}시)\s*/g, '')
+    .replace(/\s*(비|눈|안개|날씨|기온|우산|소나기|천둥|번개).*$/, '')
+    .trim();
 }
 
 function inferTimeLabel(question: string) {

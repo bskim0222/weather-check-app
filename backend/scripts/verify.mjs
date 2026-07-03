@@ -49,6 +49,16 @@ try {
   expectTruthy(Array.isArray(providerSnapshot.meta.liveProviderIds), 'provider live meta');
   expectTruthy(Array.isArray(providerSnapshot.meta.fallbackProviderIds), 'provider fallback meta');
 
+  const geocodedAlias = await postJson('/geocode', { query: '홍대앞' });
+  expectEqual(geocodedAlias.ok, true, 'geocode alias ok');
+  expectEqual(geocodedAlias.location.label, '홍대앞', 'geocode alias label');
+  expectTruthy(Number.isFinite(geocodedAlias.location.latitude), 'geocode alias latitude');
+
+  const geocodedGolf = await postJson('/geocode', { query: '용인CC' });
+  expectEqual(geocodedGolf.ok, true, 'geocode golf ok');
+  expectEqual(geocodedGolf.location.label, '용인CC', 'geocode golf label');
+  expectTruthy(Number.isFinite(geocodedGolf.location.longitude), 'geocode golf longitude');
+
   const kmaGrid = convertLatLonToKmaGrid(37.515, 127.0728);
   expectTruthy(kmaGrid.nx > 0, 'kma grid nx');
   expectTruthy(kmaGrid.ny > 0, 'kma grid ny');

@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { readDatabase, writeDatabase } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
+import { geocodePlace } from './geocoding.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
 
@@ -49,6 +50,18 @@ async function routeRequest(request, response) {
 
   if (url.pathname === '/weather/provider-snapshot') {
     sendJson(response, 200, await createWeatherProviderSnapshot(payload.context ?? createFallbackContext()));
+    return;
+  }
+
+  if (url.pathname === '/geocode') {
+    const query = textOr(payload.query, '');
+    const result = await geocodePlace(query, textOr(payload.raw, ''));
+
+    sendJson(response, 200, {
+      ok: Boolean(result?.location),
+      query,
+      ...result,
+    });
     return;
   }
 

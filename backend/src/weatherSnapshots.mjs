@@ -80,28 +80,28 @@ function createBaseWeatherProviderSnapshot(context, weather, thirdProvider = cre
     source: 'api',
     context,
     sources: [
-      createSource('kma', '기상청', 'K', weather.kma, providerColors.kma),
-      createSource('yr', 'Yr.no', 'Yr', weather.yr, providerColors.yr),
+      createSource('kma', '대한민국 기상청', 'K', weather.kma, providerColors.kma),
+      createSource('yr', '노르웨이 기상청', 'Yr', weather.yr, providerColors.yr),
       createSource(thirdProvider.providerId, thirdProvider.name, thirdProvider.mark, weather.windy, thirdProvider.color),
     ],
     summaries: [
-      createSummary('기상청', 'K', 'KMA', weather.kma, providerColors.kma),
-      createSummary('Yr.no', 'Yr', 'Norway', weather.yr, providerColors.yr),
+      createSummary('대한민국 기상청', 'K', 'KMA', weather.kma, providerColors.kma),
+      createSummary('노르웨이 기상청', 'Yr', 'MET Norway', weather.yr, providerColors.yr),
       createSummary(thirdProvider.name, thirdProvider.mark, thirdProvider.subtitle, weather.windy, thirdProvider.color),
     ],
     differences: [
       {
-        name: '기상청',
+        name: '대한민국 기상청',
         mark: 'K',
-        body: '국내 단기예보 기준으로 현재 시간대의 강수 가능성을 우선 확인합니다.',
+        body: '국내 단기예보와 초단기 관측을 기준으로 현재 시간대의 강수 가능성을 확인합니다.',
         badge: '국내 예보',
         color: providerColors.kma,
       },
       {
-        name: 'Yr.no',
+        name: '노르웨이 기상청',
         mark: 'Yr',
-        body: '강수량과 온도 흐름을 함께 보며 약한 비 가능성을 비교합니다.',
-        badge: '강수량',
+        body: '강수량과 온도 흐름을 함께 보며 글로벌 모델의 시간 변화를 비교합니다.',
+        badge: '글로벌 예보',
         color: providerColors.yr,
       },
       {
@@ -121,9 +121,9 @@ function createThirdProvider(providerId) {
   if (providerId === 'fmi') {
     return {
       providerId: 'fmi',
-      name: 'FMI ECMWF',
+      name: '핀란드 기상청',
       mark: 'FMI',
-      subtitle: 'ECMWF',
+      subtitle: 'FMI',
       body: '핀란드 기상청이 공개한 ECMWF 기반 지점 예보로 같은 위치의 기온, 강수량, 구름량을 비교합니다.',
       badge: 'ECMWF 예보',
       color: providerColors.fmi,
@@ -135,7 +135,7 @@ function createThirdProvider(providerId) {
     name: 'Windy.com',
     mark: 'W',
     subtitle: 'ECMWF',
-    body: '비구름 이동 방향과 바람 흐름이 현재 위치를 지나가는지 봅니다.',
+    body: '비구름 이동 방향과 바람 흐름이 현재 위치를 지나는지 봅니다.',
     badge: '구름 흐름',
     color: providerColors.windy,
   };
@@ -224,7 +224,7 @@ function createSummary(name, mark, subtitle, weather, color) {
     name,
     mark,
     subtitle,
-    summary: `${weather.condition} 기준으로 현재 위치를 보고 있어요.`,
+    summary: `${weather.condition} 기준으로 현재 위치 주변을 보고 있어요.`,
     weather: weather.condition,
     value: weather.value,
     color,
@@ -234,24 +234,40 @@ function createSummary(name, mark, subtitle, weather, color) {
 function normalizeWeather(detectedWeather) {
   if (detectedWeather === '맑음') {
     return {
-      kma: createWeather('구름 조금', '28도', '현재 강수 신호가 거의 없어요.', '맑음', '10%'),
-      yr: createWeather('맑음', '27도', '강수량을 0에 가깝게 보고 있어요.', '건조', '0mm'),
-      windy: createWeather('비구름 없음', '28도', '비구름 흐름이 위치를 벗어나 있어요.', '안정', '약함'),
+      kma: createWeather('구름 조금', '28℃', '현재 강수 신호가 거의 없어요.', '맑음', '10%'),
+      yr: createWeather('맑음', '27℃', '강수량을 0mm에 가깝게 보고 있어요.', '건조', '0mm'),
+      windy: createWeather('비구름 없음', '28℃', '구름대가 현재 위치를 벗어나 있어요.', '안정', '약함'),
     };
   }
 
   if (detectedWeather === '천둥번개') {
     return {
-      kma: createWeather('소나기', '24도', '짧은 시간 강한 비 가능성이 있어요.', '주의', '55%'),
-      yr: createWeather('불안정', '23도', '국지성 소나기 가능성을 봅니다.', '불안정', '0.8mm'),
-      windy: createWeather('강한 구름', '24도', '비구름 핵이 빠르게 지날 수 있어요.', '강함', '접근'),
+      kma: createWeather('소나기', '24℃', '대기 불안정 신호가 일부 있어요.', '주의', '55%'),
+      yr: createWeather('약한 비', '23℃', '짧은 비 가능성을 낮게 봅니다.', '약한 비', '0.8mm'),
+      windy: createWeather('대기 불안정', '24℃', '구름 발달 가능성이 보입니다.', '불안정', '국지'),
+    };
+  }
+
+  if (detectedWeather === '눈') {
+    return {
+      kma: createWeather('눈 약함', '-1℃', '낮은 기온과 약한 강수 신호가 있어요.', '눈', '40%'),
+      yr: createWeather('진눈깨비', '0℃', '비와 눈이 섞일 가능성을 봅니다.', '혼합', '0.5mm'),
+      windy: createWeather('눈구름', '-1℃', '찬 공기와 구름대가 겹쳐 있어요.', '눈구름', '약함'),
+    };
+  }
+
+  if (detectedWeather === '안개') {
+    return {
+      kma: createWeather('안개', '19℃', '습도가 높고 시정이 낮을 수 있어요.', '안개', '주의'),
+      yr: createWeather('흐림', '18℃', '강수보다 습한 흐림 신호가 강해요.', '습함', '0mm'),
+      windy: createWeather('낮은 구름', '19℃', '낮은 구름층이 머물 가능성이 있어요.', '구름', '정체'),
     };
   }
 
   return {
-    kma: createWeather('약한 비', '23도', '현재 강수 신호가 있고 조금 더 짙어질 수 있어요.', '비', '50%'),
-    yr: createWeather('흐림', '22도', '강수량은 작지만 구름대가 걸쳐 있어요.', '흐림', '0.4mm'),
-    windy: createWeather('비구름 접근', '23도', '남서쪽 비구름 흐름이 접근 중이에요.', '접근', '남서풍'),
+    kma: createWeather('비 약함', '23℃', '현재 강수 신호가 있고 1시간 안에 이어질 수 있어요.', '비', '50%'),
+    yr: createWeather('흐림', '22℃', '강수량은 작지만 구름대가 걸쳐 있어요.', '흐림', '0.4mm'),
+    windy: createWeather('비구름 접근', '23℃', '남서쪽 비구름 흐름이 접근 중이에요.', '접근', '남서풍'),
   };
 }
 
@@ -262,7 +278,7 @@ function createWeather(condition, temp, detail, badge, value) {
 function createCompareRows(weather, mode) {
   const labels =
     mode === 'daily'
-      ? ['오늘', '내일', '모레', '주말', '월요일', '화요일']
+      ? ['오늘', '내일', '모레', '목요일', '금요일', '토요일']
       : ['지금', '1시간 뒤', '3시간 뒤', '6시간 뒤', '9시간 뒤', '12시간 뒤'];
 
   return labels.map((label, index) => ({
@@ -277,7 +293,7 @@ function createCell(weather, index) {
   return {
     mark: weather.condition.slice(0, 1),
     weather: weather.condition,
-    detail: `${weather.temp} · ${index === 0 ? weather.value : index < 3 ? '변화 가능' : '재확인'}`,
+    detail: `${weather.temp} · ${index === 0 ? weather.value : index < 3 ? '비슷함' : '변동'}`,
     tone: '#64748b',
   };
 }

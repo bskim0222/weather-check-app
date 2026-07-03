@@ -6,14 +6,18 @@ import { styles } from '../styles/appStyles';
 import type { CompareForecastCell, CompareRow, CompareServiceSummary } from '../types/weather';
 
 const serviceIcons: Record<string, ImageSourcePropType> = {
+  '대한민국 기상청': require('../../assets/icon-kma.png'),
   기상청: require('../../assets/icon-kma.png'),
+  '노르웨이 기상청': require('../../assets/icon-yr.png'),
   'Yr.no': require('../../assets/icon-yr.png'),
+  '핀란드 기상청': require('../../assets/icon-fmi.png'),
+  'FMI ECMWF': require('../../assets/icon-fmi.png'),
 };
 
 const fallbackServices: CompareServiceSummary[] = [
-  { name: '기상청', mark: 'K', subtitle: 'KMA', summary: '', weather: '', value: '', color: '#e6465f' },
-  { name: 'Yr.no', mark: 'Yr', subtitle: 'Norway', summary: '', weather: '', value: '', color: '#65a6ff' },
-  { name: 'FMI ECMWF', mark: 'FMI', subtitle: 'ECMWF', summary: '', weather: '', value: '', color: '#7f9f8d' },
+  { name: '대한민국 기상청', mark: 'K', subtitle: 'KMA', summary: '', weather: '', value: '', color: '#e6465f' },
+  { name: '노르웨이 기상청', mark: 'Yr', subtitle: 'MET Norway', summary: '', weather: '', value: '', color: '#65a6ff' },
+  { name: '핀란드 기상청', mark: 'FMI', subtitle: 'FMI', summary: '', weather: '', value: '', color: '#7f9f8d' },
 ];
 
 type ForecastComparePanelProps = {
@@ -86,19 +90,18 @@ export function ForecastComparePanel({
 
 function CompareServiceLabel({ service }: { service: CompareServiceSummary }) {
   const icon = serviceIcons[service.name];
+  const label = normalizeServiceName(service.name);
 
   return (
     <View style={styles.compareTableServiceCell}>
       {icon ? (
-        <View style={styles.compareTableServiceIconFrame}>
-          <Image source={icon} style={styles.compareTableServiceIcon} />
-        </View>
+        <Image source={icon} style={styles.compareTableServiceIcon} />
       ) : (
-        <View style={[styles.compareTableServiceIconFrame, { backgroundColor: service.color }]}>
+        <View style={[styles.compareTableServiceIconFallback, { backgroundColor: service.color }]}>
           <Text style={styles.compareServiceMarkText}>{service.mark}</Text>
         </View>
       )}
-      <Text style={styles.compareTableServiceText}>{service.name}</Text>
+      <Text style={styles.compareTableServiceText}>{label}</Text>
     </View>
   );
 }
@@ -194,4 +197,12 @@ function getSoftTone(kind: string) {
   if (kind === 'fog') return '#bbb5b7';
 
   return '#fff2e9';
+}
+
+function normalizeServiceName(name: string) {
+  if (name === '기상청') return '대한민국 기상청';
+  if (name === 'Yr.no') return '노르웨이 기상청';
+  if (name === 'FMI ECMWF') return '핀란드 기상청';
+
+  return name;
 }

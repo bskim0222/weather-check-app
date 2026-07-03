@@ -89,7 +89,7 @@ async function routeRequest(request, response) {
   if (requestAnswerMatch) {
     const database = await readDatabase();
     const requestId = decodeURIComponent(requestAnswerMatch[1]);
-    const existingRequest = database.reportRequests.find((request) => request.id === requestId);
+    const existingRequest = database.reportRequests.find((requestItem) => requestItem.id === requestId);
 
     if (!existingRequest) {
       sendJson(response, 404, { error: 'Report request not found.' });
@@ -99,8 +99,8 @@ async function routeRequest(request, response) {
     const updatedRequest = {
       ...existingRequest,
       answers: Number.isFinite(existingRequest.answers) ? existingRequest.answers + 1 : 1,
-      status: textOr(payload.status, '답변 있음'),
-      hint: textOr(payload.hint, '방금 답변됨'),
+      status: textOr(payload.status, '답변 받는 중'),
+      hint: textOr(payload.hint, '방금 답변이 추가됐어요.'),
       lastAnsweredAt: new Date().toISOString(),
     };
 
@@ -145,9 +145,9 @@ function createFieldReport(payload) {
 
   return {
     id: typeof payload.id === 'string' ? payload.id : createId('report'),
-    place: textOr(payload.place, '현재 위치 근처'),
+    place: textOr(payload.place, '현재 위치 주변'),
     time: textOr(payload.time, '방금'),
-    condition: textOr(payload.condition, '확인 필요'),
+    condition: textOr(payload.condition, '날씨 확인'),
     body: textOr(payload.body, ''),
     createdAt,
     moderationStatus: 'visible',
@@ -156,18 +156,18 @@ function createFieldReport(payload) {
 }
 
 function createReportRequest(payload) {
-  const place = textOr(payload.place, '현재 위치');
+  const place = textOr(payload.place, '현재 위치 주변');
 
   return {
     id: typeof payload.id === 'string' ? payload.id : createId('request'),
-    question: textOr(payload.question, `${place} 지금 날씨 어떤가요?`),
-    hint: textOr(payload.hint, '근처라면 바로 답변 가능'),
+    question: textOr(payload.question, `${place} 지금 날씨 어때요?`),
+    hint: textOr(payload.hint, '근처 사용자에게 현장 제보를 요청합니다.'),
     place,
     distance: textOr(payload.distance, '근처'),
     answers: Number.isFinite(payload.answers) ? payload.answers : 0,
     time: textOr(payload.time, '방금'),
     status: textOr(payload.status, '답변 대기'),
-    mark: textOr(payload.mark, '현'),
+    mark: textOr(payload.mark, '요'),
     accent: textOr(payload.accent, '#d6d2c4'),
     createdAt: new Date().toISOString(),
     source: 'api',
@@ -182,10 +182,10 @@ function selectVisibleReports(reports, context) {
   return [
     {
       id: createId('seed-report'),
-      place: `${context.place ?? '현재 위치'} 근처`,
+      place: `${context.place ?? '현재 위치'} 주변`,
       time: '방금',
-      condition: context.detectedWeather ?? '확인 필요',
-      body: '아직 저장된 현장 제보가 없어 서버 기본 제보를 보여주고 있어요.',
+      condition: context.detectedWeather ?? '날씨 확인',
+      body: '아직 현장 제보가 없어 예시 제보를 보여주고 있어요.',
       createdAt: new Date().toISOString(),
       moderationStatus: 'visible',
       source: 'api',
@@ -201,14 +201,14 @@ function selectReportRequests(requests, context) {
   return [
     {
       id: createId('seed-request'),
-      question: `${place} 지금 날씨 어떤가요?`,
-      hint: '근처라면 바로 답변 가능',
+      question: `${place} 지금 날씨 어때요?`,
+      hint: '근처 사용자에게 현장 제보를 요청합니다.',
       place,
       distance: '근처',
       answers: 0,
       time: '방금',
       status: '답변 대기',
-      mark: '현',
+      mark: '요',
       accent: '#d6d2c4',
       createdAt: new Date().toISOString(),
       source: 'api',
@@ -241,7 +241,7 @@ function sendJson(response, statusCode, body) {
 
 function createFallbackContext() {
   return {
-    raw: '현재 위치 기준',
+    raw: '현재 위치 날씨',
     place: '현재 위치',
     target: {
       id: 'current-location',
@@ -251,7 +251,7 @@ function createFallbackContext() {
     },
     timeLabel: '지금',
     detectedWeather: '비',
-    interpretationNote: '기본 위치 기준으로 보여주고 있어요.',
+    interpretationNote: '현재 위치 기준으로 예보를 비교합니다.',
     needsClarification: false,
   };
 }
@@ -266,21 +266,21 @@ function createProviderStatus() {
     providers: [
       {
         providerId: 'kma',
-        name: '기상청',
+        name: '대한민국 기상청',
         enabled: isProviderEnabled(mode, 'kma'),
         configured: hasEnvValue('KMA_SERVICE_KEY') || hasEnvValue('EXPO_PUBLIC_KMA_API_KEY'),
         requiresKey: true,
       },
       {
         providerId: 'yr',
-        name: 'Yr.no',
+        name: '노르웨이 기상청',
         enabled: isProviderEnabled(mode, 'yr'),
         configured: hasEnvValue('YR_USER_AGENT') || hasEnvValue('EXPO_PUBLIC_YR_USER_AGENT'),
         requiresKey: false,
       },
       {
         providerId: 'fmi',
-        name: 'FMI ECMWF',
+        name: '핀란드 기상청',
         enabled: isProviderEnabled(mode, 'fmi'),
         configured: true,
         requiresKey: false,

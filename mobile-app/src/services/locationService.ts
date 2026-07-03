@@ -25,6 +25,11 @@ type BrowserGeolocationHost = {
   };
 };
 
+type ExtendedGeocodedAddress = ExpoLocation.LocationGeocodedAddress & {
+  city?: string | null;
+  formattedAddress?: string | null;
+};
+
 const fallbackLatitude = 37.5146;
 const fallbackLongitude = 127.0736;
 const fallbackPlaceName = '서울 송파구 잠실동';
@@ -39,7 +44,7 @@ export function createCheckingLocationStatus(): LocationStatus {
   return {
     phase: 'checking',
     label: '위치 확인 중',
-    message: '현재 위치를 확인한 뒤 가까운 제보와 예보를 맞춰볼게요.',
+    message: '현재 위치를 확인해서 가까운 예보와 제보를 맞춰볼게요.',
   };
 }
 
@@ -127,23 +132,34 @@ async function resolveNativePlaceName(latitude: number, longitude: number) {
       ExpoLocation.reverseGeocodeAsync({ latitude, longitude }),
       5000,
     );
-    const address = addresses?.[0];
+    const address = addresses?.[0] as ExtendedGeocodedAddress | undefined;
 
     if (!address) return {};
 
+    const formattedParts = splitFormattedAddress(address.formattedAddress);
     const region = compactRegionName(address.region);
-    const district = address.subregion ?? address.district ?? '';
-    const neighborhood = address.district && address.subregion ? address.district : address.name ?? address.street ?? '';
-    const full = [region, district, neighborhood]
-      .map((item) => item?.trim())
-      .filter(Boolean)
-      .filter((item, index, items) => items.indexOf(item) === index)
-      .join(' ');
+    const city = compactRegionName(address.city);
+    const district = compactRegionName(address.district ?? address.subregion);
+    const neighborhood = pickNeighborhood(address);
+    const street = compactRegionName(address.street);
+    const streetNumber = compactRegionName(address.streetNumber);
+    const name = compactRegionName(address.name);
 
-    const short = neighborhood || district || region || undefined;
+    const fullParts = uniqueCompact([
+      ...formattedParts,
+      region,
+      city,
+      district,
+      neighborhood,
+      street && streetNumber ? `${street} ${streetNumber}` : street,
+      name,
+    ]).filter((item) => !isTooBroadCountryName(item));
+
+    const detailParts = trimToUsefulLocation(fullParts);
+    const short = neighborhood || name || street || district || city || region || undefined;
 
     return {
-      placeName: full || short,
+      placeName: detailParts.join(' ') || short,
       shortPlaceName: short,
     };
   } catch {
@@ -207,15 +223,66 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
   });
 }
 
+function splitFormattedAddress(value?: string | null) {
+  if (!value) return [];
+
+  return value
+    .replace(/대한민국/g, '')
+    .replace(/\bSouth Korea\b/gi, '')
+    .split(/[,\n]/)
+    .flatMap((part) => part.split(/\s+/))
+    .map(compactRegionName)
+    .filter(Boolean);
+}
+
+function pickNeighborhood(address: ExtendedGeocodedAddress) {
+  const candidates = [
+    address.name,
+    address.district,
+    address.subregion,
+    address.street,
+  ].map(compactRegionName);
+
+  return candidates.find((item) => /동$|읍$|면$|리$|가$/.test(item)) ?? '';
+}
+
+function trimToUsefulLocation(parts: string[]) {
+  const meaningfulParts = parts.filter((part) => !/^\d{5}$/.test(part));
+
+  if (meaningfulParts.length <= 4) return meaningfulParts;
+
+  const startsAt = Math.max(0, meaningfulParts.findIndex((part) => /시$|도$|특별시$|광역시$/.test(part)));
+  return meaningfulParts.slice(startsAt, startsAt + 4);
+}
+
+function uniqueCompact(values: Array<string | undefined | null>) {
+  const seen = new Set<string>();
+
+  return values
+    .map(compactRegionName)
+    .filter(Boolean)
+    .filter((item) => {
+      if (seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+}
+
+function isTooBroadCountryName(value: string) {
+  return value === '대한민국' || value.toLowerCase() === 'south korea' || value.toLowerCase() === 'korea';
+}
+
 function compactRegionName(region?: string | null) {
   if (!region) return '';
 
   return region
-    .replace('특별시', '')
-    .replace('광역시', '')
-    .replace('특별자치시', '')
-    .replace('특별자치도', '')
-    .replace('자치도', '')
-    .replace('도', '')
+    .replace(/특별시/g, '')
+    .replace(/광역시/g, '')
+    .replace(/특별자치시/g, '')
+    .replace(/특별자치도/g, '')
+    .replace(/자치도/g, '')
+    .replace(/Province/gi, '')
+    .replace(/-do$/i, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }

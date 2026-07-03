@@ -5,8 +5,12 @@ import { styles } from '../styles/appStyles';
 import type { CompareServiceSummary, SearchContext } from '../types/weather';
 
 const compareServiceIcons: Record<string, ImageSourcePropType> = {
+  '대한민국 기상청': require('../../assets/icon-kma.png'),
   기상청: require('../../assets/icon-kma.png'),
+  '노르웨이 기상청': require('../../assets/icon-yr.png'),
   'Yr.no': require('../../assets/icon-yr.png'),
+  '핀란드 기상청': require('../../assets/icon-fmi.png'),
+  'FMI ECMWF': require('../../assets/icon-fmi.png'),
 };
 
 type CompareOverviewProps = {
@@ -30,7 +34,7 @@ export function CompareOverview({ searchContext, summaries }: CompareOverviewPro
           <View key={service.name} style={styles.compareSummaryCard}>
             <CompareServiceIcon service={service} />
             <View style={styles.compareSummaryContent}>
-              <Text style={styles.compareSummaryName}>{service.name}</Text>
+              <Text style={styles.compareSummaryName}>{normalizeServiceName(service.name)}</Text>
               <Text style={styles.compareSummaryText}>{service.summary}</Text>
             </View>
             <CompareWeatherBadge service={service} />
@@ -69,6 +73,14 @@ function CompareWeatherBadge({ service }: { service: CompareServiceSummary }) {
       <Text style={styles.compareSummaryValueText}>{service.value}</Text>
     </View>
   );
+}
+
+function normalizeServiceName(name: string) {
+  if (name === '기상청') return '대한민국 기상청';
+  if (name === 'Yr.no') return '노르웨이 기상청';
+  if (name === 'FMI ECMWF') return '핀란드 기상청';
+
+  return name;
 }
 
 function WeatherMiniIcon({ condition, tone }: { condition: string; tone: string }) {

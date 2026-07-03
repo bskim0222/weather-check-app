@@ -385,9 +385,9 @@ function createFallbackStatusMessage(providerIds: ForecastProviderId[]) {
 }
 
 function getProviderDisplayName(providerId: ForecastProviderId) {
-  if (providerId === 'kma') return '기상청';
-  if (providerId === 'yr') return 'Yr.no';
-  if (providerId === 'fmi') return 'FMI ECMWF';
+  if (providerId === 'kma') return '대한민국 기상청';
+  if (providerId === 'yr') return '노르웨이 기상청';
+  if (providerId === 'fmi') return '핀란드 기상청';
   if (providerId === 'windy') return 'Windy.com';
 
   return '';

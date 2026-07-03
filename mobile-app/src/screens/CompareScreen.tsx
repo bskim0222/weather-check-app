@@ -24,7 +24,7 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
   const compareCaption =
     mode === 'hourly'
       ? `${searchContext.timeLabel} · ${searchContext.place} 시간대별`
-      : `${searchContext.place} 날짜별 전망`;
+      : `${searchContext.place} 날짜별 흐름`;
 
   return (
     <View>
@@ -56,15 +56,23 @@ function ProviderAttribution({ summaries }: { summaries: CompareServiceSummary[]
 }
 
 function createAttributionText(summaries: CompareServiceSummary[]) {
-  const names = summaries.map((summary) => summary.name);
+  const names = summaries.map((summary) => normalizeServiceName(summary.name));
   const parts = [];
 
-  if (names.includes('기상청')) parts.push('기상청 단기예보');
-  if (names.includes('Yr.no')) parts.push('Yr.no / MET Norway');
-  if (names.includes('FMI ECMWF')) parts.push('FMI Open Data ECMWF, CC BY 4.0');
+  if (names.includes('대한민국 기상청')) parts.push('기상청 단기예보');
+  if (names.includes('노르웨이 기상청')) parts.push('MET Norway / Yr');
+  if (names.includes('핀란드 기상청')) parts.push('FMI Open Data, CC BY 4.0');
   if (names.includes('Windy.com')) parts.push('Windy.com');
 
   return parts.length > 0
     ? `${parts.join(' · ')} 기준으로 비교합니다.`
     : '연결된 예보 서비스 기준으로 비교합니다.';
+}
+
+function normalizeServiceName(name: string) {
+  if (name === '기상청') return '대한민국 기상청';
+  if (name === 'Yr.no') return '노르웨이 기상청';
+  if (name === 'FMI ECMWF') return '핀란드 기상청';
+
+  return name;
 }

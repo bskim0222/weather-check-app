@@ -7,7 +7,7 @@ export type ForecastProviderId = 'kma' | 'yr' | 'windy' | 'fmi';
 export type LocationReference = {
   id: string;
   label: string;
-  kind: 'current' | 'known-place' | 'custom';
+  kind: 'current' | 'known-place' | 'custom' | 'pending-place';
   latitude?: number;
   longitude?: number;
   radiusMeters: number;

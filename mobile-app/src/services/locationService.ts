@@ -115,16 +115,20 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
     ]);
     const place = chooseBestPlace(nativePlace, remotePlaceName);
     const placeName = place.placeName ?? '현재 위치';
+    const accuracyMeters = position.coords.accuracy;
+    const isLowAccuracy = typeof accuracyMeters === 'number' && accuracyMeters > 1000;
 
     return {
       phase: 'granted',
-      label: placeName,
-      message: `${placeName} 기준으로 예보와 현장 제보를 맞춰보고 있어요.`,
+      label: isLowAccuracy ? `${placeName} · 정확도 낮음` : placeName,
+      message: isLowAccuracy
+        ? `기기 위치 정확도가 낮아 ${placeName} 인근으로만 보고 있어요. 위치 설정에서 정확한 위치를 켜고 다시 갱신해보세요.`
+        : `${placeName} 기준으로 예보와 현장 제보를 맞춰보고 있어요.`,
       placeName,
       shortPlaceName: place.shortPlaceName,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
-      accuracyMeters: position.coords.accuracy,
+      accuracyMeters,
       source: place.source,
     };
   } catch {

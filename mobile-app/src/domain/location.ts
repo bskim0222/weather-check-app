@@ -22,6 +22,7 @@ export const knownLocationReferences: LocationReference[] = [
   { id: 'gimpo', label: '김포시', kind: 'known-place', latitude: 37.615, longitude: 126.7158, radiusMeters: 5000 },
   { id: 'seoraksan', label: '설악산', kind: 'known-place', latitude: 38.1195, longitude: 128.4656, radiusMeters: 5000 },
   { id: 'cheongwadae', label: '청와대', kind: 'known-place', latitude: 37.5866, longitude: 126.9748, radiusMeters: 900 },
+  { id: 'gwanghwamun', label: '광화문', kind: 'known-place', latitude: 37.5759, longitude: 126.9768, radiusMeters: 900 },
   { id: 'dumulmeori', label: '두물머리', kind: 'known-place', latitude: 37.5303, longitude: 127.3115, radiusMeters: 1200 },
   { id: 'kyobo-jongno', label: '종로 교보빌딩', kind: 'known-place', latitude: 37.5707, longitude: 126.9779, radiusMeters: 500 },
   { id: 'jamsil-stadium', label: '잠실운동장', kind: 'known-place', latitude: 37.5146, longitude: 127.0736, radiusMeters: 900 },

@@ -18,7 +18,11 @@ export type ReverseGeocodeLocationResponse = GeocodeLocationResponse & {
 export async function resolveRemoteLocation(searchContext: SearchContext) {
   const query = searchContext.locationQuery?.trim();
 
-  if (!isApiModeEnabled() || !query || searchContext.target.kind !== 'current') {
+  if (
+    !isApiModeEnabled() ||
+    !query ||
+    (searchContext.target.kind !== 'current' && searchContext.target.kind !== 'pending-place')
+  ) {
     return null;
   }
 

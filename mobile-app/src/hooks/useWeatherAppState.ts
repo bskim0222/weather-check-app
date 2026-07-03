@@ -127,7 +127,7 @@ export function useWeatherAppState() {
     if (!isPersistenceReady) return;
 
     if (locationAutoRefreshRequestedRef.current) return;
-    if (locationStatus.phase === 'checking' || locationStatus.phase === 'granted') return;
+    if (locationStatus.phase === 'checking') return;
 
     locationAutoRefreshRequestedRef.current = true;
     refreshLocationStatus();
@@ -227,6 +227,17 @@ export function useWeatherAppState() {
     setQuestionText(clean);
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
     setActiveTab('decision');
+    if (nextJudgement.searchContext.target.kind === 'pending-place') {
+      setRefreshLabel('장소 확인 중');
+      setDataStatus({
+        phase: 'loading',
+        label: '장소 확인 중',
+        message: `${nextJudgement.searchContext.place} 위치를 찾고 있어요. 확인되면 그 장소 기준으로 날씨를 판정할게요.`,
+      });
+      resolveQuestionLocation(nextJudgement);
+      return;
+    }
+
     refreshData('질문 기준', nextJudgement.searchContext);
     resolveQuestionLocation(nextJudgement);
   };
@@ -337,7 +348,17 @@ export function useWeatherAppState() {
   const resolveQuestionLocation = async (nextJudgement: ReturnType<typeof createQuestionJudgement>) => {
     const resolvedLocation = await resolveRemoteLocation(nextJudgement.searchContext);
 
-    if (!resolvedLocation) return;
+    if (!resolvedLocation) {
+      if (nextJudgement.searchContext.target.kind !== 'pending-place') return;
+
+      setRefreshLabel('장소 확인 실패');
+      setDataStatus({
+        phase: 'error',
+        label: '장소를 못 찾았어요',
+        message: `${nextJudgement.searchContext.locationQuery ?? nextJudgement.searchContext.place} 위치를 찾지 못했어요. 현재위치로 바꾸지 않았으니 장소명을 조금 더 구체적으로 다시 입력해주세요.`,
+      });
+      return;
+    }
 
     const resolvedSearchContext = {
       ...nextJudgement.searchContext,

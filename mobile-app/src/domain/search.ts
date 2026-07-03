@@ -26,6 +26,8 @@ const weatherHintWords = [
   '안개',
   '뿌옇',
   '비',
+  '날씨',
+  '기온',
   '우산',
   '소나기',
   '흐',
@@ -64,17 +66,29 @@ export function getDetectedWeatherLabel(weatherKey: WeatherKey) {
 export function inferSearchContext(question: string, weatherKey: WeatherKey): SearchContext {
   const clean = question.trim();
   const matchedLocation = findKnownLocation(clean);
-  const place = matchedLocation?.label ?? '현재 위치';
-  const target = matchedLocation ?? currentLocationReference;
   const locationQuery = matchedLocation?.label ?? extractLocationCandidate(clean);
+  const hasPlaceCandidate = Boolean(locationQuery);
+  const place = matchedLocation?.label ?? locationQuery ?? '현재 위치';
+  const target = matchedLocation ?? (
+    locationQuery
+      ? {
+          id: `pending-${locationQuery.replace(/\s+/g, '-')}`,
+          label: locationQuery,
+          kind: 'pending-place' as const,
+          radiusMeters: 1200,
+        }
+      : currentLocationReference
+  );
   const timeLabel = inferTimeLabel(clean);
   const weatherHintFound = hasWeatherHint(clean);
   const weatherLabel = getDetectedWeatherLabel(weatherKey);
-  const interpretationNote = !matchedLocation
-    ? '장소 단어를 찾지 못해서 현재 위치 기준으로 봤어요.'
-    : !weatherHintFound
+  const interpretationNote = matchedLocation
+    ? !weatherHintFound
       ? '날씨 단어가 뚜렷하지 않아 비 가능성을 먼저 확인했어요.'
-      : `${place}의 ${timeLabel} 날씨를 ${weatherLabel} 기준으로 봤어요.`;
+      : `${place}의 ${timeLabel} 날씨를 ${weatherLabel} 기준으로 봤어요.`
+    : hasPlaceCandidate
+      ? `${place} 위치를 먼저 확인하고 있어요. 장소가 확인되면 그 위치 기준으로 판정할게요.`
+      : '장소 단어를 찾지 못해서 현재 위치 기준으로 봤어요.';
 
   return {
     raw: clean,

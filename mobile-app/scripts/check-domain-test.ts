@@ -68,6 +68,15 @@ expectEqual(seoraksanTomorrowJudgement.searchContext.locationQuery, '설악산',
 const cheongwadaeNowJudgement = createQuestionJudgement('청와대 지금 비 와?');
 expectEqual(cheongwadaeNowJudgement.searchContext.locationQuery, '청와대', 'cheongwadae question location query');
 
+const gwanghwamunNowJudgement = createQuestionJudgement('광화문 지금 비 와?');
+expectEqual(gwanghwamunNowJudgement.searchContext.locationQuery, '광화문', 'gwanghwamun question location query');
+expectEqual(gwanghwamunNowJudgement.searchContext.place, '광화문', 'gwanghwamun question place');
+
+const unknownBuildingJudgement = createQuestionJudgement('테스트빌딩 오늘 밤 기온 어때?');
+expectEqual(unknownBuildingJudgement.searchContext.locationQuery, '테스트빌딩', 'unknown building location query');
+expectEqual(unknownBuildingJudgement.searchContext.place, '테스트빌딩', 'unknown building keeps candidate place');
+expectEqual(unknownBuildingJudgement.searchContext.target.kind, 'pending-place', 'unknown building waits for geocoding');
+
 const kyoboTonightJudgement = createQuestionJudgement('종로 교보빌딩 오늘 밤 기온 어때?');
 expectEqual(kyoboTonightJudgement.searchContext.locationQuery, '종로 교보빌딩', 'kyobo building question location query');
 

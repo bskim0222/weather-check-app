@@ -7,6 +7,7 @@
     "check:fmi-live": "node scripts/check-fmi-live.mjs",
     "check:kma-live": "node scripts/check-kma-live.mjs",
     "check:mvp-live": "node scripts/check-mvp-live.mjs",
+    "check:render-live": "node scripts/check-render-live.mjs",
     "check:windy-live": "node scripts/check-windy-live.mjs",
     "check:yr-live": "node scripts/check-yr-live.mjs",
     "moderate": "node scripts/moderate-report.mjs",

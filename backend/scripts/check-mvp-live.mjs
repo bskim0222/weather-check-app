@@ -28,7 +28,7 @@ const context = {
   },
   timeLabel: '지금',
   detectedWeather: '비',
-  interpretationNote: 'MVP 실데이터 예보 비교 확인용입니다.',
+  interpretationNote: 'MVP 실제 예보 비교 확인용입니다.',
   needsClarification: false,
 };
 
@@ -38,6 +38,8 @@ console.log(
   JSON.stringify(
     {
       mode: process.env.WEATHER_PROVIDER_MODE,
+      liveProviderIds: snapshot.meta.liveProviderIds,
+      fallbackProviderIds: snapshot.meta.fallbackProviderIds,
       sources: snapshot.sources.map((source) => ({
         providerId: source.providerId,
         name: source.name,

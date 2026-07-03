@@ -130,7 +130,6 @@ async function fetchKmaEndpoint(path, params) {
 }
 
 function createKmaBaseTime(date, type) {
-  const zoned = getSeoulParts(date);
   const releaseOffsetMinutes = type === 'forecast' ? 45 : 15;
   const base = new Date(date.getTime() - releaseOffsetMinutes * 60 * 1000);
   const baseParts = getSeoulParts(base);
@@ -219,12 +218,22 @@ function createDailyRows(hourlyRows) {
   });
 
   return [...byDate.values()].slice(0, 6).map((row, index) => ({
-    label: index === 0 ? '오늘' : index === 1 ? '내일' : row.date?.slice(4).replace(/(\d{2})(\d{2})/, '$1/$2') ?? `${index + 1}일 뒤`,
+    label: createDailyLabel(row.date, index),
     weather: conditionFromKmaValues(row),
     detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
     mark: conditionToMark(conditionFromKmaValues(row)),
     tone: conditionToTone(conditionFromKmaValues(row)),
   }));
+}
+
+function createDailyLabel(dateValue, index) {
+  if (index === 0) return '오늘';
+  if (index === 1) return '내일';
+  if (typeof dateValue === 'string' && dateValue.length === 8) {
+    return dateValue.slice(4).replace(/(\d{2})(\d{2})/, '$1/$2');
+  }
+
+  return `${index + 1}일 뒤`;
 }
 
 function conditionFromKmaValues(values) {
@@ -275,10 +284,10 @@ function formatKmaHour(value) {
 function conditionToMark(condition) {
   if (condition.includes('비')) return '비';
   if (condition.includes('눈')) return '눈';
-  if (condition.includes('맑')) return '맑음';
-  if (condition.includes('구름')) return '구름';
+  if (condition.includes('맑')) return '맑';
+  if (condition.includes('구름')) return '구';
 
-  return '흐림';
+  return '흐';
 }
 
 function conditionToTone(condition) {

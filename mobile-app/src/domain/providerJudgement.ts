@@ -6,6 +6,8 @@ type WeatherVote = {
   label: string;
 };
 
+type JudgementTone = 'confident' | 'leaning' | 'mixed' | 'caution';
+
 export function createProviderAdjustedPreset(
   basePreset: WeatherPreset,
   providerSnapshot: WeatherProviderSnapshot,
@@ -13,19 +15,22 @@ export function createProviderAdjustedPreset(
   const sources = providerSnapshot.sources.length > 0 ? providerSnapshot.sources : basePreset.sources;
   const votes = sources.map((source) => getWeatherVote(source.condition));
   const consensus = getConsensusVote(votes) ?? getWeatherVote(basePreset.condition);
+  const agreeingCount = votes.filter((vote) => vote.key === consensus.key).length;
+  const tone = getJudgementTone(consensus.key, agreeingCount, sources.length);
   const temp = getAverageTemperature(sources) ?? basePreset.temp;
-  const serviceSignal = createServiceSignal(sources, consensus.label);
 
   return {
     ...basePreset,
     condition: consensus.label,
     temp,
-    title: createProviderTitle(consensus, basePreset.title),
-    summary: createProviderSummary(sources, consensus.label),
-    signal: serviceSignal,
+    level: createJudgementLevel(tone),
+    live: '현장 제보 확인',
+    title: createProviderTitle(consensus, tone),
+    summary: createProviderSummary(sources, consensus, agreeingCount),
+    signal: createServiceSignal(agreeingCount, sources.length, consensus.label),
     sources,
-    forecastLead: createForecastLead(providerSnapshot.hourlyRows, consensus.label, basePreset.forecastLead),
-    forecastRows: createForecastRows(providerSnapshot.hourlyRows, basePreset.forecastRows),
+    forecastLead: createForecastLead(providerSnapshot.hourlyRows, consensus),
+    forecastRows: createForecastRows(providerSnapshot.hourlyRows, basePreset.forecastRows, consensus),
   };
 }
 
@@ -38,15 +43,15 @@ function getWeatherVote(condition: string): WeatherVote {
     return { key: 'snow', label: '눈' };
   }
 
-  if (includesAny(condition, ['비', '강수', '소강'])) {
+  if (includesAny(condition, ['비', '강수', '소나기'])) {
     return { key: 'rain', label: '비' };
   }
 
-  if (includesAny(condition, ['안개', '시야', '습함'])) {
+  if (includesAny(condition, ['안개', '시야', '습함', '낮은 구름'])) {
     return { key: 'fog', label: '안개' };
   }
 
-  if (includesAny(condition, ['맑', '비 없음', '건조', '안정'])) {
+  if (includesAny(condition, ['맑', '비 없음', '강수 없음', '건조', '안정'])) {
     return { key: 'sunny', label: '맑음' };
   }
 
@@ -58,12 +63,40 @@ function getConsensusVote(votes: WeatherVote[]) {
     acc[vote.key] = (acc[vote.key] ?? 0) + 1;
     return acc;
   }, {} as Record<WeatherKey, number>);
-  const sorted = [...votes].sort((a, b) => (counts[b.key] ?? 0) - (counts[a.key] ?? 0));
-  const winner = sorted[0];
+  const sorted = [...votes].sort((a, b) => {
+    const countDiff = (counts[b.key] ?? 0) - (counts[a.key] ?? 0);
+    if (countDiff !== 0) return countDiff;
 
-  if (!winner || (counts[winner.key] ?? 0) < 2) return null;
+    return getWeatherPriority(b.key) - getWeatherPriority(a.key);
+  });
 
-  return winner;
+  return sorted[0] ?? null;
+}
+
+function getWeatherPriority(key: WeatherKey) {
+  if (key === 'thunder') return 6;
+  if (key === 'snow') return 5;
+  if (key === 'rain') return 4;
+  if (key === 'fog') return 3;
+  if (key === 'cloudy') return 2;
+
+  return 1;
+}
+
+function getJudgementTone(key: WeatherKey, agreeingCount: number, totalCount: number): JudgementTone {
+  if (key === 'thunder' || key === 'snow' || key === 'fog') return 'caution';
+  if (totalCount >= 3 && agreeingCount >= 3) return 'confident';
+  if (agreeingCount >= 2) return 'leaning';
+
+  return 'mixed';
+}
+
+function createJudgementLevel(tone: JudgementTone) {
+  if (tone === 'confident') return '확실';
+  if (tone === 'leaning') return '우세';
+  if (tone === 'caution') return '주의';
+
+  return '엇갈림';
 }
 
 function getAverageTemperature(sources: ForecastSource[]) {
@@ -82,75 +115,104 @@ function parseTemperature(value: string) {
   return match ? Number(match[0]) : null;
 }
 
-function createProviderTitle(consensus: WeatherVote, fallbackTitle: string) {
-  if (consensus.key === 'rain') return '지금은 비 오는 쪽이 우세해요';
-  if (consensus.key === 'sunny') return '지금은 비 걱정이 거의 없어요';
-  if (consensus.key === 'cloudy') return '비보다는 흐린 쪽에 가까워요';
-  if (consensus.key === 'thunder') return '소나기와 천둥 가능성을 봐야 해요';
+function createProviderTitle(consensus: WeatherVote, tone: JudgementTone) {
+  if (consensus.key === 'rain') return tone === 'mixed' ? '비 신호가 엇갈려요' : '비 가능성이 더 높아요';
+  if (consensus.key === 'sunny') return tone === 'mixed' ? '비 가능성은 낮아 보여요' : '비 걱정은 낮은 편이에요';
+  if (consensus.key === 'cloudy') return '비보다는 흐림 쪽 신호예요';
+  if (consensus.key === 'thunder') return '소나기·천둥 가능성을 확인해야 해요';
   if (consensus.key === 'snow') return '눈 또는 진눈깨비 신호가 있어요';
-  if (consensus.key === 'fog') return '비보다 시야 확인이 먼저예요';
+  if (consensus.key === 'fog') return '비보다 시야 확인이 중요해요';
 
-  return fallbackTitle;
+  return '예보 신호를 비교하고 있어요';
 }
 
-function createProviderSummary(sources: ForecastSource[], consensusLabel: string) {
-  const names = sources.map((source) => `${source.name} ${source.condition}`).join(', ');
+function createProviderSummary(sources: ForecastSource[], consensus: WeatherVote, agreeingCount: number) {
+  const sourceText = sources
+    .map((source) => `${normalizeProviderName(source.name)} ${source.condition}`)
+    .join(', ');
+  const total = sources.length;
 
-  return `${names} 신호를 비교하면 현재는 ${consensusLabel} 쪽으로 판단하고 있어요.`;
+  if (agreeingCount >= 2) {
+    return `${sourceText}. ${total}곳 중 ${agreeingCount}곳이 ${consensus.label} 쪽이라 이렇게 판단했어요.`;
+  }
+
+  return `${sourceText}. 예보가 서로 갈려서 ${consensus.label} 가능성을 우선 보되, 현장 제보 확인이 필요해요.`;
 }
 
-function createServiceSignal(sources: ForecastSource[], consensusLabel: string) {
-  const count = sources.filter((source) => getWeatherVote(source.condition).label === consensusLabel).length;
-
-  return `${count}곳 ${consensusLabel}`;
+function createServiceSignal(agreeingCount: number, totalCount: number, consensusLabel: string) {
+  return `${totalCount}곳 중 ${agreeingCount}곳 ${consensusLabel}`;
 }
 
-function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows'], consensusLabel: string, fallback: string) {
-  if (rows.length === 0) return fallback;
+function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows'], consensus: WeatherVote) {
+  if (rows.length === 0) {
+    return `${consensus.label} 판단을 기준으로 다음 변화를 계속 확인해요.`;
+  }
 
   const nextLabels = rows
     .slice(0, 3)
-    .map((row) => pickRepresentativeCell(row)?.weather)
+    .map((row) => pickRepresentativeCell(row, consensus)?.weather)
     .filter(Boolean);
 
-  return nextLabels.length > 0
-    ? `앞으로 몇 시간은 ${nextLabels.join(' → ')} 흐름으로 보고 있어요.`
-    : `${consensusLabel} 판단을 기준으로 다음 변화를 보고 있어요.`;
+  if (nextLabels.length === 0) {
+    return `${consensus.label} 판단을 기준으로 다음 변화를 계속 확인해요.`;
+  }
+
+  return `앞으로 몇 시간은 ${dedupe(nextLabels).join(' → ')} 흐름으로 보고 있어요.`;
 }
 
-function createForecastRows(rows: WeatherProviderSnapshot['hourlyRows'], fallbackRows: ForecastStep[]) {
+function createForecastRows(
+  rows: WeatherProviderSnapshot['hourlyRows'],
+  fallbackRows: ForecastStep[],
+  consensus: WeatherVote,
+) {
   if (rows.length === 0) return fallbackRows;
 
   return rows.slice(0, 3).map((row, index) => {
-    const cell = pickRepresentativeCell(row);
+    const cell = pickRepresentativeCell(row, consensus);
 
     return {
       time: row.label,
       title: cell?.weather ?? fallbackRows[index]?.title ?? '확인 필요',
-      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRows[index]?.temp ?? '--도',
+      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRows[index]?.temp ?? '--℃',
       note: getPrecipitationFromDetail(cell?.detail) ?? fallbackRows[index]?.note ?? '변화 확인',
       mark: cell?.mark ?? fallbackRows[index]?.mark ?? '확',
     };
   });
 }
 
-function pickRepresentativeCell(row: WeatherProviderSnapshot['hourlyRows'][number]): CompareForecastCell {
+function pickRepresentativeCell(
+  row: WeatherProviderSnapshot['hourlyRows'][number],
+  consensus: WeatherVote,
+): CompareForecastCell {
   const cells = [row.kma, row.yr, row.windy];
-  const rainLike = cells.find((cell) => getWeatherVote(cell.weather).key === 'rain');
+  const consensusCell = cells.find((cell) => getWeatherVote(cell.weather).key === consensus.key);
+  const cautionCell = cells.find((cell) => ['rain', 'thunder', 'snow'].includes(getWeatherVote(cell.weather).key));
 
-  return rainLike ?? row.yr ?? row.kma;
+  return consensusCell ?? cautionCell ?? row.kma ?? row.yr ?? row.windy;
 }
 
 function getTemperatureFromDetail(detail: string | undefined) {
   const match = detail?.match(/-?\d+\s*(?:℃|도)/);
 
-  return match ? match[0].replace('℃', '도').replace(/\s/g, '') : null;
+  return match ? match[0].replace(/\s/g, '').replace('도', '℃') : null;
 }
 
 function getPrecipitationFromDetail(detail: string | undefined) {
   const match = detail?.match(/\d+(?:\.\d+)?mm/);
 
   return match ? `강수 ${match[0]}` : null;
+}
+
+function normalizeProviderName(name: string) {
+  if (name === '기상청') return '대한민국 기상청';
+  if (name === 'Yr.no') return '노르웨이 기상청';
+  if (name === 'FMI ECMWF') return '핀란드 기상청';
+
+  return name;
+}
+
+function dedupe(values: string[]) {
+  return values.filter((value, index) => values.indexOf(value) === index);
 }
 
 function includesAny(value: string, patterns: string[]) {

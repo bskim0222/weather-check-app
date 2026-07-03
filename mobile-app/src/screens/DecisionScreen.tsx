@@ -7,8 +7,8 @@ import { weatherPresets } from '../data/mockWeather';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
 import type {
-  ForecastSource,
   ForecastProviderId,
+  ForecastSource,
   LocalReport,
   SearchContext,
   WeatherKey,
@@ -18,6 +18,7 @@ import type {
 const providerIcons: Partial<Record<ForecastProviderId, ImageSourcePropType>> = {
   kma: require('../../assets/icon-kma.png'),
   yr: require('../../assets/icon-yr.png'),
+  fmi: require('../../assets/icon-fmi.png'),
 };
 
 type DecisionScreenProps = {
@@ -75,7 +76,13 @@ export function DecisionScreen({
                 },
               ]}
             >
-              <Text style={[styles.weatherChipText, isActive && styles.weatherChipTextActive, isActive && { color: item.accentInk }]}>
+              <Text
+                style={[
+                  styles.weatherChipText,
+                  isActive && styles.weatherChipTextActive,
+                  isActive && { color: item.accentInk },
+                ]}
+              >
                 {item.label}
               </Text>
             </Pressable>
@@ -93,7 +100,7 @@ export function DecisionScreen({
               <Text style={styles.localReportPlace}>{searchContext.place}</Text>
             </View>
             <Text style={styles.localReportCaption}>
-              현재 위치 날씨를 한줄로 남기면 생생날씨특파원에 바로 올라가요.
+              지금 보이는 날씨를 한 줄로 남기면 생생날씨특파원에 반영돼요.
             </Text>
           </View>
         </View>
@@ -105,15 +112,15 @@ export function DecisionScreen({
           {['비 안 와요', '비 와요', '소나기', '눈', '천둥', '강풍'].map((option, index) => {
             const isSelected = reportCondition ? reportCondition === option : index === 0;
             return (
-            <Pressable
-              key={option}
-              onPress={() => onReportConditionChange(option)}
-              style={[styles.localOptionChip, isSelected && styles.localOptionChipActive]}
-            >
-              <Text style={[styles.localOptionText, isSelected && styles.localOptionTextActive]}>
-                {option}
-              </Text>
-            </Pressable>
+              <Pressable
+                key={option}
+                onPress={() => onReportConditionChange(option)}
+                style={[styles.localOptionChip, isSelected && styles.localOptionChipActive]}
+              >
+                <Text style={[styles.localOptionText, isSelected && styles.localOptionTextActive]}>
+                  {option}
+                </Text>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -121,7 +128,7 @@ export function DecisionScreen({
           <TextInput
             value={reportText}
             onChangeText={onReportTextChange}
-            placeholder="예: 바닥 말라있고 우산 안 써요"
+            placeholder="예: 바닥은 말라 있고 우산 쓴 사람은 없어요"
             placeholderTextColor="rgba(34,36,38,0.36)"
             style={styles.reportInput}
           />
@@ -140,22 +147,22 @@ export function DecisionScreen({
           </Pressable>
         </View>
         <View style={styles.reasonSummary}>
-          <Text style={styles.reasonSummaryTitle}>현재값을 서로 맞춰봤어요</Text>
+          <Text style={styles.reasonSummaryTitle}>서비스별 현재값을 서로 맞춰봤어요</Text>
           <Text style={styles.reasonSummaryText}>
-            같은 장소와 시간의 서비스별 날씨, 기온, 근처 제보를 한 번에 비교한 결과예요.
+            같은 장소와 시간의 서비스별 날씨, 기온, 근처 제보를 함께 보고 판정 문장을 만들어요.
           </Text>
         </View>
         <View style={styles.sourceGrid}>
           {current.sources.map((source) => (
             <View key={source.name} style={styles.evidenceRow}>
               <ServiceIcon source={source} />
-            <View style={styles.evidenceContent}>
-              <Text style={styles.evidenceName}>{source.name}</Text>
-              <Text style={styles.evidenceSub}>현재 예보</Text>
-            </View>
+              <View style={styles.evidenceContent}>
+                <Text style={styles.evidenceName}>{normalizeProviderName(source.name)}</Text>
+                <Text style={styles.evidenceSub}>현재 예보</Text>
+              </View>
               <View style={styles.sourceWeatherPillCompact}>
                 <WeatherStatusIcon condition={source.condition} tone={source.color} />
-                <Text style={styles.sourceTempCompact}>{source.temp.replace('도', '°')}</Text>
+                <Text style={styles.sourceTempCompact}>{formatSourceTemperature(source.temp)}</Text>
               </View>
             </View>
           ))}
@@ -165,7 +172,7 @@ export function DecisionScreen({
             </View>
             <View style={styles.evidenceContent}>
               <Text style={styles.evidenceName}>생생날씨특파원</Text>
-              <Text style={styles.evidenceSub}>최근 제보가 예보와 같은 쪽이에요.</Text>
+              <Text style={styles.evidenceSub}>현장 제보가 쌓이면 예보와 함께 비교해요.</Text>
             </View>
             <View style={styles.liveEvidenceBadge}>
               <Text style={styles.liveEvidenceBadgeText}>{current.live}</Text>
@@ -178,12 +185,12 @@ export function DecisionScreen({
         <View style={styles.mockSectionHead}>
           <Text style={styles.mockSectionTitle}>다음 6시간 날씨</Text>
           <Pressable style={styles.mockSectionButton}>
-            <Text style={styles.mockSectionButtonText}>우산 판단</Text>
+            <Text style={styles.mockSectionButtonText}>예보 흐름</Text>
           </Pressable>
         </View>
         <View style={styles.forecastPanel}>
           <View style={styles.forecastLead}>
-            <Text style={styles.forecastLeadLabel}>핵심</Text>
+            <Text style={styles.forecastLeadLabel}>흐름</Text>
             <Text style={styles.forecastLeadText}>{current.forecastLead}</Text>
             <View style={styles.forecastHint}>
               <Text style={styles.forecastHintLabel}>행동 힌트</Text>
@@ -331,12 +338,12 @@ function WeatherStatusIcon({ condition, tone }: { condition: string; tone: strin
 }
 
 function getWeatherIconKind(condition: string) {
-  if (condition.includes('천둥') || condition.includes('불안정')) return 'thunder';
+  if (condition.includes('천둥') || condition.includes('번개') || condition.includes('불안정')) return 'thunder';
   if (condition.includes('비') || condition.includes('강수')) return 'rain';
-  if (condition.includes('소강')) return 'cloudy';
+  if (condition.includes('소나기')) return 'rain';
   if (condition.includes('눈')) return 'snow';
-  if (condition.includes('안개') || condition.includes('습')) return 'fog';
-  if (condition.includes('맑')) return 'sunny';
+  if (condition.includes('안개') || condition.includes('시야') || condition.includes('습')) return 'fog';
+  if (condition.includes('맑') || condition.includes('비 없음')) return 'sunny';
 
   return 'cloudy';
 }
@@ -360,4 +367,16 @@ function getSoftTone(kind: string) {
   if (kind === 'fog') return '#bbb5b7';
 
   return '#fff2e9';
+}
+
+function normalizeProviderName(name: string) {
+  if (name === '기상청') return '대한민국 기상청';
+  if (name === 'Yr.no') return '노르웨이 기상청';
+  if (name === 'FMI ECMWF') return '핀란드 기상청';
+
+  return name;
+}
+
+function formatSourceTemperature(value: string) {
+  return value.replace('도', '℃');
 }

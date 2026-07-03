@@ -248,15 +248,27 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
 
   return new Promise((resolve) => {
     geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const remotePlaceName = await resolveRemotePlaceName(
+          position.coords.latitude,
+          position.coords.longitude,
+        ).catch(() => null);
+        const placeName = remotePlaceName ?? '현재 위치 확인됨';
+        const accuracyMeters = position.coords.accuracy ?? null;
+        const isLowAccuracy = typeof accuracyMeters === 'number' && accuracyMeters > 1000;
+
         resolve({
           phase: 'granted',
-          label: '현재 위치 확인됨',
-          message: '현재 위치 기준으로 예보와 현장 제보를 맞춰보고 있어요.',
+          label: isLowAccuracy ? `${placeName} · 정확도 낮음` : placeName,
+          message: remotePlaceName
+            ? `${placeName} 기준으로 예보와 현장 제보를 맞춰보고 있어요.`
+            : '현재 위치 좌표를 확인했지만 동네 이름은 아직 불러오지 못했어요.',
+          placeName,
+          shortPlaceName: remotePlaceName ? getShortPlaceName(remotePlaceName) : undefined,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          accuracyMeters: position.coords.accuracy ?? null,
-          source: 'web',
+          accuracyMeters,
+          source: remotePlaceName ? 'backend' : 'web',
         });
       },
       (error) => {

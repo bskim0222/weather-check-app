@@ -13,11 +13,12 @@ export function createProviderAdjustedPreset(
   providerSnapshot: WeatherProviderSnapshot,
 ): WeatherPreset {
   const sources = providerSnapshot.sources.length > 0 ? providerSnapshot.sources : basePreset.sources;
-  const votes = sources.map((source) => getWeatherVote(source.condition));
+  const judgementSources = getJudgementSources(sources, providerSnapshot);
+  const votes = judgementSources.map((source) => getWeatherVote(source.condition));
   const consensus = getConsensusVote(votes) ?? getWeatherVote(basePreset.condition);
   const agreeingCount = votes.filter((vote) => vote.key === consensus.key).length;
-  const tone = getJudgementTone(consensus.key, agreeingCount, sources.length);
-  const temp = getAverageTemperature(sources) ?? basePreset.temp;
+  const tone = getJudgementTone(consensus.key, agreeingCount, judgementSources.length);
+  const temp = getAverageTemperature(judgementSources) ?? basePreset.temp;
 
   return {
     ...basePreset,
@@ -26,12 +27,22 @@ export function createProviderAdjustedPreset(
     level: createJudgementLevel(tone),
     live: '현장 제보 확인',
     title: createProviderTitle(consensus, tone),
-    summary: createProviderSummary(sources, consensus, agreeingCount),
-    signal: createServiceSignal(agreeingCount, sources.length, consensus.label),
+    summary: createProviderSummary(judgementSources, consensus, agreeingCount),
+    signal: createServiceSignal(agreeingCount, judgementSources.length, consensus.label),
     sources,
     forecastLead: createForecastLead(providerSnapshot.hourlyRows, consensus),
     forecastRows: createForecastRows(providerSnapshot.hourlyRows, basePreset.forecastRows, consensus),
   };
+}
+
+function getJudgementSources(
+  sources: ForecastSource[],
+  providerSnapshot: WeatherProviderSnapshot,
+) {
+  const liveProviderIds = new Set(providerSnapshot.meta.liveProviderIds);
+  const liveSources = sources.filter((source) => source.providerId && liveProviderIds.has(source.providerId));
+
+  return liveSources.length > 0 ? liveSources : sources;
 }
 
 function getWeatherVote(condition: string): WeatherVote {

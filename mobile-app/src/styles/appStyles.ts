@@ -699,6 +699,10 @@ export const styles = StyleSheet.create({
     width: 122,
     gap: 12,
   },
+  fogLinesCloudy: {
+    top: 120,
+    opacity: 0.58,
+  },
   fogLine: {
     height: 5,
     borderRadius: 4,

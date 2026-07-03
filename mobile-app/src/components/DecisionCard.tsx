@@ -1,7 +1,6 @@
 ﻿import { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 
-import { WeatherIcon } from './WeatherIcon';
 import { styles } from '../styles/appStyles';
 import type { SearchContext, WeatherPreset } from '../types/weather';
 import type { LocationStatus } from '../types/appState';
@@ -121,8 +120,10 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   const isThunder = current.condition === '천둥번개';
   const isSnow = current.condition === '눈';
   const isFog = current.condition === '안개';
+  const isCloudy = current.condition === '흐림';
   const shapeColor = getWeatherShapeColor(current);
   const softColor = getSoftWeatherColor(current);
+  const puffColor = getWeatherPuffColor(current);
 
   useEffect(() => {
     drift.setValue(0);
@@ -248,7 +249,42 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   return (
     <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
       {isThunder && <Animated.View style={[styles.thunderFlash, { opacity: flash }]} />}
-      <WeatherIcon condition={current.condition} style={styles.weatherArtIcon} />
+      <Animated.View style={[styles.cloudPuffLarge, { backgroundColor: puffColor }, pulseStyle]} />
+      <Animated.View style={[styles.cloudBase, { backgroundColor: shapeColor }, pulseStyle]} />
+      <Animated.View style={[styles.cloudPuffSmall, { backgroundColor: softColor }, pulseStyle]} />
+
+      {(isRain || isThunder) && (
+        <Animated.View style={[styles.weatherDrops, fallStyle]}>
+          <View style={[styles.rainDrop, styles.rainDropFast, { backgroundColor: getDropColor(current) }]} />
+          <View style={[styles.rainDrop, styles.rainDropMiddle, { backgroundColor: getDropColor(current) }]} />
+          <View style={[styles.rainDrop, { backgroundColor: getDropColor(current) }]} />
+          <View style={[styles.rainDrop, styles.rainDropWide, { backgroundColor: getDropColor(current) }]} />
+        </Animated.View>
+      )}
+
+      {isThunder && (
+        <Animated.View style={[styles.thunderBolt, { opacity: flash }]}>
+          <View style={[styles.thunderBoltTop, { backgroundColor: current.accent }]} />
+          <View style={[styles.thunderBoltBottom, { backgroundColor: current.accent }]} />
+        </Animated.View>
+      )}
+
+      {isSnow && (
+        <Animated.View style={[styles.snowDots, fallStyle]}>
+          <View style={styles.snowDot} />
+          <View style={[styles.snowDot, styles.snowDotMiddle]} />
+          <View style={[styles.snowDot, styles.snowDotSmall]} />
+          <View style={[styles.snowDot, styles.snowDotLow]} />
+        </Animated.View>
+      )}
+
+      {(isFog || isCloudy) && (
+        <Animated.View style={[styles.fogLines, isCloudy && styles.fogLinesCloudy, weatherFloatStyle]}>
+          <View style={[styles.fogLine, { backgroundColor: getFogLineColor(current) }]} />
+          <View style={[styles.fogLine, styles.fogLineShort, { backgroundColor: getFogLineColor(current) }]} />
+          <View style={[styles.fogLine, { backgroundColor: getFogLineColor(current) }]} />
+        </Animated.View>
+      )}
     </Animated.View>
   );
 }
@@ -267,5 +303,26 @@ function getSoftWeatherColor(current: WeatherPreset) {
   if (current.condition === '천둥번개') return '#8a64c6';
   if (current.condition === '눈') return '#ffffff';
   if (current.condition === '안개') return '#f0e7dc';
+  if (current.condition === '흐림') return '#f8f5ec';
   return '#fff2e9';
+}
+
+function getWeatherPuffColor(current: WeatherPreset) {
+  if (current.condition === '비') return '#0b5a7b';
+  if (current.condition === '천둥번개') return '#4e5663';
+  if (current.condition === '눈') return '#f8fdff';
+  if (current.condition === '안개') return '#efe8dc';
+  if (current.condition === '흐림') return '#718176';
+
+  return current.accent;
+}
+
+function getDropColor(current: WeatherPreset) {
+  if (current.condition === '천둥번개') return '#9ed4e9';
+  return '#e6f8ff';
+}
+
+function getFogLineColor(current: WeatherPreset) {
+  if (current.condition === '흐림') return 'rgba(36,36,36,0.22)';
+  return 'rgba(36,36,36,0.34)';
 }

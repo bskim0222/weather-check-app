@@ -3,7 +3,7 @@ services:
     name: weather-check-web
     runtime: static
     rootDir: mobile-app
-    buildCommand: npm install && npm run export:web:api:node
+    buildCommand: pnpm run export:web:api:node
     staticPublishPath: dist-phone
     routes:
       - type: rewrite

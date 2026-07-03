@@ -2,6 +2,7 @@ import * as ExpoLocation from 'expo-location';
 import { Platform } from 'react-native';
 
 import type { LocationStatus } from '../types/appState';
+import { resolveRemotePlaceName } from './geocoding';
 
 type BrowserGeolocationHost = {
   navigator?: {
@@ -91,23 +92,26 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       return createFallbackLocationStatus('기기 위치 서비스가 꺼져 있어 기본 위치 기준으로 보여주고 있어요.');
     }
 
-    const lastKnownPosition = await ExpoLocation.getLastKnownPositionAsync({
-      maxAge: 1000 * 60 * 5,
-      requiredAccuracy: 300,
-    });
     const position =
-      lastKnownPosition ??
       (await withLocationTimeout(
         ExpoLocation.getCurrentPositionAsync({
-          accuracy: ExpoLocation.Accuracy.Balanced,
+          accuracy: ExpoLocation.Accuracy.High,
         }),
-      ));
+        12000,
+      )) ??
+      (await ExpoLocation.getLastKnownPositionAsync({
+        maxAge: 1000 * 60,
+        requiredAccuracy: 150,
+      }));
 
     if (!position) {
       return createFallbackLocationStatus('현재 위치를 제때 확인하지 못해 기본 위치 기준으로 보여주고 있어요.');
     }
 
-    const place = await resolveNativePlaceName(position.coords.latitude, position.coords.longitude);
+    const remotePlaceName = await resolveRemotePlaceName(position.coords.latitude, position.coords.longitude);
+    const place = remotePlaceName
+      ? { placeName: remotePlaceName, shortPlaceName: getShortPlaceName(remotePlaceName) }
+      : await resolveNativePlaceName(position.coords.latitude, position.coords.longitude);
     const placeName = place.placeName ?? '현재 위치';
 
     return {
@@ -119,11 +123,17 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
       accuracyMeters: position.coords.accuracy,
-      source: 'native',
+      source: remotePlaceName ? 'backend' : 'native',
     };
   } catch {
     return createFallbackLocationStatus('위치 확인 중 문제가 생겨 기본 위치 기준으로 보여주고 있어요.');
   }
+}
+
+function getShortPlaceName(placeName: string) {
+  const parts = placeName.split(/\s+/).filter(Boolean);
+
+  return parts.at(-1) ?? placeName;
 }
 
 async function resolveNativePlaceName(latitude: number, longitude: number) {

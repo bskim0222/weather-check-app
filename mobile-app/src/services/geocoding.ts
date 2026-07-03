@@ -10,6 +10,11 @@ export type GeocodeLocationResponse = {
   displayName?: string;
 };
 
+export type ReverseGeocodeLocationResponse = GeocodeLocationResponse & {
+  latitude?: number;
+  longitude?: number;
+};
+
 export async function resolveRemoteLocation(searchContext: SearchContext) {
   const query = searchContext.locationQuery?.trim();
 
@@ -25,4 +30,17 @@ export async function resolveRemoteLocation(searchContext: SearchContext) {
   if (!response.ok || !response.data?.location) return null;
 
   return response.data.location;
+}
+
+export async function resolveRemotePlaceName(latitude: number, longitude: number) {
+  if (!isApiModeEnabled()) return null;
+
+  const response = await writeApiJson<
+    ReverseGeocodeLocationResponse,
+    { latitude: number; longitude: number }
+  >('/reverse-geocode', { latitude, longitude });
+
+  if (!response.ok || !response.data?.location?.label) return null;
+
+  return response.data.location.label;
 }

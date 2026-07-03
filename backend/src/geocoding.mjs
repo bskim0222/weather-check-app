@@ -1,4 +1,5 @@
 const nominatimEndpoint = 'https://nominatim.openstreetmap.org/search';
+const nominatimReverseEndpoint = 'https://nominatim.openstreetmap.org/reverse';
 const defaultUserAgent = 'WeatherCheck/0.1 weathercheck.official@gmail.com';
 const cache = new Map();
 
@@ -23,6 +24,21 @@ export async function geocodePlace(query, raw = '') {
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
   const result = await fetchNominatim(cleanQuery, raw);
+  cache.set(cacheKey, result);
+
+  return result;
+}
+
+export async function reverseGeocodePoint(latitude, longitude) {
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  const cacheKey = `reverse:${lat.toFixed(5)},${lon.toFixed(5)}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+  const result = await fetchNominatimReverse(lat, lon);
   cache.set(cacheKey, result);
 
   return result;
@@ -94,6 +110,43 @@ async function fetchNominatim(query, raw) {
   };
 }
 
+async function fetchNominatimReverse(latitude, longitude) {
+  const url = new URL(nominatimReverseEndpoint);
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('lat', String(latitude));
+  url.searchParams.set('lon', String(longitude));
+  url.searchParams.set('zoom', '18');
+  url.searchParams.set('accept-language', 'ko');
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': process.env.GEOCODING_USER_AGENT || process.env.YR_USER_AGENT || defaultUserAgent,
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const row = await response.json();
+  const address = row?.address ?? {};
+  const label = createReverseLocationLabel(address, row?.display_name);
+
+  if (!label) return null;
+
+  return {
+    source: 'nominatim',
+    displayName: row?.display_name,
+    location: {
+      id: `reverse-${normalizeQuery(label).replace(/[^a-z0-9가-힣]+/gi, '-')}`,
+      label,
+      kind: 'custom',
+      latitude,
+      longitude,
+      radiusMeters: 1200,
+    },
+  };
+}
+
 function createNominatimQuery(query, raw) {
   if (/[가-힣]/.test(query) && !query.includes('대한민국')) {
     return `${query} 대한민국`;
@@ -107,6 +160,25 @@ function createLocationLabel(query, displayName = '') {
   if (clean) return clean;
 
   return String(displayName).split(',')[0]?.trim() || '검색한 장소';
+}
+
+function createReverseLocationLabel(address, displayName = '') {
+  const city = compactRegionName(address.city || address.province || address.state);
+  const district = compactRegionName(address.borough || address.county || address.city_district);
+  const neighborhood = compactRegionName(
+    address.neighbourhood ||
+      address.suburb ||
+      address.quarter ||
+      address.village ||
+      address.town ||
+      address.hamlet,
+  );
+  const road = compactRegionName(address.road);
+  const parts = [city, district, neighborhood || road].filter(Boolean);
+
+  if (parts.length > 0) return unique(parts).join(' ');
+
+  return String(displayName).split(',').slice(0, 3).map(compactRegionName).filter(Boolean).join(' ');
 }
 
 function getRadiusMeters(row) {
@@ -129,4 +201,19 @@ function normalizeQuery(value) {
     .toLowerCase()
     .replace(/\s+/g, '')
     .trim();
+}
+
+function compactRegionName(value) {
+  return String(value ?? '')
+    .replace(/특별시/g, '')
+    .replace(/광역시/g, '')
+    .replace(/특별자치시/g, '')
+    .replace(/특별자치도/g, '')
+    .replace(/자치도/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function unique(values) {
+  return values.filter((value, index) => values.indexOf(value) === index);
 }

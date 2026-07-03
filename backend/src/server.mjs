@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { readDatabase, writeDatabase } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
-import { geocodePlace } from './geocoding.mjs';
+import { geocodePlace, reverseGeocodePoint } from './geocoding.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
 
@@ -60,6 +60,18 @@ async function routeRequest(request, response) {
     sendJson(response, 200, {
       ok: Boolean(result?.location),
       query,
+      ...result,
+    });
+    return;
+  }
+
+  if (url.pathname === '/reverse-geocode') {
+    const result = await reverseGeocodePoint(payload.latitude, payload.longitude);
+
+    sendJson(response, 200, {
+      ok: Boolean(result?.location),
+      latitude: Number(payload.latitude),
+      longitude: Number(payload.longitude),
       ...result,
     });
     return;

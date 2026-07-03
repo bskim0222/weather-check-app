@@ -26,7 +26,7 @@ export type LocationStatus = {
   latitude?: number;
   longitude?: number;
   accuracyMeters?: number | null;
-  source?: 'web' | 'native' | 'fallback';
+  source?: 'web' | 'native' | 'backend' | 'fallback';
 };
 
 export type PersistedAppSnapshot = {

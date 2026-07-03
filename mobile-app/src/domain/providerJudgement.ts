@@ -1,4 +1,5 @@
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
+import { weatherPresets } from '../data/mockWeather';
 import type { CompareForecastCell, ForecastSource, ForecastStep, WeatherKey, WeatherPreset } from '../types/weather';
 
 type WeatherVote = {
@@ -16,12 +17,17 @@ export function createProviderAdjustedPreset(
   const judgementSources = getJudgementSources(sources, providerSnapshot);
   const votes = judgementSources.map((source) => getWeatherVote(source.condition));
   const consensus = getConsensusVote(votes) ?? getWeatherVote(basePreset.condition);
+  const visualPreset = weatherPresets[consensus.key];
   const agreeingCount = votes.filter((vote) => vote.key === consensus.key).length;
   const tone = getJudgementTone(consensus.key, agreeingCount, judgementSources.length);
   const temp = getAverageTemperature(judgementSources) ?? basePreset.temp;
 
   return {
     ...basePreset,
+    bg: visualPreset.bg,
+    accent: visualPreset.accent,
+    accentInk: visualPreset.accentInk,
+    glyph: visualPreset.glyph,
     condition: consensus.label,
     temp,
     level: createJudgementLevel(tone),
@@ -31,7 +37,7 @@ export function createProviderAdjustedPreset(
     signal: createServiceSignal(agreeingCount, judgementSources.length, consensus.label),
     sources,
     forecastLead: createForecastLead(providerSnapshot.hourlyRows, consensus),
-    forecastRows: createForecastRows(providerSnapshot.hourlyRows, basePreset.forecastRows, consensus),
+    forecastRows: createForecastRows(providerSnapshot.hourlyRows, visualPreset.forecastRows, consensus),
   };
 }
 

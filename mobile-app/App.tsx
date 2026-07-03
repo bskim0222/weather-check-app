@@ -1,5 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, ScrollView, View } from 'react-native';
+import { Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, View } from 'react-native';
 
 import { AppHeader } from './src/components/AppHeader';
 import { BottomTabs } from './src/components/BottomTabs';
@@ -14,11 +13,12 @@ import { styles } from './src/styles/appStyles';
 
 export default function App() {
   const appState = useWeatherAppState();
+  const androidTopInset = Platform.OS === 'android' ? NativeStatusBar.currentHeight ?? 0 : 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
-      <View style={styles.app}>
+      <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
+      <View style={[styles.app, androidTopInset > 0 && { paddingTop: Math.max(8, androidTopInset - 4) }]}>
         <AppHeader
           locationStatus={appState.locationStatus}
           refreshLabel={appState.refreshLabel}

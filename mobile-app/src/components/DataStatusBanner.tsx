@@ -25,8 +25,8 @@ export function DataStatusBanner({ status }: DataStatusBannerProps) {
     >
       <View style={[styles.dataStatusDot, isLoading && styles.dataStatusDotLoading]} />
       <View style={styles.dataStatusContent}>
-        <Text style={styles.dataStatusLabel}>{status.label}</Text>
-        <Text style={styles.dataStatusMessage}>{status.message}</Text>
+        <Text style={[styles.dataStatusLabel, isWarning && styles.dataStatusLabelWarning]}>{status.label}</Text>
+        <Text style={[styles.dataStatusMessage, isWarning && styles.dataStatusMessageWarning]}>{status.message}</Text>
       </View>
     </View>
   );

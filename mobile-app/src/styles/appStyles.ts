@@ -14,8 +14,8 @@ export const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -151,10 +151,16 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 3,
   },
+  dataStatusLabelWarning: {
+    color: '#f4f5f2',
+  },
+  dataStatusMessageWarning: {
+    color: 'rgba(244,245,242,0.78)',
+  },
   content: {
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 132,
+    paddingBottom: 178,
   },
   searchResultCard: {
     borderRadius: 22,
@@ -2570,7 +2576,7 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     left: 18,
     right: 18,
-    bottom: 10,
+    bottom: 24,
     borderRadius: 24,
     backgroundColor: '#f3f4f1',
     minHeight: 58,
@@ -2578,6 +2584,11 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     padding: 7,
+    shadowColor: 'rgba(36,36,36,0.16)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 14,
   },
   tabButton: {
     flex: 1,

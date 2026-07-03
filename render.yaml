@@ -12,5 +12,7 @@ services:
         value: kma,yr,fmi
       - key: YR_USER_AGENT
         value: WeatherCheck/0.1 weathercheck.official@gmail.com
+      - key: KMA_SERVICE_KEY
+        sync: false
       - key: NODE_VERSION
         value: 24

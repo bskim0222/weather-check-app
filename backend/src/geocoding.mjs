@@ -4,6 +4,7 @@ const defaultUserAgent = 'WeatherCheck/0.1 weathercheck.official@gmail.com';
 const cache = new Map();
 
 const aliases = [
+  createAlias('gimpo', ['김포', '김포시'], '김포시', 37.615, 126.7158, 5000),
   createAlias('yongin-cc', ['용인cc', '용인CC'], '용인CC', 37.1126704, 127.3447246, 1200),
   createAlias('blueone-yongin-cc', ['블루원용인cc', '블루원 용인cc', '블루원 용인CC'], '블루원 용인CC', 37.1296038, 127.3221861, 1200),
   createAlias('hongdae', ['홍대앞', '홍대입구', '홍대'], '홍대앞', 37.5563, 126.9236, 900),

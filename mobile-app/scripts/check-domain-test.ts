@@ -58,6 +58,10 @@ expectEqual(golfMorningJudgement.searchContext.locationQuery, '용인cc', 'golf 
 expectEqual(golfMorningJudgement.searchContext.timeLabel, '내일 07시', 'golf question exact time');
 expectEqual(golfMorningJudgement.searchContext.needsClarification, true, 'golf question needs place clarification');
 
+const gimpoTonightJudgement = createQuestionJudgement('김포시 오늘밤 날씨');
+expectEqual(gimpoTonightJudgement.searchContext.locationQuery, '김포시', 'gimpo question location query');
+expectEqual(gimpoTonightJudgement.searchContext.place, '현재 위치', 'gimpo question waits for geocoding');
+
 const manualJudgement = updateJudgementWeather(snowJudgement, 'fog');
 expectEqual(manualJudgement.weatherKey, 'fog', 'manual weather');
 expectEqual(manualJudgement.searchContext.detectedWeather, '안개', 'manual detected weather');

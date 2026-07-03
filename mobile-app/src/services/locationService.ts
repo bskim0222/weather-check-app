@@ -95,23 +95,25 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
     const position =
       (await withLocationTimeout(
         ExpoLocation.getCurrentPositionAsync({
-          accuracy: ExpoLocation.Accuracy.High,
+          accuracy: ExpoLocation.Accuracy.BestForNavigation,
+          mayShowUserSettingsDialog: true,
         }),
-        12000,
+        18000,
       )) ??
       (await ExpoLocation.getLastKnownPositionAsync({
-        maxAge: 1000 * 60,
-        requiredAccuracy: 150,
+        maxAge: 1000 * 20,
+        requiredAccuracy: 80,
       }));
 
     if (!position) {
       return createFallbackLocationStatus('현재 위치를 제때 확인하지 못해 기본 위치 기준으로 보여주고 있어요.');
     }
 
-    const remotePlaceName = await resolveRemotePlaceName(position.coords.latitude, position.coords.longitude);
-    const place = remotePlaceName
-      ? { placeName: remotePlaceName, shortPlaceName: getShortPlaceName(remotePlaceName) }
-      : await resolveNativePlaceName(position.coords.latitude, position.coords.longitude);
+    const [nativePlace, remotePlaceName] = await Promise.all([
+      resolveNativePlaceName(position.coords.latitude, position.coords.longitude),
+      resolveRemotePlaceName(position.coords.latitude, position.coords.longitude),
+    ]);
+    const place = chooseBestPlace(nativePlace, remotePlaceName);
     const placeName = place.placeName ?? '현재 위치';
 
     return {
@@ -123,7 +125,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
       accuracyMeters: position.coords.accuracy,
-      source: remotePlaceName ? 'backend' : 'native',
+      source: place.source,
     };
   } catch {
     return createFallbackLocationStatus('위치 확인 중 문제가 생겨 기본 위치 기준으로 보여주고 있어요.');
@@ -134,6 +136,48 @@ function getShortPlaceName(placeName: string) {
   const parts = placeName.split(/\s+/).filter(Boolean);
 
   return parts.at(-1) ?? placeName;
+}
+
+type ResolvedPlaceName = {
+  placeName?: string;
+  shortPlaceName?: string;
+  source?: LocationStatus['source'];
+};
+
+function chooseBestPlace(nativePlace: ResolvedPlaceName, remotePlaceName: string | null): ResolvedPlaceName {
+  const remotePlace = remotePlaceName
+    ? {
+        placeName: remotePlaceName,
+        shortPlaceName: getShortPlaceName(remotePlaceName),
+        source: 'backend' as const,
+      }
+    : {};
+  const nativeScore = scorePlaceName(nativePlace.placeName);
+  const remoteScore = scorePlaceName(remotePlace.placeName);
+
+  if (nativeScore >= remoteScore) {
+    return {
+      ...nativePlace,
+      source: 'native',
+    };
+  }
+
+  return remotePlace;
+}
+
+function scorePlaceName(value?: string) {
+  if (!value) return 0;
+
+  const parts = value.split(/\s+/).filter(Boolean);
+  const detailScore = parts.reduce((score, part) => {
+    if (/(동|읍|면|리)$/.test(part)) return score + 5;
+    if (/(구|군|시)$/.test(part)) return score + 3;
+    if (/(로|길)$/.test(part)) return score + 2;
+
+    return score + 1;
+  }, 0);
+
+  return detailScore + Math.min(parts.length, 4);
 }
 
 async function resolveNativePlaceName(latitude: number, longitude: number) {

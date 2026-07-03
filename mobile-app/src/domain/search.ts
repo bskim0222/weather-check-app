@@ -110,7 +110,19 @@ function extractLocationCandidate(question: string) {
   const compactMatches = [...normalized.matchAll(/([가-힣A-Za-z0-9·.\-]{2,24}?)(?:에|에서)\s/g)];
   const compactCandidate = cleanLocationCandidate(compactMatches.at(-1)?.[1] ?? '');
 
-  return compactCandidate;
+  if (compactCandidate) return compactCandidate;
+
+  return extractAdministrativePlaceBeforeContext(normalized);
+}
+
+function extractAdministrativePlaceBeforeContext(normalized: string) {
+  const matches = [
+    ...normalized.matchAll(
+      /([가-힣A-Za-z0-9·.\-\s]{2,40}?(?:시|군|구|동|읍|면|리|역|공원|해수욕장|공항|터미널|CC|cc|골프장|대학교|병원|시장|앞))\s*(?:오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|\d{1,2}\s*시|날씨|비|눈|안개|기온|우산|소나기|천둥|번개)/g,
+    ),
+  ];
+
+  return cleanLocationCandidate(matches.at(-1)?.[1] ?? '');
 }
 
 function cleanLocationCandidate(value: string) {

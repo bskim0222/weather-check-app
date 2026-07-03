@@ -536,6 +536,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 24,
     transform: [{ rotate: '-4deg' }],
   },
+  weatherArtIcon: {
+    width: 170,
+    height: 170,
+  },
   sunHalo: {
     position: 'absolute',
     width: 122,
@@ -997,6 +1001,10 @@ export const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  miniWeatherIconImage: {
+    width: 44,
+    height: 44,
   },
   miniSunHalo: {
     position: 'absolute',

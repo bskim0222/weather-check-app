@@ -1,6 +1,7 @@
 ﻿import { Image, Text, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
+import { WeatherIcon } from './WeatherIcon';
 import { styles } from '../styles/appStyles';
 import type { CompareServiceSummary, SearchContext } from '../types/weather';
 
@@ -84,31 +85,7 @@ function normalizeServiceName(name: string) {
 }
 
 function WeatherMiniIcon({ condition, tone }: { condition: string; tone: string }) {
-  const kind = getWeatherIconKind(condition);
-  const softTone = getSoftTone(kind);
-
-  if (kind === 'sunny') {
-    return (
-      <View style={styles.miniWeatherDrawing}>
-        <View style={[styles.miniSunHalo, { borderColor: tone }]} />
-        <View style={[styles.miniSunCore, { backgroundColor: tone }]} />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.miniWeatherDrawing}>
-      <View style={[styles.miniCloudBase, { backgroundColor: tone }]} />
-      <View style={[styles.miniCloudPuff, { backgroundColor: tone }]} />
-      <View style={[styles.miniCloudSmall, { backgroundColor: softTone }]} />
-      {kind === 'rain' && (
-        <View style={styles.miniRainDrops}>
-          <View style={[styles.miniRainDrop, { backgroundColor: softTone }]} />
-          <View style={[styles.miniRainDrop, styles.miniRainDropLower, { backgroundColor: softTone }]} />
-        </View>
-      )}
-    </View>
-  );
+  return <WeatherIcon condition={condition} style={styles.miniWeatherIconImage} />;
 }
 
 function getWeatherIconKind(condition: string) {

@@ -3,6 +3,7 @@ import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { DecisionCard } from '../components/DecisionCard';
+import { WeatherIcon } from '../components/WeatherIcon';
 import { weatherPresets } from '../data/mockWeather';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
@@ -292,49 +293,7 @@ function ServiceIcon({ source }: { source: ForecastSource }) {
 }
 
 function WeatherStatusIcon({ condition, tone }: { condition: string; tone: string }) {
-  const kind = getWeatherIconKind(condition);
-  const softTone = getSoftTone(kind);
-
-  if (kind === 'sunny') {
-    return (
-      <View style={styles.miniWeatherDrawing}>
-        <View style={[styles.miniSunHalo, { borderColor: tone }]} />
-        <View style={[styles.miniSunCore, { backgroundColor: tone }]} />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.miniWeatherDrawing}>
-      <View style={[styles.miniCloudBase, { backgroundColor: tone }]} />
-      <View style={[styles.miniCloudPuff, { backgroundColor: tone }]} />
-      <View style={[styles.miniCloudSmall, { backgroundColor: softTone }]} />
-      {kind === 'rain' && (
-        <View style={styles.miniRainDrops}>
-          <View style={[styles.miniRainDrop, { backgroundColor: softTone }]} />
-          <View style={[styles.miniRainDrop, styles.miniRainDropLower, { backgroundColor: softTone }]} />
-        </View>
-      )}
-      {kind === 'snow' && (
-        <View style={styles.miniSnowDots}>
-          <View style={styles.miniSnowDot} />
-          <View style={styles.miniSnowDot} />
-        </View>
-      )}
-      {kind === 'thunder' && (
-        <View style={styles.miniThunder}>
-          <View style={styles.miniThunderTop} />
-          <View style={styles.miniThunderBottom} />
-        </View>
-      )}
-      {kind === 'fog' && (
-        <View style={styles.miniFogLines}>
-          <View style={[styles.miniFogLine, { backgroundColor: softTone }]} />
-          <View style={[styles.miniFogLineShort, { backgroundColor: softTone }]} />
-        </View>
-      )}
-    </View>
-  );
+  return <WeatherIcon condition={condition} style={styles.miniWeatherIconImage} />;
 }
 
 function getWeatherIconKind(condition: string) {

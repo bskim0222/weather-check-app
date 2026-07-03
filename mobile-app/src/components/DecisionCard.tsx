@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 
+import { WeatherIcon } from './WeatherIcon';
 import { styles } from '../styles/appStyles';
 import type { SearchContext, WeatherPreset } from '../types/weather';
 import type { LocationStatus } from '../types/appState';
@@ -247,39 +248,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   return (
     <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
       {isThunder && <Animated.View style={[styles.thunderFlash, { opacity: flash }]} />}
-      <View style={[styles.cloudBase, { backgroundColor: shapeColor }]} />
-      <View style={[styles.cloudPuffLarge, { backgroundColor: shapeColor }]} />
-      <View style={[styles.cloudPuffSmall, { backgroundColor: softColor }]} />
-      {isRain && (
-        <Animated.View style={[styles.weatherDrops, fallStyle]}>
-          <Animated.View style={[styles.rainDrop, { backgroundColor: softColor }]} />
-          <Animated.View style={[styles.rainDrop, styles.rainDropMiddle, { backgroundColor: softColor }]} />
-          <Animated.View style={[styles.rainDrop, { backgroundColor: softColor }]} />
-          <Animated.View style={[styles.rainDrop, styles.rainDropFast, { backgroundColor: softColor }]} />
-          <Animated.View style={[styles.rainDrop, styles.rainDropWide, { backgroundColor: softColor }]} />
-        </Animated.View>
-      )}
-      {isThunder && (
-        <Animated.View style={[styles.thunderBolt, pulseStyle]}>
-          <View style={[styles.thunderBoltTop, { backgroundColor: current.accent }]} />
-          <View style={[styles.thunderBoltBottom, { backgroundColor: current.accent }]} />
-        </Animated.View>
-      )}
-      {isSnow && (
-        <Animated.View style={[styles.snowDots, fallStyle]}>
-          <View style={styles.snowDot} />
-          <View style={[styles.snowDot, styles.snowDotSmall, styles.snowDotLow]} />
-          <View style={[styles.snowDot, styles.snowDotMiddle]} />
-          <View style={[styles.snowDot, styles.snowDotSmall]} />
-          <View style={styles.snowDot} />
-        </Animated.View>
-      )}
-      {isFog && (
-        <Animated.View style={[styles.fogLines, fallStyle]}>
-          <View style={[styles.fogLine, { backgroundColor: softColor }]} />
-          <View style={[styles.fogLine, styles.fogLineShort, { backgroundColor: softColor }]} />
-        </Animated.View>
-      )}
+      <WeatherIcon condition={current.condition} style={styles.weatherArtIcon} />
     </Animated.View>
   );
 }

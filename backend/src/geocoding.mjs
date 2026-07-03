@@ -5,6 +5,10 @@ const cache = new Map();
 
 const aliases = [
   createAlias('gimpo', ['김포', '김포시'], '김포시', 37.615, 126.7158, 5000),
+  createAlias('seoraksan', ['설악산', '설악산국립공원', '설악산 국립공원'], '설악산', 38.1195, 128.4656, 5000),
+  createAlias('cheongwadae', ['청와대', '청와대 본관'], '청와대', 37.5866, 126.9748, 900),
+  createAlias('dumulmeori', ['두물머리', '양평 두물머리'], '두물머리', 37.5303, 127.3115, 1200),
+  createAlias('kyobo-jongno', ['종로 교보빌딩', '광화문 교보빌딩', '교보빌딩 종로', '교보빌딩 광화문'], '종로 교보빌딩', 37.5707, 126.9779, 500),
   createAlias('yongin-cc', ['용인cc', '용인CC'], '용인CC', 37.1126704, 127.3447246, 1200),
   createAlias('blueone-yongin-cc', ['블루원용인cc', '블루원 용인cc', '블루원 용인CC'], '블루원 용인CC', 37.1296038, 127.3221861, 1200),
   createAlias('hongdae', ['홍대앞', '홍대입구', '홍대'], '홍대앞', 37.5563, 126.9236, 900),

@@ -60,7 +60,19 @@ expectEqual(golfMorningJudgement.searchContext.needsClarification, true, 'golf q
 
 const gimpoTonightJudgement = createQuestionJudgement('김포시 오늘밤 날씨');
 expectEqual(gimpoTonightJudgement.searchContext.locationQuery, '김포시', 'gimpo question location query');
-expectEqual(gimpoTonightJudgement.searchContext.place, '현재 위치', 'gimpo question waits for geocoding');
+expectEqual(gimpoTonightJudgement.searchContext.place, '김포시', 'gimpo question place');
+
+const seoraksanTomorrowJudgement = createQuestionJudgement('설악산 내일 날씨 어때?');
+expectEqual(seoraksanTomorrowJudgement.searchContext.locationQuery, '설악산', 'seoraksan question location query');
+
+const cheongwadaeNowJudgement = createQuestionJudgement('청와대 지금 비 와?');
+expectEqual(cheongwadaeNowJudgement.searchContext.locationQuery, '청와대', 'cheongwadae question location query');
+
+const kyoboTonightJudgement = createQuestionJudgement('종로 교보빌딩 오늘 밤 기온 어때?');
+expectEqual(kyoboTonightJudgement.searchContext.locationQuery, '종로 교보빌딩', 'kyobo building question location query');
+
+const dumulmeoriRainJudgement = createQuestionJudgement('두물머리 주말에 비 올까?');
+expectEqual(dumulmeoriRainJudgement.searchContext.locationQuery, '두물머리', 'dumulmeori question location query');
 
 const manualJudgement = updateJudgementWeather(snowJudgement, 'fog');
 expectEqual(manualJudgement.weatherKey, 'fog', 'manual weather');

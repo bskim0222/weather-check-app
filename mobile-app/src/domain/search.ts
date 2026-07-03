@@ -96,8 +96,11 @@ function hasWeatherHint(question: string) {
 
 function inferTimeLabel(question: string) {
   const dayLabel = inferDayLabel(question);
+  const exactHourLabel = inferExactHourLabel(question);
   const dayPartLabel = inferDayPartLabel(question);
 
+  if (dayLabel && exactHourLabel) return `${dayLabel} ${exactHourLabel}`;
+  if (exactHourLabel) return exactHourLabel;
   if (dayLabel && dayPartLabel) return `${dayLabel} ${dayPartLabel}`;
   if (dayLabel) return dayLabel;
   if (dayPartLabel) return dayPartLabel;
@@ -114,6 +117,28 @@ function inferDayLabel(question: string) {
   if (question.includes('오늘')) return '오늘';
 
   return '';
+}
+
+function inferExactHourLabel(question: string) {
+  const match = question.match(/(\d{1,2})\s*시/);
+  if (!match) return '';
+
+  const hour = normalizeQuestionHour(question, Number(match[1]));
+
+  return Number.isFinite(hour) ? `${String(hour).padStart(2, '0')}시` : '';
+}
+
+function normalizeQuestionHour(question: string, rawHour: number) {
+  if (rawHour < 0 || rawHour > 24) return NaN;
+
+  if ((question.includes('오후') || question.includes('저녁') || question.includes('밤')) && rawHour < 12) {
+    return rawHour + 12;
+  }
+
+  if (question.includes('새벽') && rawHour === 12) return 0;
+  if ((question.includes('오전') || question.includes('아침')) && rawHour === 12) return 0;
+
+  return rawHour === 24 ? 0 : rawHour;
 }
 
 function inferDayPartLabel(question: string) {

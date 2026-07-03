@@ -3,7 +3,7 @@ const oneHourMs = 60 * 60 * 1000;
 export function getTargetTimestampMs(context, now = new Date()) {
   const text = `${context?.timeLabel ?? ''} ${context?.raw ?? ''}`;
   const hasExplicitTime =
-    /내일|모레|오늘|주말|오전|오후|저녁|퇴근|밤|새벽|아침|점심|낮/.test(text);
+    /내일|모레|오늘|주말|오전|오후|저녁|퇴근|밤|새벽|아침|점심|낮|\d{1,2}\s*시/.test(text);
 
   if (!hasExplicitTime) return null;
 
@@ -72,6 +72,9 @@ function getDayOffset(text, now) {
 }
 
 function getTargetHour(text) {
+  const exactHour = getExactHour(text);
+  if (Number.isFinite(exactHour)) return exactHour;
+
   if (text.includes('새벽')) return 6;
   if (text.includes('아침') || text.includes('오전')) return 9;
   if (text.includes('점심') || text.includes('낮')) return 12;
@@ -80,6 +83,23 @@ function getTargetHour(text) {
   if (text.includes('밤')) return 21;
 
   return 12;
+}
+
+function getExactHour(text) {
+  const match = text.match(/(\d{1,2})\s*시/);
+  if (!match) return NaN;
+
+  const rawHour = Number(match[1]);
+  if (rawHour < 0 || rawHour > 24) return NaN;
+
+  if ((text.includes('오후') || text.includes('저녁') || text.includes('밤')) && rawHour < 12) {
+    return rawHour + 12;
+  }
+
+  if (text.includes('새벽') && rawHour === 12) return 0;
+  if ((text.includes('오전') || text.includes('아침')) && rawHour === 12) return 0;
+
+  return rawHour === 24 ? 0 : rawHour;
 }
 
 function getWeekendOffset(now) {

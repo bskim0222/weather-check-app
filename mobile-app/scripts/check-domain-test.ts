@@ -52,6 +52,11 @@ expectEqual(busanTomorrowAfternoonJudgement.searchContext.target.id, 'busan', 'b
 expectEqual(busanTomorrowAfternoonJudgement.searchContext.timeLabel, '내일 오후', 'busan question time');
 expectEqual(busanTomorrowAfternoonJudgement.searchContext.needsClarification, false, 'busan question clarification');
 
+const golfMorningJudgement = createQuestionJudgement('내일 아침7시에 골프칠건데 용인cc에 비가 올까? 기온은 어느정도일거같아?');
+expectEqual(golfMorningJudgement.weatherKey, 'rain', 'golf question weather');
+expectEqual(golfMorningJudgement.searchContext.timeLabel, '내일 07시', 'golf question exact time');
+expectEqual(golfMorningJudgement.searchContext.needsClarification, true, 'golf question needs place clarification');
+
 const manualJudgement = updateJudgementWeather(snowJudgement, 'fog');
 expectEqual(manualJudgement.weatherKey, 'fog', 'manual weather');
 expectEqual(manualJudgement.searchContext.detectedWeather, '안개', 'manual detected weather');

@@ -1,4 +1,21 @@
 services:
+  - type: static
+    name: weather-check-web
+    rootDir: mobile-app
+    buildCommand: npm install && npm run export:web:api:node
+    staticPublishPath: dist-phone
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: EXPO_PUBLIC_DATA_MODE
+        value: api
+      - key: EXPO_PUBLIC_API_BASE_URL
+        value: https://weather-check-backend-hvfs.onrender.com
+      - key: NODE_VERSION
+        value: 24
+
   - type: web
     name: weather-check-backend
     runtime: node

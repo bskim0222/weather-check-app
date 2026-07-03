@@ -28,6 +28,7 @@
     "web:api": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-api-web.ps1",
     "export:web": "expo export --platform web --output-dir dist-phone && node scripts/post-export-pwa.mjs",
     "export:web:api": "powershell.exe -ExecutionPolicy Bypass -File scripts/export-api-web.ps1",
+    "export:web:api:node": "node scripts/export-api-web.mjs",
     "typecheck": "tsc --noEmit",
     "check:domain": "node scripts/check-domain.mjs",
     "check:pwa": "node scripts/check-pwa-export.mjs",

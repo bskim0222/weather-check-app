@@ -26,7 +26,7 @@ writeFileSync(
     {
       name: '웨더체크',
       short_name: '웨더체크',
-      description: '기상청, Yr.no, FMI ECMWF 예보와 현장 제보를 비교해 지금 날씨를 판정합니다.',
+      description: '대한민국 기상청, 노르웨이 기상청, 핀란드 기상청 예보와 현장 제보를 비교해 지금 날씨를 판정합니다.',
       start_url: '/',
       scope: '/',
       display: 'standalone',
@@ -60,7 +60,7 @@ const meta = [
   '<meta name="apple-mobile-web-app-status-bar-style" content="default" />',
   '<meta name="mobile-web-app-capable" content="yes" />',
   '<meta name="application-name" content="웨더체크" />',
-  '<meta name="description" content="예보 비교와 현장 제보로 지금 날씨를 판정하는 모바일 앱" />',
+  '<meta name="description" content="예보 비교와 현장 제보로 지금 날씨를 판정하는 모바일 날씨 앱" />',
   '<link rel="manifest" href="/manifest.webmanifest" />',
   '<link rel="apple-touch-icon" href="/pwa/icon.png" />',
 ].join('\n    ');

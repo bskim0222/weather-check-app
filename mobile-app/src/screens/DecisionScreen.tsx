@@ -52,6 +52,7 @@ export function DecisionScreen({
   onWeatherChange,
 }: DecisionScreenProps) {
   const weatherOptions = Object.entries(weatherPresets) as [WeatherKey, WeatherPreset][];
+  const activeWeatherKey = getWeatherKeyFromCondition(current.condition) ?? weatherKey;
   const actionHint = searchContext.needsClarification
     ? '장소나 시간을 더 구체적으로 물어보면 판정이 더 또렷해져요.'
     : `${searchContext.detectedWeather} 기준으로 보면 첫 1~3시간 변화가 가장 중요해요.`;
@@ -64,7 +65,7 @@ export function DecisionScreen({
         contentContainerStyle={styles.weatherSwitch}
       >
         {weatherOptions.map(([key, item]) => {
-          const isActive = weatherKey === key;
+          const isActive = activeWeatherKey === key;
           return (
             <Pressable
               key={key}
@@ -263,6 +264,28 @@ export function DecisionScreen({
       </View>
     </View>
   );
+}
+
+function getWeatherKeyFromCondition(condition: string): WeatherKey | null {
+  if (condition.includes('천둥') || condition.includes('번개') || condition.includes('소나기')) {
+    return 'thunder';
+  }
+  if (condition.includes('눈') || condition.includes('진눈')) {
+    return 'snow';
+  }
+  if (condition.includes('안개') || condition.includes('시야')) {
+    return 'fog';
+  }
+  if (condition.includes('맑') || condition.includes('비 없음') || condition.includes('건조')) {
+    return 'sunny';
+  }
+  if (condition.includes('비') || condition.includes('강수')) {
+    return 'rain';
+  }
+  if (condition.includes('흐림') || condition.includes('구름')) {
+    return 'cloudy';
+  }
+  return null;
 }
 
 function ServiceIcon({ source }: { source: ForecastSource }) {

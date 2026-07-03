@@ -28,6 +28,7 @@ export function QuestionSearchBar({
           value={value}
           onChangeText={onChangeText}
           onSubmitEditing={onSubmit}
+          selectTextOnFocus
           placeholder="잠실운동장 지금 비 와?"
           placeholderTextColor="rgba(34,36,38,0.36)"
           returnKeyType="search"

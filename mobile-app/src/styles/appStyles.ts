@@ -62,9 +62,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: '#242424',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '900',
-    paddingVertical: 10,
+    lineHeight: 20,
+    paddingVertical: 9,
   },
   searchSubmit: {
     width: 44,

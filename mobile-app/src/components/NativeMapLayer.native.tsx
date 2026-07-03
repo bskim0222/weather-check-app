@@ -12,9 +12,14 @@ type NativeMapLayerProps = {
 export function NativeMapLayer({ searchContext }: NativeMapLayerProps) {
   return (
     <View style={styles.mapNativeFallback}>
-      <Text style={styles.mapNativeFallbackText}>
-        {searchContext.place} 주변 현장 제보 지도
-      </Text>
+      <View style={styles.mapNativeBlockOne} />
+      <View style={styles.mapNativeBlockTwo} />
+      <View style={styles.mapNativeBlockThree} />
+      <View style={styles.mapNativeLaneOne} />
+      <View style={styles.mapNativeLaneTwo} />
+      <View style={styles.mapNativeLaneThree} />
+      <View style={styles.mapNativeWater} />
+      <Text style={styles.mapNativeFallbackText}>{searchContext.place} 주변 현장 지도</Text>
     </View>
   );
 }

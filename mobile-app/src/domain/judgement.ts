@@ -55,18 +55,22 @@ export function updateJudgementLocation(
     return judgement;
   }
 
+  const placeName = locationStatus.placeName ?? judgement.searchContext.place;
+
   return {
     ...judgement,
     searchContext: {
       ...judgement.searchContext,
+      place: placeName,
       target: {
         ...judgement.searchContext.target,
+        label: placeName,
         latitude: locationStatus.latitude,
         longitude: locationStatus.longitude,
       },
       interpretationNote:
         locationStatus.phase === 'granted'
-          ? '현재 위치 좌표를 기준으로 예보와 현장 제보를 맞춰보고 있어요.'
+          ? `${placeName} 기준으로 예보와 현장 제보를 맞춰보고 있어요.`
           : judgement.searchContext.interpretationNote,
     },
   };

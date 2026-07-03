@@ -24,7 +24,7 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
   const compareCaption =
     mode === 'hourly'
       ? `${searchContext.timeLabel} · ${searchContext.place} 시간대별`
-      : `${searchContext.place} 5일 전망`;
+      : `${searchContext.place} 날짜별 전망`;
 
   return (
     <View>

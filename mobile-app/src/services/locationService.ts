@@ -27,10 +27,11 @@ type BrowserGeolocationHost = {
 
 const fallbackLatitude = 37.5146;
 const fallbackLongitude = 127.0736;
+const fallbackPlaceName = '서울 송파구 잠실동';
 
 export const initialLocationStatus: LocationStatus = {
   phase: 'idle',
-  label: '위치 준비 전',
+  label: '위치 준비',
   message: '현재 위치 기준 판정을 위해 위치 확인을 준비하고 있어요.',
 };
 
@@ -42,11 +43,15 @@ export function createCheckingLocationStatus(): LocationStatus {
   };
 }
 
-export function createFallbackLocationStatus(message = '위치를 확인할 수 없어 잠실 기준 샘플 위치로 보여주고 있어요.'): LocationStatus {
+export function createFallbackLocationStatus(
+  message = '위치를 확인할 수 없어 잠실 기준 샘플 위치로 보여주고 있어요.',
+): LocationStatus {
   return {
     phase: 'fallback',
-    label: '기본 위치 사용',
+    label: fallbackPlaceName,
     message,
+    placeName: fallbackPlaceName,
+    shortPlaceName: '잠실동',
     latitude: fallbackLatitude,
     longitude: fallbackLongitude,
     accuracyMeters: null,
@@ -97,10 +102,15 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       return createFallbackLocationStatus('현재 위치를 제때 확인하지 못해 기본 위치 기준으로 보여주고 있어요.');
     }
 
+    const place = await resolveNativePlaceName(position.coords.latitude, position.coords.longitude);
+    const placeName = place.placeName ?? '현재 위치';
+
     return {
       phase: 'granted',
-      label: '현재 위치 확인됨',
-      message: '현재 위치 기준으로 예보와 현장 제보를 맞춰보고 있어요.',
+      label: placeName,
+      message: `${placeName} 기준으로 예보와 현장 제보를 맞춰보고 있어요.`,
+      placeName,
+      shortPlaceName: place.shortPlaceName,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
       accuracyMeters: position.coords.accuracy,
@@ -111,11 +121,41 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
   }
 }
 
-async function withLocationTimeout<T>(promise: Promise<T>) {
+async function resolveNativePlaceName(latitude: number, longitude: number) {
+  try {
+    const addresses = await withLocationTimeout(
+      ExpoLocation.reverseGeocodeAsync({ latitude, longitude }),
+      5000,
+    );
+    const address = addresses?.[0];
+
+    if (!address) return {};
+
+    const region = compactRegionName(address.region);
+    const district = address.subregion ?? address.district ?? '';
+    const neighborhood = address.district && address.subregion ? address.district : address.name ?? address.street ?? '';
+    const full = [region, district, neighborhood]
+      .map((item) => item?.trim())
+      .filter(Boolean)
+      .filter((item, index, items) => items.indexOf(item) === index)
+      .join(' ');
+
+    const short = neighborhood || district || region || undefined;
+
+    return {
+      placeName: full || short,
+      shortPlaceName: short,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function withLocationTimeout<T>(promise: Promise<T>, timeoutMs = 8000) {
   return Promise.race<T | null>([
     promise,
     new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), 8000);
+      setTimeout(() => resolve(null), timeoutMs);
     }),
   ]);
 }
@@ -148,11 +188,13 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
       (error) => {
         resolve({
           phase: error.code === 1 ? 'denied' : 'fallback',
-          label: error.code === 1 ? '위치 권한 꺼짐' : '기본 위치 사용',
+          label: error.code === 1 ? '위치 권한 꺼짐' : fallbackPlaceName,
           message:
             error.code === 1
               ? '위치 권한이 꺼져 있어 기본 위치 기준으로 보여주고 있어요.'
               : '위치를 정확히 확인하지 못해 기본 위치 기준으로 보여주고 있어요.',
+          placeName: error.code === 1 ? undefined : fallbackPlaceName,
+          shortPlaceName: error.code === 1 ? undefined : '잠실동',
           source: 'web',
         });
       },
@@ -163,4 +205,17 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
       },
     );
   });
+}
+
+function compactRegionName(region?: string | null) {
+  if (!region) return '';
+
+  return region
+    .replace('특별시', '')
+    .replace('광역시', '')
+    .replace('특별자치시', '')
+    .replace('특별자치도', '')
+    .replace('자치도', '')
+    .replace('도', '')
+    .trim();
 }

@@ -21,6 +21,8 @@ export type LocationStatus = {
   phase: LocationStatusPhase;
   label: string;
   message: string;
+  placeName?: string;
+  shortPlaceName?: string;
   latitude?: number;
   longitude?: number;
   accuracyMeters?: number | null;

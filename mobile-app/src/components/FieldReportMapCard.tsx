@@ -72,7 +72,7 @@ export function FieldReportMapCard({
         </View>
         <Text style={styles.mapTitle}>주변 제보는 {dominantCondition} 쪽이에요</Text>
         <Text style={styles.mapCaption}>
-          핀 숫자는 최근 30분 제보 수입니다. 지도에서는 강수 영역과 현장 제보 밀도를 같이 보여줍니다.
+          핀 숫자는 최근 제보 수예요. 지도에서 현장 글의 위치와 밀도를 함께 확인합니다.
         </Text>
       </View>
     </View>

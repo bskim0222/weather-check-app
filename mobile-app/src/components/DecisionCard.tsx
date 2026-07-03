@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 
 import { styles } from '../styles/appStyles';
@@ -84,19 +84,15 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
 function getDecisionPlaceLabel(searchContext: SearchContext, locationStatus: LocationStatus) {
   if (searchContext.target.kind !== 'current') return searchContext.place;
 
-  if (locationStatus.phase === 'granted' && typeof locationStatus.latitude === 'number' && typeof locationStatus.longitude === 'number') {
-    return `현재 위치 확인됨 ${formatCoordinate(locationStatus.latitude)}, ${formatCoordinate(locationStatus.longitude)}`;
+  if (locationStatus.phase === 'granted') {
+    return locationStatus.placeName ?? locationStatus.label ?? '현재 위치 확인됨';
   }
 
   if (locationStatus.phase === 'checking') return '현재 위치 확인 중';
   if (locationStatus.phase === 'denied') return '현재 위치 권한 꺼짐';
-  if (locationStatus.phase === 'fallback') return '기본 위치 사용 중';
+  if (locationStatus.phase === 'fallback') return locationStatus.placeName ?? '기본 위치 사용 중';
 
   return searchContext.place;
-}
-
-function formatCoordinate(value: number) {
-  return value.toFixed(3);
 }
 
 function getDisplayTitle(title: string) {
@@ -122,6 +118,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   const drift = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
   const fall = useRef(new Animated.Value(0)).current;
+  const flash = useRef(new Animated.Value(0)).current;
   const isSunny = current.condition === '맑음';
   const isRain = current.condition === '비';
   const isThunder = current.condition === '천둥번개';
@@ -134,6 +131,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     drift.setValue(0);
     pulse.setValue(0);
     fall.setValue(0);
+    flash.setValue(0);
 
     const animation = Animated.loop(
       Animated.parallel([
@@ -167,10 +165,24 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
         ]),
         Animated.timing(fall, {
           toValue: 1,
-          duration: isRain ? 900 : 1900,
+          duration: isRain ? 520 : isSnow ? 1200 : 1700,
           easing: Easing.linear,
           useNativeDriver: true,
         }),
+        Animated.sequence([
+          Animated.timing(flash, {
+            toValue: 1,
+            duration: isThunder ? 140 : 900,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(flash, {
+            toValue: 0,
+            duration: isThunder ? 520 : 900,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
       ]),
     );
 
@@ -179,7 +191,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     return () => {
       animation.stop();
     };
-  }, [current.condition, drift, fall, isRain, isThunder, pulse]);
+  }, [current.condition, drift, fall, flash, isRain, isSnow, isThunder, pulse]);
 
   const weatherFloatStyle = {
     transform: [
@@ -238,6 +250,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
 
   return (
     <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
+      {isThunder && <Animated.View style={[styles.thunderFlash, { opacity: flash }]} />}
       <View style={[styles.cloudBase, { backgroundColor: shapeColor }]} />
       <View style={[styles.cloudPuffLarge, { backgroundColor: shapeColor }]} />
       <View style={[styles.cloudPuffSmall, { backgroundColor: softColor }]} />
@@ -246,6 +259,8 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
           <Animated.View style={[styles.rainDrop, { backgroundColor: softColor }]} />
           <Animated.View style={[styles.rainDrop, styles.rainDropMiddle, { backgroundColor: softColor }]} />
           <Animated.View style={[styles.rainDrop, { backgroundColor: softColor }]} />
+          <Animated.View style={[styles.rainDrop, styles.rainDropFast, { backgroundColor: softColor }]} />
+          <Animated.View style={[styles.rainDrop, styles.rainDropWide, { backgroundColor: softColor }]} />
         </Animated.View>
       )}
       {isThunder && (

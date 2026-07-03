@@ -63,7 +63,7 @@ export function MapScreen({ reports, searchContext, onReportIssue }: MapScreenPr
         <EmptyState
           title="지도에 표시할 현장 글이 없어요"
           body={`${searchContext.place} 주변 글이 생기면 지도 핀과 목록에 바로 표시됩니다.`}
-          action="제보 탭에서 요청을 먼저 올려보세요."
+          action="제보 탭에서 요청을 먼저 올려보세요"
         />
       )}
 

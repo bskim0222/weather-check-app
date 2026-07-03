@@ -8,7 +8,7 @@ type DataStatusBannerProps = {
 };
 
 export function DataStatusBanner({ status }: DataStatusBannerProps) {
-  const isHidden = status.phase === 'ready';
+  const isHidden = status.phase === 'ready' || status.phase === 'mock';
 
   if (isHidden) return null;
 

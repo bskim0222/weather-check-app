@@ -20,61 +20,63 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
       <View style={[styles.app, androidTopInset > 0 && { paddingTop: androidTopInset }]}>
-        <AppHeader
-          locationStatus={appState.locationStatus}
-          refreshLabel={appState.refreshLabel}
-          screenTitle={appState.screenTitle}
-          onRefresh={appState.refreshCurrentLocation}
-        />
-        <QuestionSearchBar
-          isBusy={appState.isBusy}
-          suggestions={appState.questionSuggestions}
-          value={appState.questionText}
-          onChangeText={appState.setQuestionText}
-          onPickSuggestion={appState.runQuestion}
-          onSubmit={appState.submitQuestion}
-        />
-        <DataStatusBanner status={appState.dataStatus} />
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {appState.activeTab === 'decision' && (
-            <DecisionScreen
-              current={appState.current}
-              locationStatus={appState.locationStatus}
-              reportCondition={appState.reportCondition}
-              reportText={appState.reportText}
-              reports={appState.reports}
-              searchContext={appState.searchContext}
-              weatherKey={appState.weatherKey}
-              onReportConditionChange={appState.setReportCondition}
-              onReportTextChange={appState.setReportText}
-              onSubmitReport={appState.submitReport}
-              onReportIssue={appState.reportFieldReport}
-              onWeatherChange={appState.changeWeather}
-            />
-          )}
-          {appState.activeTab === 'map' && (
-            <MapScreen
-              reports={appState.reports}
-              searchContext={appState.searchContext}
-              onReportIssue={appState.reportFieldReport}
-            />
-          )}
-          {appState.activeTab === 'report' && (
-            <ReportScreen
-              requests={appState.reportRequests}
-              reports={appState.reports}
-              searchContext={appState.searchContext}
-              onAddReport={appState.addLocalReport}
-              onReportIssue={appState.reportFieldReport}
-              onRequestsChange={appState.setReportRequests}
-            />
-          )}
-          {appState.activeTab === 'compare' && (
-            <CompareScreen
-              providerSnapshot={appState.providerSnapshot}
-              searchContext={appState.searchContext}
-            />
-          )}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <AppHeader
+            locationStatus={appState.locationStatus}
+            refreshLabel={appState.refreshLabel}
+            screenTitle={appState.screenTitle}
+            onRefresh={appState.refreshCurrentLocation}
+          />
+          <QuestionSearchBar
+            isBusy={appState.isBusy}
+            suggestions={appState.questionSuggestions}
+            value={appState.questionText}
+            onChangeText={appState.setQuestionText}
+            onPickSuggestion={appState.runQuestion}
+            onSubmit={appState.submitQuestion}
+          />
+          <DataStatusBanner status={appState.dataStatus} />
+          <View style={styles.content}>
+            {appState.activeTab === 'decision' && (
+              <DecisionScreen
+                current={appState.current}
+                locationStatus={appState.locationStatus}
+                reportCondition={appState.reportCondition}
+                reportText={appState.reportText}
+                reports={appState.reports}
+                searchContext={appState.searchContext}
+                weatherKey={appState.weatherKey}
+                onReportConditionChange={appState.setReportCondition}
+                onReportTextChange={appState.setReportText}
+                onSubmitReport={appState.submitReport}
+                onReportIssue={appState.reportFieldReport}
+                onWeatherChange={appState.changeWeather}
+              />
+            )}
+            {appState.activeTab === 'map' && (
+              <MapScreen
+                reports={appState.reports}
+                searchContext={appState.searchContext}
+                onReportIssue={appState.reportFieldReport}
+              />
+            )}
+            {appState.activeTab === 'report' && (
+              <ReportScreen
+                requests={appState.reportRequests}
+                reports={appState.reports}
+                searchContext={appState.searchContext}
+                onAddReport={appState.addLocalReport}
+                onReportIssue={appState.reportFieldReport}
+                onRequestsChange={appState.setReportRequests}
+              />
+            )}
+            {appState.activeTab === 'compare' && (
+              <CompareScreen
+                providerSnapshot={appState.providerSnapshot}
+                searchContext={appState.searchContext}
+              />
+            )}
+          </View>
         </ScrollView>
 
         <BottomTabs activeTab={appState.activeTab} onTabChange={appState.setActiveTab} />

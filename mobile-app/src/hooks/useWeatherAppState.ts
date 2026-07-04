@@ -33,7 +33,7 @@ import {
   type WeatherProviderSnapshot,
 } from '../services/weatherProviders';
 import type { DataStatus, LocationStatus, PersistedAppSnapshot } from '../types/appState';
-import type { ForecastProviderId, LocalReport, ReportRequest, TabKey, WeatherKey } from '../types/weather';
+import type { ForecastProviderId, LocalReport, ReportRequest, SearchContext, TabKey, WeatherKey } from '../types/weather';
 
 const mockStatus: DataStatus = {
   phase: 'mock',
@@ -347,7 +347,7 @@ export function useWeatherAppState() {
       setDataStatus({
         phase: 'error',
         label: '연결 실패',
-        message: '데이터를 불러오지 못했어요. 마지막으로 확인한 화면을 유지하고 다시 시도할 수 있어요.',
+        message: '데이터를 불러오지 못했어요. 마지막으로 확인한 화면은 유지하고 다시 시도할 수 있어요.',
       });
     }
   };
@@ -362,7 +362,7 @@ export function useWeatherAppState() {
       setDataStatus({
         phase: 'error',
         label: '장소를 못 찾았어요',
-        message: `${nextJudgement.searchContext.locationQuery ?? nextJudgement.searchContext.place} 위치를 찾지 못했어요. 현재위치로 바꾸지 않았으니 장소명을 조금 더 구체적으로 다시 입력해주세요.`,
+        message: `${nextJudgement.searchContext.locationQuery ?? nextJudgement.searchContext.place} 위치를 찾지 못했어요. 현재 위치로 바꾸지 않았으니 장소명을 조금 더 구체적으로 다시 입력해주세요.`,
       });
       return;
     }
@@ -420,7 +420,7 @@ export function useWeatherAppState() {
   };
 }
 
-function hasWeatherIntent(searchContext: ReturnType<typeof createQuestionJudgement>['searchContext']) {
+function hasWeatherIntent(searchContext: SearchContext) {
   return Boolean(searchContext.detectedWeather);
 }
 
@@ -438,10 +438,10 @@ function createFallbackStatusMessage(providerIds: ForecastProviderId[]) {
   const names = providerIds.map(getProviderDisplayName).filter(Boolean);
 
   if (names.length === 0) {
-    return '실제 데이터 연결이 준비되지 않아 현재는 목업 예보와 현장 글로 대신 보여주고 있어요.';
+    return '실제 데이터 연결이 준비되지 않아 현재는 목업 예보와 현장 글로 대체 보여주고 있어요.';
   }
 
-  return `${names.join(', ')} 데이터가 준비되지 않아 해당 예보는 샘플 값으로 대신 보여주고 있어요.`;
+  return `${names.join(', ')} 데이터가 준비되지 않아 해당 예보는 샘플 값으로 대체 보여주고 있어요.`;
 }
 
 function getProviderDisplayName(providerId: ForecastProviderId) {
@@ -459,26 +459,23 @@ function waitForMinimumLoadingTime() {
   });
 }
 
+function isSameWeatherContext(a: SearchContext, b: SearchContext) {
+  return (
+    a.place === b.place &&
+    a.timeLabel === b.timeLabel &&
+    a.detectedWeather === b.detectedWeather &&
+    a.target.kind === b.target.kind &&
+    a.target.latitude === b.target.latitude &&
+    a.target.longitude === b.target.longitude
+  );
+}
+
+function replaceReportById(reports: LocalReport[], localId: string | undefined, nextReport: LocalReport) {
+  if (!localId) return [nextReport, ...reports];
+
+  return reports.map((report) => (report.id === localId ? nextReport : report));
+}
+
 function createLocalId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function replaceReportById(reports: LocalReport[], reportId: string | undefined, replacement: LocalReport) {
-  if (!reportId) return reports;
-
-  return reports.map((report) => (report.id === reportId ? replacement : report));
-}
-
-function isSameWeatherContext(
-  left: WeatherProviderSnapshot['context'] | undefined,
-  right: WeatherProviderSnapshot['context'] | undefined,
-) {
-  if (!left || !right) return false;
-
-  return (
-    left.place === right.place &&
-    left.timeLabel === right.timeLabel &&
-    left.target?.latitude === right.target?.latitude &&
-    left.target?.longitude === right.target?.longitude
-  );
 }

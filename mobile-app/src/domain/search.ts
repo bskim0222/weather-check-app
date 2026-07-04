@@ -5,7 +5,7 @@ export const defaultQuestionSuggestions = [
   '잠실운동장 지금 비 와?',
   '부산 내일 오후에 비 올 것 같아?',
   '석촌호수 내일 눈 와?',
-  '잠실새내역 퇴근길 천둥번개 들려?',
+  '잠실새내역 퇴근길 천둥번개 올까?',
   '송파 지금 안개 심해?',
 ];
 
@@ -24,13 +24,13 @@ const weatherHintWords = [
   '번개',
   '눈',
   '안개',
-  '뿌옇',
+  '미세먼지',
   '비',
   '날씨',
   '기온',
   '우산',
   '소나기',
-  '흐',
+  '흐림',
   '구름',
   '맑',
   '해',
@@ -40,11 +40,11 @@ export function inferWeatherFromQuestion(question: string): WeatherKey {
   const clean = question.replace(/\s/g, '');
 
   if (clean.includes('천둥') || clean.includes('번개')) return 'thunder';
-  if (clean.includes('눈')) return 'snow';
-  if (clean.includes('안개') || clean.includes('뿌옇')) return 'fog';
+  if (clean.includes('눈') || clean.includes('진눈')) return 'snow';
+  if (clean.includes('안개') || clean.includes('시야')) return 'fog';
   if (clean.includes('비안') || clean.includes('안와') || clean.includes('안오')) return 'sunny';
   if (clean.includes('비') || clean.includes('우산') || clean.includes('소나기')) return 'rain';
-  if (clean.includes('흐') || clean.includes('구름')) return 'cloudy';
+  if (clean.includes('흐림') || clean.includes('흐려') || clean.includes('구름')) return 'cloudy';
   if (clean.includes('맑') || clean.includes('해')) return 'sunny';
 
   return 'rain';
@@ -112,38 +112,28 @@ function hasWeatherHint(question: string) {
 
 function extractLocationCandidate(question: string) {
   const normalized = question
-    .replace(/[?？!！]/g, ' ')
+    .replace(/[?!,。]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  const matches = [...normalized.matchAll(/([가-힣A-Za-z0-9·.\-\s]{2,40}?)(?:에|에서|근처|주변)\s*(?:비|눈|안개|날씨|기온|우산|소나기|천둥|번개)/g)];
-  const lastMatch = matches.at(-1)?.[1] ?? '';
-  const cleaned = cleanLocationCandidate(lastMatch);
 
-  if (cleaned) return cleaned;
+  const beforeWeather = normalized.match(
+    /(.+?)(?:오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|\d{1,2}\s*시)?\s*(?:날씨|비|눈|안개|기온|우산|소나기|천둥|번개)/,
+  )?.[1];
+  const cleanedBeforeWeather = cleanLocationCandidate(beforeWeather ?? '');
+  if (cleanedBeforeWeather) return cleanedBeforeWeather;
 
-  const compactMatches = [...normalized.matchAll(/([가-힣A-Za-z0-9·.\-]{2,24}?)(?:에|에서)\s/g)];
-  const compactCandidate = cleanLocationCandidate(compactMatches.at(-1)?.[1] ?? '');
+  const placeWithParticle = normalized.match(/([가-힣A-Za-z0-9·.\-\s]{2,40}?)(?:에서|근처|주변)\s*(?:날씨|비|눈|안개|기온|우산|소나기|천둥|번개)/)?.[1];
+  const cleanedPlace = cleanLocationCandidate(placeWithParticle ?? '');
+  if (cleanedPlace) return cleanedPlace;
 
-  if (compactCandidate) return compactCandidate;
-
-  return extractAdministrativePlaceBeforeContext(normalized);
-}
-
-function extractAdministrativePlaceBeforeContext(normalized: string) {
-  const matches = [
-    ...normalized.matchAll(
-      /([가-힣A-Za-z0-9·.\-\s]{2,40}?(?:시|군|구|동|읍|면|리|역|산|봉|고개|계곡|해변|궁|성|문|빌딩|타워|센터|몰|백화점|호텔|학교|캠퍼스|공원|광장|해수욕장|공항|터미널|다리|대교|전망대|CC|cc|골프장|대학교|병원|시장|앞))\s*(?:오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|\d{1,2}\s*시|날씨|비|눈|안개|기온|우산|소나기|천둥|번개)/g,
-    ),
-  ];
-
-  return cleanLocationCandidate(matches.at(-1)?.[1] ?? '');
+  return '';
 }
 
 function cleanLocationCandidate(value: string) {
   return value
-    .replace(/.*(?:건데|인데|라면|이면|때|하고|그리고|,)/, '')
-    .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|\d{1,2}시)\s*/g, '')
-    .replace(/\s*(비|눈|안개|날씨|기온|우산|소나기|천둥|번개).*$/, '')
+    .replace(/.*(?:근데|그런데|이면|라면|하고|그리고|,)/, '')
+    .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|\d{1,2}시)\s*/g, '')
+    .replace(/\s*(날씨|비|눈|안개|기온|우산|소나기|천둥|번개).*$/, '')
     .trim();
 }
 
@@ -157,7 +147,7 @@ function inferTimeLabel(question: string) {
   if (dayLabel && dayPartLabel) return `${dayLabel} ${dayPartLabel}`;
   if (dayLabel) return dayLabel;
   if (dayPartLabel) return dayPartLabel;
-  if (question.includes('저녁')) return '저녁';
+  if (question.includes('지금')) return '지금';
   if (question.includes('오늘')) return '오늘';
 
   return '지금';

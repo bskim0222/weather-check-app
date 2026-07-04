@@ -52,24 +52,26 @@ function getJudgementSources(
 }
 
 function getWeatherVote(condition: string): WeatherVote {
-  if (includesAny(condition, ['천둥', '번개', '소나기', '불안정'])) {
+  const value = condition.toLowerCase();
+
+  if (includesAny(value, ['비 없음', '비구름 없음', '강수 없음', '비 안', 'no rain', '0mm', '맑', 'clear', 'sunny', '건조', '안정'])) {
+    return { key: 'sunny', label: '맑음' };
+  }
+
+  if (includesAny(value, ['천둥', '번개', 'thunder', 'storm', '불안정'])) {
     return { key: 'thunder', label: '천둥번개' };
   }
 
-  if (includesAny(condition, ['눈', '진눈'])) {
+  if (includesAny(value, ['눈', '진눈', 'snow', 'sleet'])) {
     return { key: 'snow', label: '눈' };
   }
 
-  if (includesAny(condition, ['비', '강수', '소나기'])) {
+  if (includesAny(value, ['비', '강수', '소나기', 'rain', 'shower'])) {
     return { key: 'rain', label: '비' };
   }
 
-  if (includesAny(condition, ['안개', '시야', '습함', '낮은 구름'])) {
+  if (includesAny(value, ['안개', '시야', '습함', '낮은 구름', 'fog', 'mist'])) {
     return { key: 'fog', label: '안개' };
-  }
-
-  if (includesAny(condition, ['맑', '비 없음', '강수 없음', '건조', '안정'])) {
-    return { key: 'sunny', label: '맑음' };
   }
 
   return { key: 'cloudy', label: '흐림' };
@@ -113,7 +115,7 @@ function createJudgementLevel(tone: JudgementTone) {
   if (tone === 'leaning') return '우세';
   if (tone === 'caution') return '주의';
 
-  return '엇갈림';
+  return '애매';
 }
 
 function getAverageTemperature(sources: ForecastSource[]) {
@@ -133,10 +135,10 @@ function parseTemperature(value: string) {
 }
 
 function createProviderTitle(consensus: WeatherVote, tone: JudgementTone) {
-  if (consensus.key === 'rain') return tone === 'mixed' ? '비 신호가 엇갈려요' : '비 가능성이 더 높아요';
+  if (consensus.key === 'rain') return tone === 'mixed' ? '비 신호가 애매해요' : '비 가능성이 더 높아요';
   if (consensus.key === 'sunny') return tone === 'mixed' ? '비 가능성은 낮아 보여요' : '비 걱정은 낮은 편이에요';
   if (consensus.key === 'cloudy') return '비보다는 흐림 쪽 신호예요';
-  if (consensus.key === 'thunder') return '소나기·천둥 가능성을 확인해야 해요';
+  if (consensus.key === 'thunder') return '소나기와 천둥 가능성을 확인해야 해요';
   if (consensus.key === 'snow') return '눈 또는 진눈깨비 신호가 있어요';
   if (consensus.key === 'fog') return '비보다 시야 확인이 중요해요';
 
@@ -162,7 +164,7 @@ function createServiceSignal(agreeingCount: number, totalCount: number, consensu
 
 function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows'], consensus: WeatherVote) {
   if (rows.length === 0) {
-    return `${consensus.label} 판단을 기준으로 다음 변화를 계속 확인해요.`;
+    return `${consensus.label} 판정을 기준으로 다음 변화를 계속 확인해요.`;
   }
 
   const nextLabels = rows
@@ -171,7 +173,7 @@ function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows'], consens
     .filter(Boolean);
 
   if (nextLabels.length === 0) {
-    return `${consensus.label} 판단을 기준으로 다음 변화를 계속 확인해요.`;
+    return `${consensus.label} 판정을 기준으로 다음 변화를 계속 확인해요.`;
   }
 
   return `앞으로 몇 시간은 ${dedupe(nextLabels).join(' → ')} 흐름으로 보고 있어요.`;
@@ -190,9 +192,9 @@ function createForecastRows(
     return {
       time: row.label,
       title: cell?.weather ?? fallbackRows[index]?.title ?? '확인 필요',
-      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRows[index]?.temp ?? '--℃',
+      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRows[index]?.temp ?? '--도',
       note: getPrecipitationFromDetail(cell?.detail) ?? fallbackRows[index]?.note ?? '변화 확인',
-      mark: cell?.mark ?? fallbackRows[index]?.mark ?? '확',
+      mark: cell?.mark ?? fallbackRows[index]?.mark ?? consensus.label.slice(0, 1),
     };
   });
 }
@@ -209,9 +211,9 @@ function pickRepresentativeCell(
 }
 
 function getTemperatureFromDetail(detail: string | undefined) {
-  const match = detail?.match(/-?\d+\s*(?:℃|도)/);
+  const match = detail?.match(/-?\d+\s*(?:°|도)/);
 
-  return match ? match[0].replace(/\s/g, '').replace('도', '℃') : null;
+  return match ? match[0].replace(/\s/g, '').replace('°', '도') : null;
 }
 
 function getPrecipitationFromDetail(detail: string | undefined) {

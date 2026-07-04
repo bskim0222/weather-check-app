@@ -1,7 +1,7 @@
 import type { PersistedAppSnapshot } from '../types/appState';
 import { getPersistentStorage } from './persistentStorage';
 
-const storageKey = 'weather-check-app-state-v1';
+const storageKey = 'weather-check-app-state-v2';
 
 export async function readPersistedAppSnapshot() {
   const storage = getPersistentStorage();

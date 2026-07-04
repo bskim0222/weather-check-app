@@ -115,15 +115,8 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   const pulse = useRef(new Animated.Value(0)).current;
   const fall = useRef(new Animated.Value(0)).current;
   const flash = useRef(new Animated.Value(0)).current;
-  const isSunny = current.condition === '맑음';
-  const isRain = current.condition === '비';
   const isThunder = current.condition === '천둥번개';
-  const isSnow = current.condition === '눈';
-  const isFog = current.condition === '안개';
-  const isCloudy = current.condition === '흐림';
-  const shapeColor = getWeatherShapeColor(current);
-  const softColor = getSoftWeatherColor(current);
-  const puffColor = getWeatherPuffColor(current);
+  const sample = getSoftSample(current.condition);
 
   useEffect(() => {
     drift.setValue(0);
@@ -163,7 +156,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
         ]),
         Animated.timing(fall, {
           toValue: 1,
-          duration: isRain ? 520 : isSnow ? 1200 : 1700,
+          duration: sample.key === 'rain' ? 520 : sample.key === 'snow' ? 1200 : 1700,
           easing: Easing.linear,
           useNativeDriver: true,
         }),
@@ -189,7 +182,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     return () => {
       animation.stop();
     };
-  }, [current.condition, drift, fall, flash, isRain, isSnow, isThunder, pulse]);
+  }, [current.condition, drift, fall, flash, isThunder, pulse, sample.key]);
 
   const weatherFloatStyle = {
     transform: [
@@ -227,7 +220,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
       {
         translateY: fall.interpolate({
           inputRange: [0, 1],
-          outputRange: isRain ? [-8, 10] : [-3, 6],
+          outputRange: sample.key === 'rain' ? [-8, 10] : [-3, 6],
         }),
       },
     ],
@@ -237,92 +230,123 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     }),
   };
 
-  if (isSunny) {
+  return (
+    <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
+      <View style={[styles.softSampleTile, { backgroundColor: sample.background }]}>
+        <SoftSampleGraphic sampleKey={sample.key} pulseStyle={pulseStyle} fallStyle={fallStyle} flash={flash} />
+        <View style={styles.softSampleLabelBlock}>
+          <Text style={[styles.softSampleLabel, sample.dark && styles.softSampleLabelDark]}>
+            {sample.label}
+          </Text>
+          <Text style={[styles.softSampleSubLabel, sample.dark && styles.softSampleSubLabelDark]}>
+            {sample.subLabel}
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function SoftSampleGraphic({
+  sampleKey,
+  pulseStyle,
+  fallStyle,
+  flash,
+}: {
+  sampleKey: SoftSampleKey;
+  pulseStyle: object;
+  fallStyle: object;
+  flash: Animated.Value;
+}) {
+  if (sampleKey === 'sun') {
     return (
-      <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
-        <Animated.View style={[styles.sunHalo, { borderColor: current.accent }, pulseStyle]} />
-        <Animated.View style={[styles.sunCore, { backgroundColor: current.accent }, pulseStyle]} />
+      <Animated.View style={[styles.softSampleSunGroup, pulseStyle]}>
+        <View style={[styles.softSampleRay, styles.softSampleRayTop]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayRight]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayBottom]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayLeft]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayTopLeft]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayTopRight]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayBottomRight]} />
+        <View style={[styles.softSampleRay, styles.softSampleRayBottomLeft]} />
+        <View style={styles.softSampleSunCore} />
       </Animated.View>
     );
   }
 
   return (
-    <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
-      {isThunder && <Animated.View style={[styles.thunderFlash, { opacity: flash }]} />}
-      <Animated.View style={[styles.cloudPuffLarge, { backgroundColor: puffColor }, pulseStyle]} />
-      <Animated.View style={[styles.cloudBase, { backgroundColor: shapeColor }, pulseStyle]} />
-      <Animated.View style={[styles.cloudPuffSmall, { backgroundColor: softColor }, pulseStyle]} />
+    <>
+      <Animated.View style={[styles.softSampleCloudWhite, pulseStyle]} />
+      <Animated.View
+        style={[
+          styles.softSampleCloudCircle,
+          sampleKey === 'rain' && styles.softSampleCloudCircleRain,
+          sampleKey === 'thunder' && styles.softSampleCloudCircleThunder,
+          sampleKey === 'snow' && styles.softSampleCloudCircleSnow,
+          sampleKey === 'fog' && styles.softSampleCloudCircleFog,
+          pulseStyle,
+        ]}
+      />
 
-      {(isRain || isThunder) && (
-        <Animated.View style={[styles.weatherDrops, fallStyle]}>
-          <View style={[styles.rainDrop, styles.rainDropFast, { backgroundColor: getDropColor(current) }]} />
-          <View style={[styles.rainDrop, styles.rainDropMiddle, { backgroundColor: getDropColor(current) }]} />
-          <View style={[styles.rainDrop, { backgroundColor: getDropColor(current) }]} />
-          <View style={[styles.rainDrop, styles.rainDropWide, { backgroundColor: getDropColor(current) }]} />
+      {(sampleKey === 'rain' || sampleKey === 'thunder') && (
+        <Animated.View style={[styles.softSampleRainLines, fallStyle]}>
+          <View style={styles.softSampleRainLine} />
+          <View style={[styles.softSampleRainLine, styles.softSampleRainLineMiddle]} />
+          <View style={[styles.softSampleRainLine, styles.softSampleRainLineLast]} />
         </Animated.View>
       )}
 
-      {isThunder && (
-        <Animated.View style={[styles.thunderBolt, { opacity: flash }]}>
-          <View style={[styles.thunderBoltTop, { backgroundColor: current.accent }]} />
-          <View style={[styles.thunderBoltBottom, { backgroundColor: current.accent }]} />
+      {sampleKey === 'thunder' && (
+        <Animated.View style={[styles.softSampleBolt, { opacity: flash }]}>
+          <View style={styles.softSampleBoltTop} />
+          <View style={styles.softSampleBoltBottom} />
         </Animated.View>
       )}
 
-      {isSnow && (
-        <Animated.View style={[styles.snowDots, fallStyle]}>
-          <View style={styles.snowDot} />
-          <View style={[styles.snowDot, styles.snowDotMiddle]} />
-          <View style={[styles.snowDot, styles.snowDotSmall]} />
-          <View style={[styles.snowDot, styles.snowDotLow]} />
-        </Animated.View>
+      {sampleKey === 'snow' && (
+        <>
+          <View style={[styles.softSampleSnowDot, styles.softSampleSnowDotOne]} />
+          <View style={[styles.softSampleSnowDot, styles.softSampleSnowDotTwo]} />
+          <View style={[styles.softSampleSnowDot, styles.softSampleSnowDotThree]} />
+          <View style={[styles.softSampleSnowDot, styles.softSampleSnowDotFour]} />
+        </>
       )}
 
-      {(isFog || isCloudy) && (
-        <Animated.View style={[styles.fogLines, isCloudy && styles.fogLinesCloudy, weatherFloatStyle]}>
-          <View style={[styles.fogLine, { backgroundColor: getFogLineColor(current) }]} />
-          <View style={[styles.fogLine, styles.fogLineShort, { backgroundColor: getFogLineColor(current) }]} />
-          <View style={[styles.fogLine, { backgroundColor: getFogLineColor(current) }]} />
-        </Animated.View>
+      {sampleKey === 'fog' && (
+        <View style={styles.softSampleFogLines}>
+          <View style={[styles.softSampleFogLine, styles.softSampleFogLineOne]} />
+          <View style={[styles.softSampleFogLine, styles.softSampleFogLineTwo]} />
+          <View style={[styles.softSampleFogLine, styles.softSampleFogLineThree]} />
+        </View>
       )}
-    </Animated.View>
+    </>
   );
 }
 
-function getWeatherShapeColor(current: WeatherPreset) {
-  if (current.condition === '비') return '#126895';
-  if (current.condition === '천둥번개') return '#3f2465';
-  if (current.condition === '눈') return '#f8fdff';
-  if (current.condition === '안개') return '#d0c5b9';
-  if (current.condition === '흐림') return '#d3ddd6';
-  return current.accent;
-}
+type SoftSampleKey = 'sun' | 'cloud' | 'rain' | 'thunder' | 'snow' | 'fog';
 
-function getSoftWeatherColor(current: WeatherPreset) {
-  if (current.condition === '비') return '#d7f4ff';
-  if (current.condition === '천둥번개') return '#8a64c6';
-  if (current.condition === '눈') return '#ffffff';
-  if (current.condition === '안개') return '#f0e7dc';
-  if (current.condition === '흐림') return '#f8f5ec';
-  return '#fff2e9';
-}
+function getSoftSample(condition: string): {
+  background: string;
+  dark?: boolean;
+  key: SoftSampleKey;
+  label: string;
+  subLabel: string;
+} {
+  if (condition === '맑음') {
+    return { background: '#e7ea64', key: 'sun', label: '맑음', subLabel: 'clear' };
+  }
+  if (condition === '비') {
+    return { background: '#66b9df', key: 'rain', label: '비', subLabel: 'rain' };
+  }
+  if (condition === '천둥번개') {
+    return { background: '#292533', dark: true, key: 'thunder', label: '천둥', subLabel: 'storm' };
+  }
+  if (condition === '눈') {
+    return { background: '#dcecf3', key: 'snow', label: '눈', subLabel: 'snow' };
+  }
+  if (condition === '안개') {
+    return { background: '#d8d0c4', key: 'fog', label: '안개', subLabel: 'fog' };
+  }
 
-function getWeatherPuffColor(current: WeatherPreset) {
-  if (current.condition === '비') return '#0b5a7b';
-  if (current.condition === '천둥번개') return '#4e5663';
-  if (current.condition === '눈') return '#f8fdff';
-  if (current.condition === '안개') return '#efe8dc';
-  if (current.condition === '흐림') return '#718176';
-
-  return current.accent;
-}
-
-function getDropColor(current: WeatherPreset) {
-  if (current.condition === '천둥번개') return '#9ed4e9';
-  return '#e6f8ff';
-}
-
-function getFogLineColor(current: WeatherPreset) {
-  if (current.condition === '흐림') return 'rgba(36,36,36,0.22)';
-  return 'rgba(36,36,36,0.34)';
+  return { background: '#bbc5bb', key: 'cloud', label: '흐림', subLabel: 'overcast' };
 }

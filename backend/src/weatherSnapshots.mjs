@@ -201,6 +201,8 @@ function mergeProviderRows(baseRows, providerId, providerRows) {
         weather: providerRow.weather,
         detail: providerRow.detail,
         tone: providerRow.tone,
+        morning: providerRow.morning,
+        afternoon: providerRow.afternoon,
       },
     };
   });
@@ -281,8 +283,8 @@ function createWeather(condition, temp, detail, badge, value) {
 function createCompareRows(weather, mode) {
   const labels =
     mode === 'daily'
-      ? ['오늘', '내일', '모레', '목요일', '금요일', '토요일']
-      : ['지금', '1시간 뒤', '3시간 뒤', '6시간 뒤', '9시간 뒤', '12시간 뒤'];
+      ? createDailyCompareLabels(10)
+      : createHourlyCompareLabels(18);
 
   return labels.map((label, index) => ({
     label,
@@ -292,11 +294,48 @@ function createCompareRows(weather, mode) {
   }));
 }
 
+function createHourlyCompareLabels(count) {
+  return Array.from({ length: count }, (_, index) => {
+    if (index === 0) return '지금';
+
+    return `${index}시간 뒤`;
+  });
+}
+
+function createDailyCompareLabels(count) {
+  const today = new Date();
+
+  return Array.from({ length: count }, (_, index) => {
+    if (index === 0) return '오늘';
+    if (index === 1) return '내일';
+    if (index === 2) return '모레';
+
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  });
+}
+
 function createCell(weather, index) {
+  const detail = `${weather.temp} · ${index === 0 ? weather.value : index < 3 ? '비슷함' : '변동'}`;
+
   return {
     mark: weather.condition.slice(0, 1),
     weather: weather.condition,
-    detail: `${weather.temp} · ${index === 0 ? weather.value : index < 3 ? '비슷함' : '변동'}`,
+    detail,
     tone: '#64748b',
+    morning: {
+      weather: weather.condition,
+      detail,
+      mark: weather.condition.slice(0, 1),
+      tone: '#64748b',
+    },
+    afternoon: {
+      weather: weather.condition,
+      detail,
+      mark: weather.condition.slice(0, 1),
+      tone: '#64748b',
+    },
   };
 }

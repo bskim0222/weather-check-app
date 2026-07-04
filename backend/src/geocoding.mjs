@@ -7,6 +7,15 @@ const defaultUserAgent = 'WeatherCheck/0.1 weathercheck.official@gmail.com';
 const cache = new Map();
 
 const aliases = [
+  createAlias('seoul-city', ['서울', '서울시', '서울특별시'], '서울특별시', 37.5665, 126.978, 15000),
+  createAlias('busan-city', ['부산', '부산시', '부산광역시'], '부산광역시', 35.1796, 129.0756, 14000),
+  createAlias('daegu-city', ['대구', '대구시', '대구광역시'], '대구광역시', 35.8714, 128.6014, 12000),
+  createAlias('incheon-city', ['인천', '인천시', '인천광역시'], '인천광역시', 37.4563, 126.7052, 14000),
+  createAlias('gwangju-city', ['광주', '광주시', '광주광역시'], '광주광역시', 35.1595, 126.8526, 10000),
+  createAlias('daejeon-city', ['대전', '대전시', '대전광역시'], '대전광역시', 36.3504, 127.3845, 10000),
+  createAlias('ulsan-city', ['울산', '울산시', '울산광역시'], '울산광역시', 35.5384, 129.3114, 12000),
+  createAlias('sejong-city', ['세종', '세종시', '세종특별자치시'], '세종특별자치시', 36.4801, 127.289, 10000),
+  createAlias('jeju-city', ['제주', '제주시', '제주도', '제주특별자치도'], '제주특별자치도', 33.4996, 126.5312, 15000),
   createAlias('gimpo', ['김포', '김포시'], '김포시', 37.615, 126.7158, 5000),
   createAlias('seoraksan', ['설악산', '설악산국립공원', '설악산 국립공원'], '설악산', 38.1195, 128.4656, 5000),
   createAlias('cheongwadae', ['청와대', '청와대 본관'], '청와대', 37.5866, 126.9748, 900),
@@ -131,6 +140,8 @@ function findAliasCandidates(query) {
     .filter((item) =>
       item.names.some((name) => {
         const aliasName = normalizeQuery(name);
+
+        if (item.id.endsWith('-city')) return aliasName === normalized;
 
         return aliasName.includes(normalized) || normalized.includes(aliasName);
       }),

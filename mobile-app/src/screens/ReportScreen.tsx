@@ -131,10 +131,20 @@ export function ReportScreen({
   return (
     <View>
       <View style={styles.requestCard}>
-        <Text style={styles.requestKicker}>현장 제보</Text>
+        <Text style={styles.requestKicker}>생생날씨특파원</Text>
         <Text style={styles.requestTitle}>
-          궁금한 지역의 현재 상황을 물어보세요.
+          궁금한 지역의 지금 날씨를 물어보고, 현장 답변을 모아봐요.
         </Text>
+        <View style={styles.reportGuide}>
+          <View style={styles.reportStep}>
+            <Text style={styles.reportStepLabel}>묻기</Text>
+            <Text style={styles.reportStepText}>다른 지역의 현재 상황을 질문해요.</Text>
+          </View>
+          <View style={styles.reportStep}>
+            <Text style={styles.reportStepLabel}>보기</Text>
+            <Text style={styles.reportStepText}>근처와 전국의 현장글을 확인해요.</Text>
+          </View>
+        </View>
         <View style={styles.requestForm}>
           <TextInput
             value={requestDraft}
@@ -150,8 +160,8 @@ export function ReportScreen({
       </View>
 
       <View style={styles.reportSectionHeader}>
-        <Text style={styles.reportSectionTitle}>답변 기다리는 요청</Text>
-        <Text style={styles.reportSectionAction}>내 주변</Text>
+        <Text style={styles.reportSectionTitle}>답변할 수 있는 질문</Text>
+        <Text style={styles.reportSectionAction}>근처 요청</Text>
       </View>
 
       {visibleRequests.length > 0 ? (
@@ -181,7 +191,7 @@ export function ReportScreen({
                   </Text>
                 </View>
                 <Text style={[styles.requestStatus, isSelected && styles.requestStatusActive]}>
-                  {request.status}
+                  {isSelected ? '답변하기' : request.status}
                 </Text>
               </Pressable>
             );
@@ -197,7 +207,7 @@ export function ReportScreen({
 
       {selectedRequest ? (
         <View style={styles.replyBox}>
-          <Text style={styles.replyEyebrow}>{selectedRequest.place} 요청에 현장 답변하기</Text>
+          <Text style={styles.replyEyebrow}>선택한 질문에 답변하기</Text>
           <Text style={styles.replyQuestion}>{selectedRequest.question}</Text>
           <TextInput
             multiline
@@ -220,7 +230,7 @@ export function ReportScreen({
       )}
 
       <View style={styles.reportSectionHeader}>
-        <Text style={styles.reportSectionTitle}>현장 답변 모아보기</Text>
+        <Text style={styles.reportSectionTitle}>실시간 현장글</Text>
         <Text style={styles.reportSectionAction}>{feedMode === 'national' ? '전국' : '근처'}</Text>
       </View>
       <View style={styles.reportFeedMode}>

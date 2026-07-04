@@ -16,6 +16,8 @@ const markerPositions = [
   { top: '39%', left: '45%', tone: '#f4f5f2' },
   { top: '51%', left: '20%', tone: '#b8cbd6' },
   { top: '25%', left: '69%', tone: '#d6c8c0' },
+  { top: '62%', left: '72%', tone: '#74c9ee' },
+  { top: '31%', left: '28%', tone: '#fff05a' },
 ] as const;
 
 export function FieldReportMapCard({
@@ -72,7 +74,7 @@ export function FieldReportMapCard({
         </View>
         <Text style={styles.mapTitle}>주변 제보는 {dominantCondition} 쪽이에요</Text>
         <Text style={styles.mapCaption}>
-          핀 숫자는 최근 제보 수예요. 지도에서 현장 글의 위치와 밀도를 함께 확인합니다.
+          손가락으로 지도를 움직이고 확대해 주변 제보와 질문 위치를 확인합니다.
         </Text>
       </View>
     </View>

@@ -107,6 +107,15 @@ export type CompareForecastCell = {
   weather: string;
   detail: string;
   tone: string;
+  morning?: CompareForecastPeriod;
+  afternoon?: CompareForecastPeriod;
+};
+
+export type CompareForecastPeriod = {
+  weather: string;
+  detail: string;
+  mark?: string;
+  tone?: string;
 };
 
 export type CompareServiceSummary = {

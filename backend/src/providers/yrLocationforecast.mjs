@@ -33,7 +33,7 @@ export function createYrForecastModel(payload, context = null) {
     ? payload.properties.timeseries
     : [];
   const targetMs = getTargetTimestampMs(context);
-  const forecastWindow = getForecastWindow(timeseries, getItemTimeMs, targetMs, 8);
+  const forecastWindow = getForecastWindow(timeseries, getItemTimeMs, targetMs, 18);
   const current = pickTargetItem(timeseries, getItemTimeMs, targetMs);
   const currentDetails = current?.data?.instant?.details ?? {};
   const currentSymbol = getSymbolCode(current);
@@ -64,7 +64,7 @@ export function shouldUseYrProvider() {
 }
 
 function createRows(items, mode, targetMs = null) {
-  return items.slice(0, 6).map((item, index) => {
+  return items.slice(0, 18).map((item, index) => {
     const symbol = getSymbolCode(item);
     const details = item?.data?.instant?.details ?? {};
     const precipitation = getPrecipitationAmount(item);
@@ -84,15 +84,55 @@ function createDailyRows(timeseries) {
 
   timeseries.forEach((item) => {
     const date = typeof item?.time === 'string' ? item.time.slice(0, 10) : '';
-    const hour = typeof item?.time === 'string' ? item.time.slice(11, 13) : '';
 
-    if (!date || byDate.has(date)) return;
-    if (hour === '12' || byDate.size === 0) {
-      byDate.set(date, item);
-    }
+    if (!date) return;
+    const rows = byDate.get(date) ?? [];
+    rows.push(item);
+    byDate.set(date, rows);
   });
 
-  return createRows([...byDate.values()].slice(0, 6), 'daily');
+  return [...byDate.entries()].slice(0, 10).map(([date, rows], index) => {
+    const morning = createYrDailyPeriod(pickClosestIsoHour(rows, 9));
+    const afternoon = createYrDailyPeriod(pickClosestIsoHour(rows, 15));
+    const representative = afternoon ?? morning ?? createYrDailyPeriod(rows[0]);
+
+    return {
+      label: index === 0 ? '오늘' : index === 1 ? '내일' : index === 2 ? '모레' : date.slice(5, 10).replace('-', '/'),
+      weather: representative.weather,
+      detail: representative.detail,
+      mark: representative.mark,
+      tone: representative.tone,
+      morning,
+      afternoon,
+    };
+  });
+}
+
+function pickClosestIsoHour(rows, targetHour) {
+  return rows.reduce((best, row) => {
+    const hour = Number(typeof row?.time === 'string' ? row.time.slice(11, 13) : NaN);
+    if (!Number.isFinite(hour)) return best;
+    if (!best) return row;
+
+    const bestHour = Number(typeof best?.time === 'string' ? best.time.slice(11, 13) : NaN);
+
+    return Math.abs(hour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
+  }, null);
+}
+
+function createYrDailyPeriod(item) {
+  if (!item) return null;
+
+  const symbol = getSymbolCode(item);
+  const details = item?.data?.instant?.details ?? {};
+  const precipitation = getPrecipitationAmount(item);
+
+  return {
+    weather: symbolToCondition(symbol),
+    detail: `${formatTemperature(numberOrNull(details.air_temperature))} · ${formatPrecipitation(precipitation)}`,
+    mark: symbolToMark(symbol),
+    tone: symbolToTone(symbol),
+  };
 }
 
 function getItemTimeMs(item) {
@@ -132,8 +172,10 @@ function getPrecipitationAmount(item) {
 function symbolToCondition(symbol) {
   if (symbol.includes('thunder')) return '천둥번개';
   if (symbol.includes('snow') || symbol.includes('sleet')) return '눈';
+  if (symbol.includes('rainshowers')) return '소나기';
   if (symbol.includes('rain')) return '비';
   if (symbol.includes('fog')) return '안개';
+  if (symbol.includes('night') && (symbol.includes('clearsky') || symbol.includes('fair'))) return '맑은 밤';
   if (symbol.includes('clearsky') || symbol.includes('fair')) return '맑음';
   if (symbol.includes('partlycloudy')) return '구름 조금';
 
@@ -143,8 +185,10 @@ function symbolToCondition(symbol) {
 function symbolToMark(symbol) {
   if (symbol.includes('thunder')) return '번개';
   if (symbol.includes('snow') || symbol.includes('sleet')) return '눈';
+  if (symbol.includes('rainshowers')) return '소나기';
   if (symbol.includes('rain')) return '비';
   if (symbol.includes('fog')) return '안개';
+  if (symbol.includes('night') && (symbol.includes('clearsky') || symbol.includes('fair'))) return '밤';
   if (symbol.includes('clearsky') || symbol.includes('fair')) return '맑음';
 
   return '구름';

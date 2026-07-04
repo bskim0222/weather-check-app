@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
@@ -20,6 +20,7 @@ export function QuestionSearchBar({
 }: QuestionSearchBarProps) {
   const [placeCandidates, setPlaceCandidates] = useState<PlaceCandidate[]>([]);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const submitStructuredSearch = async () => {
     const query = value.trim();
@@ -38,12 +39,17 @@ export function QuestionSearchBar({
     }
 
     if (candidates.length > 1) {
-      setPlaceCandidates(candidates.slice(0, 4));
+      setPlaceCandidates(candidates.slice(0, 6));
       return;
     }
 
     setPlaceCandidates([]);
     onSubmit(query);
+  };
+
+  const refineSearch = () => {
+    setPlaceCandidates([]);
+    inputRef.current?.focus();
   };
 
   const submitCandidate = (candidate: PlaceCandidate) => {
@@ -59,6 +65,7 @@ export function QuestionSearchBar({
       <View style={styles.searchBox}>
         <Text style={styles.searchIcon}>⌕</Text>
         <TextInput
+          ref={inputRef}
           editable={!isBusy}
           value={value}
           onChangeText={(nextValue) => {
@@ -102,6 +109,19 @@ export function QuestionSearchBar({
               <Text style={styles.placeCandidateAction}>보기</Text>
             </Pressable>
           ))}
+          <Pressable
+            accessibilityRole="button"
+            onPress={refineSearch}
+            style={styles.placeCandidateRow}
+          >
+            <View style={styles.placeCandidateTextWrap}>
+              <Text style={styles.placeCandidateName}>원하는 장소가 없어요</Text>
+              <Text style={styles.placeCandidateSubtitle}>
+                장소명을 더 자세히 입력해볼게요
+              </Text>
+            </View>
+            <Text style={styles.placeCandidateAction}>수정</Text>
+          </Pressable>
         </View>
       ) : null}
     </View>

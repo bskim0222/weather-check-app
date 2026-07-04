@@ -36,7 +36,7 @@ export function createKmaForecastModel(currentPayload, forecastPayload = current
   const currentByCategory = groupLatestByCategory(currentItems, 'obsrValue');
   const allForecastRows = createForecastRows(forecastItems);
   const targetMs = getTargetTimestampMs(context);
-  const forecastRows = getForecastWindow(allForecastRows, getForecastRowTimeMs, targetMs, 8);
+  const forecastRows = getForecastWindow(allForecastRows, getForecastRowTimeMs, targetMs, 18);
   const targetForecast = pickTargetItem(allForecastRows, getForecastRowTimeMs, targetMs) ?? forecastRows[0];
   const currentValues = {
     pty: currentByCategory.PTY ?? targetForecast?.pty,
@@ -246,17 +246,52 @@ function createDailyRows(hourlyRows) {
   const byDate = new Map();
 
   hourlyRows.forEach((row) => {
-    if (!row.date || byDate.has(row.date)) return;
-    byDate.set(row.date, row);
+    if (!row.date) return;
+    const rows = byDate.get(row.date) ?? [];
+    rows.push(row);
+    byDate.set(row.date, rows);
   });
 
-  return [...byDate.values()].slice(0, 6).map((row, index) => ({
-    label: createDailyLabel(row.date, index),
-    weather: conditionFromKmaValues(row),
+  return [...byDate.entries()].slice(0, 10).map(([date, rows], index) => {
+    const morning = createKmaDailyPeriod(pickClosestKmaHour(rows, 9));
+    const afternoon = createKmaDailyPeriod(pickClosestKmaHour(rows, 15));
+    const representative = afternoon ?? morning ?? createKmaDailyPeriod(rows[0]);
+
+    return {
+      label: createDailyLabel(date, index),
+      weather: representative.weather,
+      detail: representative.detail,
+      mark: representative.mark,
+      tone: representative.tone,
+      morning,
+      afternoon,
+    };
+  });
+}
+
+function pickClosestKmaHour(rows, targetHour) {
+  return rows.reduce((best, row) => {
+    const hour = Number(String(row?.time ?? '').slice(0, 2));
+    if (!Number.isFinite(hour)) return best;
+    if (!best) return row;
+
+    const bestHour = Number(String(best?.time ?? '').slice(0, 2));
+
+    return Math.abs(hour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
+  }, null);
+}
+
+function createKmaDailyPeriod(row) {
+  if (!row) return null;
+
+  const weather = conditionFromKmaValues(row);
+
+  return {
+    weather,
     detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
-    mark: conditionToMark(conditionFromKmaValues(row)),
-    tone: conditionToTone(conditionFromKmaValues(row)),
-  }));
+    mark: conditionToMark(weather),
+    tone: conditionToTone(weather),
+  };
 }
 
 function createDailyLabel(dateValue, index) {
@@ -273,10 +308,13 @@ function conditionFromKmaValues(values) {
   const pty = String(values.pty ?? '0');
   const sky = String(values.sky ?? '');
   const rain = Number(values.rn1 ?? 0);
+  const temperature = Number(values.temperature ?? values.T1H ?? values.TMP);
 
+  if (pty === '4') return '소나기';
   if (['1', '5'].includes(pty) || rain > 0) return '비';
   if (['2', '6'].includes(pty)) return '진눈깨비';
   if (['3', '7'].includes(pty)) return '눈';
+  if (Number.isFinite(temperature) && temperature >= 35) return '폭염';
   if (sky === '1') return '맑음';
   if (sky === '3') return '구름 조금';
 

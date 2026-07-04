@@ -32,7 +32,7 @@ export function createFmiForecastModel(xml, context = null) {
   const series = parseFmiTimeValueSeries(xml);
   const rows = mergeFmiRows(series);
   const targetMs = getTargetTimestampMs(context);
-  const hourlyRows = getForecastWindow(rows, getRowTimeMs, targetMs, 8);
+  const hourlyRows = getForecastWindow(rows, getRowTimeMs, targetMs, 18);
   const current = pickTargetItem(rows, getRowTimeMs, targetMs) ?? {};
   const condition = conditionFromFmiValues(current);
 
@@ -119,29 +119,68 @@ function createDailyRows(rows) {
   rows.forEach((row) => {
     const date = typeof row.time === 'string' ? row.time.slice(0, 10) : '';
 
-    if (!date || byDate.has(date)) return;
-    byDate.set(date, row);
+    if (!date) return;
+    const items = byDate.get(date) ?? [];
+    items.push(row);
+    byDate.set(date, items);
   });
 
-  return [...byDate.values()].slice(0, 6).map((row, index) => {
-    const condition = conditionFromFmiValues(row);
+  return [...byDate.entries()].slice(0, 10).map(([date, rows], index) => {
+    const morning = createFmiDailyPeriod(pickClosestIsoHour(rows, 9));
+    const afternoon = createFmiDailyPeriod(pickClosestIsoHour(rows, 15));
+    const representative = afternoon ?? morning ?? createFmiDailyPeriod(rows[0]);
 
     return {
-      label: index === 0 ? '오늘' : index === 1 ? '내일' : row.time.slice(5, 10).replace('-', '/'),
-      weather: condition,
-      detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
-      mark: conditionToMark(condition),
-      tone: conditionToTone(condition),
+      label: index === 0 ? '오늘' : index === 1 ? '내일' : date.slice(5, 10).replace('-', '/'),
+      weather: representative.weather,
+      detail: representative.detail,
+      mark: representative.mark,
+      tone: representative.tone,
+      morning,
+      afternoon,
     };
   });
+}
+
+function pickClosestIsoHour(rows, targetHour) {
+  return rows.reduce((best, row) => {
+    const hour = Number(typeof row?.time === 'string' ? row.time.slice(11, 13) : NaN);
+    if (!Number.isFinite(hour)) return best;
+    if (!best) return row;
+
+    const bestHour = Number(typeof best?.time === 'string' ? best.time.slice(11, 13) : NaN);
+
+    return Math.abs(hour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
+  }, null);
+}
+
+function createFmiDailyPeriod(row) {
+  if (!row) return null;
+
+  const condition = conditionFromFmiValues(row);
+
+  return {
+    weather: condition,
+    detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
+    mark: conditionToMark(condition),
+    tone: conditionToTone(condition),
+  };
 }
 
 function conditionFromFmiValues(values) {
   const weatherSymbol = Number(values.WeatherSymbol3);
   const precipitation = Number(values.Precipitation1h ?? 0);
   const cloudCover = Number(values.TotalCloudCover ?? 100);
+  const temperature = Number(values.Temperature);
 
-  if ([51, 52, 53, 61, 62, 63, 64, 65, 80, 81, 82].includes(weatherSymbol) || precipitation > 0.1) {
+  if ([95, 96, 99].includes(weatherSymbol)) return '천둥번개';
+  if ([45, 48].includes(weatherSymbol)) return '안개';
+
+  if ([80, 81, 82].includes(weatherSymbol)) {
+    return '소나기';
+  }
+
+  if ([51, 52, 53, 61, 62, 63, 64, 65].includes(weatherSymbol) || precipitation > 0.1) {
     return '비';
   }
 
@@ -149,6 +188,7 @@ function conditionFromFmiValues(values) {
     return '눈';
   }
 
+  if (Number.isFinite(temperature) && temperature >= 35) return '폭염';
   if ([21, 22].includes(weatherSymbol) || cloudCover < 25) return '맑음';
   if (cloudCover < 70) return '구름 조금';
 

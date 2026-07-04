@@ -71,7 +71,7 @@ export function ForecastComparePanel({
             contentContainerStyle={styles.compareTableScrollContent}
           >
             {rows.map((row) => (
-              <CompareForecastColumn key={row.label} row={row} />
+              <CompareForecastColumn key={row.label} row={row} mode={mode} />
             ))}
           </ScrollView>
         </View>
@@ -91,20 +91,31 @@ function CompareServiceLabel({ service }: { service: CompareServiceSummary }) {
   );
 }
 
-function CompareForecastColumn({ row }: { row: CompareRow }) {
+function CompareForecastColumn({ row, mode }: { row: CompareRow; mode: CompareMode }) {
   return (
-    <View style={styles.compareForecastColumn}>
+    <View style={[styles.compareForecastColumn, mode === 'daily' && styles.compareForecastColumnDaily]}>
       <View style={styles.compareForecastColumnHead}>
         <Text style={styles.compareForecastColumnLabel}>{row.label}</Text>
       </View>
-      <CompareForecastCellView cell={row.kma} />
-      <CompareForecastCellView cell={row.yr} />
-      <CompareForecastCellView cell={row.windy} />
+      <CompareForecastCellView cell={row.kma} mode={mode} />
+      <CompareForecastCellView cell={row.yr} mode={mode} />
+      <CompareForecastCellView cell={row.windy} mode={mode} />
     </View>
   );
 }
 
-function CompareForecastCellView({ cell }: { cell: CompareForecastCell }) {
+function CompareForecastCellView({ cell, mode }: { cell: CompareForecastCell; mode: CompareMode }) {
+  if (mode === 'daily') {
+    return (
+      <View style={[styles.compareForecastCell, styles.compareForecastCellDaily]}>
+        <View style={styles.compareDailyPeriods}>
+          <CompareDailyPeriod label="오전" period={cell.morning ?? cell} />
+          <CompareDailyPeriod label="오후" period={cell.afternoon ?? cell} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.compareForecastCell}>
       <View style={styles.compareForecastIconFrame}>
@@ -116,6 +127,30 @@ function CompareForecastCellView({ cell }: { cell: CompareForecastCell }) {
       </View>
     </View>
   );
+}
+
+function CompareDailyPeriod({
+  label,
+  period,
+}: {
+  label: string;
+  period: Pick<CompareForecastCell, 'weather' | 'detail'>;
+}) {
+  return (
+    <View style={styles.compareDailyPeriod}>
+      <Text style={styles.compareDailyPeriodLabel}>{label}</Text>
+      <WeatherMiniIcon condition={period.weather} />
+      <Text style={styles.compareDailyPeriodDetail}>{formatDailyPeriodDetail(period.detail)}</Text>
+    </View>
+  );
+}
+
+function formatDailyPeriodDetail(detail: string) {
+  const parts = detail.split('·').map((part) => part.trim()).filter(Boolean);
+  const temp = parts.find((part) => /-?\d+\s*℃/.test(part)) ?? parts[0] ?? '';
+  const precipitation = parts.find((part) => /mm|%/.test(part) && part !== temp);
+
+  return precipitation ? `${temp}\n${precipitation}` : temp;
 }
 
 function WeatherMiniIcon({ condition }: { condition: string }) {

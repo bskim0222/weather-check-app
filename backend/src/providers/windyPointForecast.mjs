@@ -33,7 +33,7 @@ export async function fetchWindyPointForecast(context) {
 
 export function createWindyForecastModel(payload) {
   const timestamps = Array.isArray(payload?.ts) ? payload.ts : [];
-  const rows = timestamps.slice(0, 8).map((timestamp, index) => {
+  const rows = timestamps.slice(0, 18).map((timestamp, index) => {
     const values = getWindyValues(payload, index);
     const condition = conditionFromWindyValues(values);
 
@@ -109,12 +109,17 @@ function getWindyValues(payload, index) {
 }
 
 function conditionFromWindyValues(values) {
+  const celsius = Number(values.temp) - 273.15;
+
+  if (Number(values.wind) >= 25) return '태풍';
   if (values.ptype === 5) return '눈';
   if (values.ptype === 7) return '진눈깨비';
+  if ((values.precip ?? 0) > 8) return '소나기';
   if (values.ptype === 1 || values.ptype === 3 || (values.precip ?? 0) > 0.1) return '비';
 
   const cloudCover = Math.max(values.lclouds ?? 0, values.mclouds ?? 0, values.hclouds ?? 0);
 
+  if (Number.isFinite(celsius) && celsius >= 35) return '폭염';
   if (cloudCover < 20) return '맑음';
   if (cloudCover < 60) return '구름 조금';
 
@@ -129,15 +134,46 @@ function createDailyRows(rows) {
       ? new Date(row.timestamp).toISOString().slice(0, 10)
       : row.label;
 
-    if (!byDate.has(date)) {
-      byDate.set(date, row);
-    }
+    const items = byDate.get(date) ?? [];
+    items.push(row);
+    byDate.set(date, items);
   });
 
-  return [...byDate.values()].slice(0, 6).map((row, index) => ({
-    ...stripInternalRowFields(row),
-    label: index === 0 ? '오늘' : index === 1 ? '내일' : row.label,
-  }));
+  return [...byDate.entries()].slice(0, 10).map(([date, rows], index) => {
+    const morning = createWindyDailyPeriod(pickClosestWindyHour(rows, 9));
+    const afternoon = createWindyDailyPeriod(pickClosestWindyHour(rows, 15));
+    const representative = afternoon ?? morning ?? createWindyDailyPeriod(rows[0]);
+
+    return {
+      label: index === 0 ? '오늘' : index === 1 ? '내일' : String(date).slice(5).replace('-', '/'),
+      weather: representative.weather,
+      detail: representative.detail,
+      mark: representative.mark,
+      tone: representative.tone,
+      morning,
+      afternoon,
+    };
+  });
+}
+
+function pickClosestWindyHour(rows, targetHour) {
+  return rows.reduce((best, row) => {
+    const hour = Number.isFinite(row?.timestamp) ? new Date(row.timestamp).getUTCHours() + 9 : NaN;
+    const normalizedHour = Number.isFinite(hour) ? hour % 24 : NaN;
+    if (!Number.isFinite(normalizedHour)) return best;
+    if (!best) return row;
+
+    const bestHourRaw = Number.isFinite(best?.timestamp) ? new Date(best.timestamp).getUTCHours() + 9 : NaN;
+    const bestHour = Number.isFinite(bestHourRaw) ? bestHourRaw % 24 : NaN;
+
+    return Math.abs(normalizedHour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
+  }, null);
+}
+
+function createWindyDailyPeriod(row) {
+  if (!row) return null;
+
+  return stripInternalRowFields(row);
 }
 
 function stripInternalRowFields(row) {

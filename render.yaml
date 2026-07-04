@@ -32,5 +32,7 @@ services:
         value: WeatherCheck/0.1 weathercheck.official@gmail.com
       - key: KMA_SERVICE_KEY
         sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false
       - key: NODE_VERSION
         value: 24

@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { readDatabase, writeDatabase } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
-import { geocodePlace, reverseGeocodePoint } from './geocoding.mjs';
+import { geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
 
@@ -61,6 +61,18 @@ async function routeRequest(request, response) {
       ok: Boolean(result?.location),
       query,
       ...result,
+    });
+    return;
+  }
+
+  if (url.pathname === '/places/search') {
+    const query = textOr(payload.query, '');
+    const candidates = await geocodePlaceCandidates(query, textOr(payload.raw, ''), 6);
+
+    sendJson(response, 200, {
+      ok: candidates.length > 0,
+      query,
+      candidates,
     });
     return;
   }
@@ -289,6 +301,13 @@ function createProviderStatus() {
     providerMode: mode,
     recommendedMode: 'kma,yr,fmi',
     providers: [
+      {
+        providerId: 'kakao-local',
+        name: '카카오 로컬',
+        enabled: hasEnvValue('KAKAO_REST_API_KEY'),
+        configured: hasEnvValue('KAKAO_REST_API_KEY'),
+        requiresKey: true,
+      },
       {
         providerId: 'kma',
         name: '대한민국 기상청',

@@ -1,3 +1,6 @@
+const kakaoKeywordEndpoint = 'https://dapi.kakao.com/v2/local/search/keyword.json';
+const kakaoAddressEndpoint = 'https://dapi.kakao.com/v2/local/search/address.json';
+const kakaoReverseEndpoint = 'https://dapi.kakao.com/v2/local/geo/coord2address.json';
 const nominatimEndpoint = 'https://nominatim.openstreetmap.org/search';
 const nominatimReverseEndpoint = 'https://nominatim.openstreetmap.org/reverse';
 const defaultUserAgent = 'WeatherCheck/0.1 weathercheck.official@gmail.com';
@@ -19,20 +22,28 @@ const aliases = [
 ];
 
 export async function geocodePlace(query, raw = '') {
+  const candidates = await geocodePlaceCandidates(query, raw, 1);
+
+  return candidates[0] ?? null;
+}
+
+export async function geocodePlaceCandidates(query, raw = '', limit = 6) {
   const cleanQuery = cleanPlaceQuery(query);
 
-  if (!cleanQuery) return null;
+  if (!cleanQuery) return [];
 
-  const alias = findAlias(cleanQuery);
-  if (alias) return alias;
-
-  const cacheKey = normalizeQuery(cleanQuery);
+  const cacheKey = `candidates:${normalizeQuery(cleanQuery)}:${limit}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-  const result = await fetchNominatim(cleanQuery, raw);
-  cache.set(cacheKey, result);
+  const aliasCandidates = findAliasCandidates(cleanQuery);
+  const kakaoCandidates = await fetchKakaoCandidates(cleanQuery);
+  const needsFallback = kakaoCandidates.length === 0;
+  const nominatimCandidates = needsFallback ? await fetchNominatimCandidates(cleanQuery, raw) : [];
+  const candidates = dedupeCandidates([...aliasCandidates, ...kakaoCandidates, ...nominatimCandidates]).slice(0, limit);
 
-  return result;
+  cache.set(cacheKey, candidates);
+
+  return candidates;
 }
 
 export async function reverseGeocodePoint(latitude, longitude) {
@@ -44,7 +55,7 @@ export async function reverseGeocodePoint(latitude, longitude) {
   const cacheKey = `reverse:${lat.toFixed(5)},${lon.toFixed(5)}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-  const result = await fetchNominatimReverse(lat, lon);
+  const result = await fetchKakaoReverse(lat, lon) ?? await fetchNominatimReverse(lat, lon);
   cache.set(cacheKey, result);
 
   return result;
@@ -57,6 +68,7 @@ function createAlias(id, names, label, latitude, longitude, radiusMeters) {
     result: {
       source: 'alias',
       displayName: label,
+      subtitle: '자주 쓰는 장소',
       location: {
         id,
         label,
@@ -69,19 +81,131 @@ function createAlias(id, names, label, latitude, longitude, radiusMeters) {
   };
 }
 
-function findAlias(query) {
+function findAliasCandidates(query) {
   const normalized = normalizeQuery(query);
-  const found = aliases.find((item) => item.names.some((name) => normalizeQuery(name) === normalized));
 
-  return found?.result ?? null;
+  return aliases
+    .filter((item) =>
+      item.names.some((name) => {
+        const aliasName = normalizeQuery(name);
+
+        return aliasName.includes(normalized) || normalized.includes(aliasName);
+      }),
+    )
+    .map((item) => item.result);
 }
 
-async function fetchNominatim(query, raw) {
+async function fetchKakaoCandidates(query) {
+  const keywordRows = await fetchKakaoRows(kakaoKeywordEndpoint, {
+    query,
+    size: '8',
+    sort: 'accuracy',
+  });
+  const addressRows = await fetchKakaoRows(kakaoAddressEndpoint, {
+    query,
+    size: '5',
+    analyze_type: 'similar',
+  });
+
+  return [
+    ...keywordRows.map(createKakaoKeywordCandidate),
+    ...addressRows.map(createKakaoAddressCandidate),
+  ].filter(Boolean);
+}
+
+async function fetchKakaoRows(endpoint, params) {
+  const restApiKey = getKakaoRestApiKey();
+
+  if (!restApiKey) return [];
+
+  const url = new URL(endpoint);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `KakaoAK ${restApiKey}`,
+    },
+  });
+
+  if (!response.ok) return [];
+
+  const payload = await response.json();
+
+  return Array.isArray(payload?.documents) ? payload.documents : [];
+}
+
+function createKakaoKeywordCandidate(row) {
+  const latitude = Number(row?.y);
+  const longitude = Number(row?.x);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const label = compactRegionName(row.place_name);
+  const subtitle = compactRegionName(row.road_address_name || row.address_name || row.category_name);
+  const radiusMeters = getKakaoRadiusMeters(row.category_group_code, row.category_name);
+
+  return {
+    source: 'kakao',
+    displayName: row.place_name,
+    subtitle,
+    location: {
+      id: `kakao-${row.id || normalizeQuery(`${label}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`)}`,
+      label,
+      kind: 'custom',
+      latitude,
+      longitude,
+      radiusMeters,
+    },
+  };
+}
+
+function createKakaoAddressCandidate(row) {
+  const latitude = Number(row?.y);
+  const longitude = Number(row?.x);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const address = row.road_address ?? row.address ?? {};
+  const label = createKakaoAddressLabel(row);
+  const subtitle = compactRegionName(row.road_address?.address_name || row.address?.address_name || row.address_name);
+
+  return {
+    source: 'kakao',
+    displayName: row.address_name,
+    subtitle,
+    location: {
+      id: `kakao-address-${normalizeQuery(`${row.address_name}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`).replace(/[^a-z0-9가-힣]+/gi, '-')}`,
+      label,
+      kind: 'custom',
+      latitude,
+      longitude,
+      radiusMeters: address.main_building_no ? 700 : 1400,
+    },
+  };
+}
+
+function createKakaoAddressLabel(row) {
+  const roadAddress = row.road_address;
+  if (roadAddress?.building_name) return compactRegionName(roadAddress.building_name);
+
+  const address = row.address ?? {};
+  const parts = [
+    address.region_1depth_name,
+    address.region_2depth_name,
+    address.region_3depth_name,
+  ].map(compactRegionName).filter(Boolean);
+
+  return parts.length > 0 ? unique(parts).join(' ') : compactRegionName(row.address_name) || '검색한 장소';
+}
+
+async function fetchNominatimCandidates(query, raw) {
   const url = new URL(nominatimEndpoint);
   url.searchParams.set('format', 'jsonv2');
-  url.searchParams.set('limit', '1');
+  url.searchParams.set('limit', '6');
   url.searchParams.set('countrycodes', 'kr');
   url.searchParams.set('accept-language', 'ko');
+  url.searchParams.set('addressdetails', '1');
   url.searchParams.set('q', createNominatimQuery(query, raw));
 
   const response = await fetch(url, {
@@ -91,29 +215,92 @@ async function fetchNominatim(query, raw) {
     },
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) return [];
 
   const rows = await response.json();
-  const first = Array.isArray(rows) ? rows[0] : null;
-  const latitude = Number(first?.lat);
-  const longitude = Number(first?.lon);
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map((row) => createNominatimCandidate(query, row)).filter(Boolean);
+}
+
+function createNominatimCandidate(query, row) {
+  const latitude = Number(row?.lat);
+  const longitude = Number(row?.lon);
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
-  const label = createLocationLabel(query, first.display_name);
+  const label = createNominatimCandidateLabel(query, row);
+  const subtitle = createNominatimCandidateSubtitle(row);
 
   return {
     source: 'nominatim',
-    displayName: first.display_name,
+    displayName: row.display_name,
+    subtitle,
     location: {
-      id: `geocoded-${normalizeQuery(label).replace(/[^a-z0-9가-힣]+/gi, '-')}`,
+      id: `geocoded-${normalizeQuery(`${label}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`).replace(/[^a-z0-9가-힣]+/gi, '-')}`,
       label,
       kind: 'custom',
       latitude,
       longitude,
-      radiusMeters: getRadiusMeters(first),
+      radiusMeters: getNominatimRadiusMeters(row),
     },
   };
+}
+
+async function fetchKakaoReverse(latitude, longitude) {
+  const restApiKey = getKakaoRestApiKey();
+
+  if (!restApiKey) return null;
+
+  const url = new URL(kakaoReverseEndpoint);
+  url.searchParams.set('x', String(longitude));
+  url.searchParams.set('y', String(latitude));
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `KakaoAK ${restApiKey}`,
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const payload = await response.json();
+  const row = Array.isArray(payload?.documents) ? payload.documents[0] : null;
+  const address = row?.road_address ?? row?.address ?? {};
+  const label = createKakaoReverseLabel(row);
+
+  if (!label) return null;
+
+  return {
+    source: 'kakao',
+    displayName: address.address_name,
+    location: {
+      id: `reverse-kakao-${normalizeQuery(label).replace(/[^a-z0-9가-힣]+/gi, '-')}`,
+      label,
+      kind: 'custom',
+      latitude,
+      longitude,
+      radiusMeters: 1200,
+    },
+  };
+}
+
+function createKakaoReverseLabel(row) {
+  const roadAddress = row?.road_address;
+  const address = row?.address ?? {};
+
+  if (roadAddress?.building_name) {
+    return compactRegionName(roadAddress.building_name);
+  }
+
+  const parts = [
+    address.region_1depth_name,
+    address.region_2depth_name,
+    address.region_3depth_name,
+  ].map(compactRegionName).filter(Boolean);
+
+  return unique(parts).join(' ');
 }
 
 async function fetchNominatimReverse(latitude, longitude) {
@@ -135,7 +322,7 @@ async function fetchNominatimReverse(latitude, longitude) {
 
   const row = await response.json();
   const address = row?.address ?? {};
-  const label = createReverseLocationLabel(address, row?.display_name);
+  const label = createNominatimReverseLabel(address, row?.display_name);
 
   if (!label) return null;
 
@@ -161,14 +348,33 @@ function createNominatimQuery(query, raw) {
   return query || raw;
 }
 
-function createLocationLabel(query, displayName = '') {
-  const clean = cleanPlaceQuery(query);
-  if (clean) return clean;
+function createNominatimCandidateLabel(query, row) {
+  const address = row?.address ?? {};
+  const name = compactRegionName(row?.name);
+  const road = compactRegionName(address.road);
+  const neighbourhood = compactRegionName(address.neighbourhood || address.suburb || address.quarter || address.village);
+  const district = compactRegionName(address.borough || address.county || address.city_district);
+  const city = compactRegionName(address.city || address.province || address.state);
+  const fallback = cleanPlaceQuery(query) || String(row?.display_name ?? '').split(',')[0]?.trim();
 
-  return String(displayName).split(',')[0]?.trim() || '검색한 장소';
+  return name || neighbourhood || road || district || city || fallback || '검색한 장소';
 }
 
-function createReverseLocationLabel(address, displayName = '') {
+function createNominatimCandidateSubtitle(row) {
+  const address = row?.address ?? {};
+  const parts = [
+    address.city || address.province || address.state,
+    address.borough || address.county || address.city_district,
+    address.neighbourhood || address.suburb || address.quarter || address.village,
+    address.road,
+  ].map(compactRegionName).filter(Boolean);
+
+  if (parts.length > 0) return unique(parts).join(' ');
+
+  return String(row?.display_name ?? '').split(',').slice(1, 4).map(compactRegionName).filter(Boolean).join(' ');
+}
+
+function createNominatimReverseLabel(address, displayName = '') {
   const city = compactRegionName(address.city || address.province || address.state);
   const district = compactRegionName(address.borough || address.county || address.city_district);
   const neighborhood = compactRegionName(
@@ -187,7 +393,33 @@ function createReverseLocationLabel(address, displayName = '') {
   return String(displayName).split(',').slice(0, 3).map(compactRegionName).filter(Boolean).join(' ');
 }
 
-function getRadiusMeters(row) {
+function dedupeCandidates(candidates) {
+  const seen = new Set();
+
+  return candidates.filter((candidate) => {
+    if (!candidate?.location) return false;
+
+    const key = normalizeQuery(
+      `${candidate.location.label}:${Number(candidate.location.latitude).toFixed(4)}:${Number(candidate.location.longitude).toFixed(4)}`,
+    );
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+
+    return true;
+  });
+}
+
+function getKakaoRadiusMeters(categoryGroupCode, categoryName = '') {
+  if (categoryGroupCode === 'SW8') return 700;
+  if (categoryGroupCode === 'AT4') return 1200;
+  if (categoryGroupCode === 'CT1') return 900;
+  if (String(categoryName).includes('골프')) return 1500;
+
+  return 1000;
+}
+
+function getNominatimRadiusMeters(row) {
   if (row?.type === 'golf_course') return 1200;
   if (row?.type === 'station' || row?.type === 'subway') return 700;
 
@@ -222,4 +454,8 @@ function compactRegionName(value) {
 
 function unique(values) {
   return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function getKakaoRestApiKey() {
+  return typeof process.env.KAKAO_REST_API_KEY === 'string' ? process.env.KAKAO_REST_API_KEY.trim() : '';
 }

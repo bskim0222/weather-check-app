@@ -6,7 +6,7 @@ export type GeocodeLocationResponse = {
   ok: boolean;
   query: string;
   location?: LocationReference;
-  source?: 'alias' | 'nominatim';
+  source?: 'alias' | 'kakao' | 'nominatim';
   displayName?: string;
 };
 
@@ -14,6 +14,34 @@ export type ReverseGeocodeLocationResponse = GeocodeLocationResponse & {
   latitude?: number;
   longitude?: number;
 };
+
+export type PlaceCandidate = {
+  source?: 'alias' | 'kakao' | 'nominatim';
+  displayName?: string;
+  subtitle?: string;
+  location: LocationReference;
+};
+
+export type PlaceSearchResponse = {
+  ok: boolean;
+  query: string;
+  candidates: PlaceCandidate[];
+};
+
+export async function searchRemotePlaces(query: string, raw?: string) {
+  const clean = query.trim();
+
+  if (!isApiModeEnabled() || !clean) return [];
+
+  const response = await writeApiJson<PlaceSearchResponse, { query: string; raw?: string }>(
+    '/places/search',
+    { query: clean, raw },
+  );
+
+  if (!response.ok || !Array.isArray(response.data?.candidates)) return [];
+
+  return response.data.candidates;
+}
 
 export async function resolveRemoteLocation(searchContext: SearchContext) {
   const query = searchContext.locationQuery?.trim();

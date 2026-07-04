@@ -33,7 +33,7 @@ import {
   type WeatherProviderSnapshot,
 } from '../services/weatherProviders';
 import type { DataStatus, LocationStatus, PersistedAppSnapshot } from '../types/appState';
-import type { ForecastProviderId, LocalReport, ReportRequest, SearchContext, TabKey, WeatherKey } from '../types/weather';
+import type { ForecastProviderId, LocalReport, LocationReference, ReportRequest, SearchContext, TabKey, WeatherKey } from '../types/weather';
 
 const mockStatus: DataStatus = {
   phase: 'mock',
@@ -224,11 +224,13 @@ export function useWeatherAppState() {
     moderateRemoteFieldReport(reportId, 'User reported this field weather post.');
   };
 
-  const runQuestion = (question: string) => {
+  const runQuestion = (question: string, resolvedLocation?: LocationReference) => {
     const clean = question.trim();
     if (!clean) return;
 
-    const nextJudgement = createQuestionJudgement(clean);
+    const nextJudgement = resolvedLocation
+      ? applyResolvedLocationToJudgement(createQuestionJudgement(clean), resolvedLocation)
+      : createQuestionJudgement(clean);
     if (nextJudgement.searchContext.target.kind === 'pending-place' && !nextJudgement.searchContext.locationQuery) {
       setActiveTab('decision');
       setRefreshLabel('장소 필요');
@@ -261,8 +263,8 @@ export function useWeatherAppState() {
     resolveQuestionLocation(nextJudgement);
   };
 
-  const submitQuestion = (query?: string) => {
-    runQuestion(query ?? questionText);
+  const submitQuestion = (query?: string, resolvedLocation?: LocationReference) => {
+    runQuestion(query ?? questionText, resolvedLocation);
   };
 
   const refreshLocationStatus = async () => {
@@ -438,6 +440,27 @@ export function useWeatherAppState() {
     weatherKey,
     addLocalReport,
   };
+}
+
+function applyResolvedLocationToJudgement(
+  judgement: ReturnType<typeof createQuestionJudgement>,
+  resolvedLocation: LocationReference,
+) {
+  const resolvedSearchContext: SearchContext = {
+    ...judgement.searchContext,
+    place: resolvedLocation.label,
+    target: resolvedLocation,
+    locationQuery: resolvedLocation.label,
+    interpretationNote: `${resolvedLocation.label}의 ${judgement.searchContext.timeLabel} 날씨를 ${judgement.searchContext.detectedWeather} 기준으로 봤어요.`,
+    needsClarification: !hasWeatherIntent(judgement.searchContext),
+  };
+
+  return restoreJudgement(
+    judgement.weatherKey,
+    resolvedSearchContext,
+    judgement.source,
+    judgement.createdAt,
+  );
 }
 
 function hasWeatherIntent(searchContext: SearchContext) {

@@ -54,6 +54,11 @@ try {
   expectEqual(geocodedAlias.location.label, '홍대앞', 'geocode alias label');
   expectTruthy(Number.isFinite(geocodedAlias.location.latitude), 'geocode alias latitude');
 
+  const placeCandidates = await postJson('/places/search', { query: '홍대앞' });
+  expectEqual(placeCandidates.ok, true, 'place search ok');
+  expectTruthy(placeCandidates.candidates.length > 0, 'place search candidates');
+  expectEqual(placeCandidates.candidates[0].location.label, '홍대앞', 'place search first label');
+
   const geocodedGolf = await postJson('/geocode', { query: '용인CC' });
   expectEqual(geocodedGolf.ok, true, 'geocode golf ok');
   expectEqual(geocodedGolf.location.label, '용인CC', 'geocode golf label');

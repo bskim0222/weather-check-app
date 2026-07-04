@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
+import type { LocationReference } from '../types/weather';
 
 type QuestionSearchBarProps = {
   isBusy?: boolean;
   value: string;
   onChangeText: (value: string) => void;
-  onSubmit: (query?: string) => void;
+  onSubmit: (query?: string, location?: LocationReference) => void;
 };
 
 const timeOptions = ['지금', '오늘 밤', '내일 오전', '내일 오후'];
@@ -19,12 +21,41 @@ export function QuestionSearchBar({
   onSubmit,
 }: QuestionSearchBarProps) {
   const [selectedTime, setSelectedTime] = useState(timeOptions[0]);
-  const submitStructuredSearch = () => {
+  const [placeCandidates, setPlaceCandidates] = useState<PlaceCandidate[]>([]);
+  const [isSearchingPlace, setIsSearchingPlace] = useState(false);
+
+  const submitStructuredSearch = async () => {
     const place = value.trim();
 
     if (!place) return;
 
-    onSubmit(`${place} ${selectedTime} 날씨`);
+    const query = `${place} ${selectedTime} 날씨`;
+
+    setIsSearchingPlace(true);
+    const candidates = await searchRemotePlaces(place, query);
+    setIsSearchingPlace(false);
+
+    if (candidates.length === 1) {
+      setPlaceCandidates([]);
+      onSubmit(query, candidates[0].location);
+      return;
+    }
+
+    if (candidates.length > 1) {
+      setPlaceCandidates(candidates.slice(0, 4));
+      return;
+    }
+
+    setPlaceCandidates([]);
+    onSubmit(query);
+  };
+
+  const submitCandidate = (candidate: PlaceCandidate) => {
+    const query = `${candidate.location.label} ${selectedTime} 날씨`;
+
+    setPlaceCandidates([]);
+    onChangeText(candidate.location.label);
+    onSubmit(query, candidate.location);
   };
 
   return (
@@ -34,7 +65,10 @@ export function QuestionSearchBar({
         <TextInput
           editable={!isBusy}
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={(nextValue) => {
+            setPlaceCandidates([]);
+            onChangeText(nextValue);
+          }}
           onSubmitEditing={submitStructuredSearch}
           selectTextOnFocus
           placeholder="장소를 입력하세요. 예: 광화문"
@@ -45,13 +79,35 @@ export function QuestionSearchBar({
         <Pressable
           accessibilityLabel="질문 검색"
           accessibilityRole="button"
-          disabled={isBusy}
+          disabled={isBusy || isSearchingPlace}
           onPress={submitStructuredSearch}
-          style={[styles.searchSubmit, isBusy && styles.searchSubmitDisabled]}
+          style={[styles.searchSubmit, (isBusy || isSearchingPlace) && styles.searchSubmitDisabled]}
         >
-          <Text style={styles.searchSubmitText}>{isBusy ? '…' : '↗'}</Text>
+          <Text style={styles.searchSubmitText}>{isBusy || isSearchingPlace ? '…' : '↗'}</Text>
         </Pressable>
       </View>
+
+      {placeCandidates.length > 0 ? (
+        <View style={styles.placeCandidatePanel}>
+          <Text style={styles.placeCandidateTitle}>어느 장소로 볼까요?</Text>
+          {placeCandidates.map((candidate) => (
+            <Pressable
+              key={`${candidate.location.id}-${candidate.location.latitude}-${candidate.location.longitude}`}
+              accessibilityRole="button"
+              onPress={() => submitCandidate(candidate)}
+              style={styles.placeCandidateRow}
+            >
+              <View style={styles.placeCandidateTextWrap}>
+                <Text style={styles.placeCandidateName}>{candidate.location.label}</Text>
+                {candidate.subtitle ? (
+                  <Text style={styles.placeCandidateSubtitle}>{candidate.subtitle}</Text>
+                ) : null}
+              </View>
+              <Text style={styles.placeCandidateAction}>보기</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       <ScrollView
         horizontal

@@ -14,7 +14,7 @@ const rainSources: ForecastSource[] = [
   {
     providerId: 'kma',
     iconUri: 'https://www.kma.go.kr/favicon.ico',
-    name: '기상청',
+    name: '대한민국 기상청',
     mark: 'K',
     condition: '약한 비',
     temp: '23도',
@@ -25,7 +25,7 @@ const rainSources: ForecastSource[] = [
   {
     providerId: 'yr',
     iconUri: 'https://www.yr.no/favicon.ico',
-    name: 'Yr.no',
+    name: '노르웨이 기상청',
     mark: 'Yr',
     condition: '흐림',
     temp: '22도',
@@ -35,7 +35,7 @@ const rainSources: ForecastSource[] = [
   },
   {
     providerId: 'fmi',
-    name: 'FMI ECMWF',
+    name: '핀란드 기상청',
     mark: 'FMI',
     condition: '비구름 접근',
     temp: '23도',
@@ -49,7 +49,7 @@ const calmSources: ForecastSource[] = [
   {
     providerId: 'kma',
     iconUri: 'https://www.kma.go.kr/favicon.ico',
-    name: '기상청',
+    name: '대한민국 기상청',
     mark: 'K',
     condition: '구름 조금',
     temp: '28도',
@@ -60,7 +60,7 @@ const calmSources: ForecastSource[] = [
   {
     providerId: 'yr',
     iconUri: 'https://www.yr.no/favicon.ico',
-    name: 'Yr.no',
+    name: '노르웨이 기상청',
     mark: 'Yr',
     condition: '맑음',
     temp: '27도',
@@ -70,7 +70,7 @@ const calmSources: ForecastSource[] = [
   },
   {
     providerId: 'fmi',
-    name: 'FMI ECMWF',
+    name: '핀란드 기상청',
     mark: 'FMI',
     condition: '비구름 없음',
     temp: '28도',
@@ -134,8 +134,8 @@ export const weatherPresets: Record<WeatherKey, WeatherPreset> = {
     temp: 23,
     level: '확실',
     live: '비 제보 18개',
-    signal: '기상청과 FMI ECMWF 비',
-    summary: '기상청과 FMI ECMWF가 비 신호를 보고 있고, 현장 제보도 비 쪽으로 모이고 있어요.',
+    signal: '대한민국 기상청과 핀란드 기상청 비',
+    summary: '대한민국 기상청과 핀란드 기상청이 비 신호를 보고 있고, 현장 제보도 비 쪽으로 모이고 있어요.',
     glyph: '비',
     bg: '#64b7e3',
     accent: '#06496f',
@@ -227,9 +227,9 @@ export const weatherPresets: Record<WeatherKey, WeatherPreset> = {
 
 export const tabs: { key: TabKey; label: string }[] = [
   { key: 'decision', label: '판정' },
-  { key: 'map', label: '지도' },
-  { key: 'report', label: '제보' },
   { key: 'compare', label: '비교' },
+  { key: 'report', label: '제보' },
+  { key: 'map', label: '지도' },
 ];
 
 export const initialReports: LocalReport[] = [
@@ -253,7 +253,7 @@ export const forecastSources = weatherPresets.rain.sources;
 
 export const compareServiceSummaries: CompareServiceSummary[] = [
   {
-    name: '기상청',
+    name: '대한민국 기상청',
     mark: 'K',
     subtitle: 'KMA',
     summary: '흐림, 강수확률은 낮게 봐요',
@@ -262,7 +262,7 @@ export const compareServiceSummaries: CompareServiceSummary[] = [
     color: '#e6465f',
   },
   {
-    name: 'Yr.no',
+    name: '노르웨이 기상청',
     mark: 'Yr',
     subtitle: 'Norway',
     summary: '강수량은 거의 없다고 봐요',
@@ -271,7 +271,7 @@ export const compareServiceSummaries: CompareServiceSummary[] = [
     color: '#65a6ff',
   },
   {
-    name: 'FMI ECMWF',
+    name: '핀란드 기상청',
     mark: 'FMI',
     subtitle: 'ECMWF',
     summary: 'ECMWF 기준 강수량은 약하게 봐요',
@@ -385,21 +385,21 @@ export const dailyCompareRows: CompareRow[] = [
 
 export const compareDifferences: CompareDifference[] = [
   {
-    name: '기상청',
+    name: '대한민국 기상청',
     mark: 'K',
     body: '강수확률은 18시에 가장 높지만 현재 강수는 낮게 봐요.',
     badge: '확률 중심',
     color: '#e6465f',
   },
   {
-    name: 'Yr.no',
+    name: '노르웨이 기상청',
     mark: 'Yr',
     body: '강수량 자체는 작게 잡아 짧은 약한 비 가능성에 가까워요.',
     badge: '강수량 중심',
     color: '#65a6ff',
   },
   {
-    name: 'FMI ECMWF',
+    name: '핀란드 기상청',
     mark: 'FMI',
     body: 'ECMWF 기반 지점 예보로 같은 위치의 기온, 강수량, 구름량을 비교해요.',
     badge: 'ECMWF 예보',

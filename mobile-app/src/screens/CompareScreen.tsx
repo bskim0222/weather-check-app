@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { CompareDifferenceSection } from '../components/CompareDifferenceSection';
-import { CompareOverview } from '../components/CompareOverview';
 import { ForecastComparePanel } from '../components/ForecastComparePanel';
 import { getCompareFocusText, type CompareMode } from '../domain/compare';
 import { styles } from '../styles/appStyles';
@@ -28,7 +27,6 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
 
   return (
     <View>
-      <CompareOverview searchContext={searchContext} summaries={providerSnapshot.summaries} />
       <ForecastComparePanel
         caption={compareCaption}
         mode={mode}
@@ -62,7 +60,6 @@ function createAttributionText(summaries: CompareServiceSummary[]) {
   if (names.includes('대한민국 기상청')) parts.push('기상청 단기예보');
   if (names.includes('노르웨이 기상청')) parts.push('MET Norway / Yr');
   if (names.includes('핀란드 기상청')) parts.push('FMI Open Data, CC BY 4.0');
-  if (names.includes('Windy.com')) parts.push('Windy.com');
 
   return parts.length > 0
     ? `${parts.join(' · ')} 기준으로 비교합니다.`
@@ -73,6 +70,7 @@ function normalizeServiceName(name: string) {
   if (name === '기상청') return '대한민국 기상청';
   if (name === 'Yr.no') return '노르웨이 기상청';
   if (name === 'FMI ECMWF') return '핀란드 기상청';
+  if (name.toLowerCase().includes('windy')) return '핀란드 기상청';
 
   return name;
 }

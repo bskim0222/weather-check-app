@@ -31,6 +31,7 @@ export function ReportScreen({
 }: ReportScreenProps) {
   const [requestDraft, setRequestDraft] = useState('');
   const [replyDraft, setReplyDraft] = useState('');
+  const [feedMode, setFeedMode] = useState<'nearby' | 'national'>('nearby');
   const [selectedRequestId, setSelectedRequestId] = useState(requests[0]?.id ?? '');
   const [replyNotice, setReplyNotice] = useState('');
 
@@ -40,22 +41,24 @@ export function ReportScreen({
   );
   const orderedReports = fieldSnapshot.reports;
   const orderedRequests = fieldSnapshot.requests;
+  const visibleReports = feedMode === 'national' ? createNationalReports(orderedReports) : orderedReports;
+  const visibleRequests = orderedRequests;
   const selectedRequest = useMemo(
-    () => orderedRequests.find((request) => request.id === selectedRequestId),
-    [orderedRequests, selectedRequestId],
+    () => visibleRequests.find((request) => request.id === selectedRequestId),
+    [visibleRequests, selectedRequestId],
   );
 
   useEffect(() => {
-    if (orderedRequests.length === 0) {
+    if (visibleRequests.length === 0) {
       setSelectedRequestId('');
       return;
     }
 
-    const selectedRequestExists = orderedRequests.some((request) => request.id === selectedRequestId);
+    const selectedRequestExists = visibleRequests.some((request) => request.id === selectedRequestId);
     if (!selectedRequestExists) {
-      setSelectedRequestId(orderedRequests[0].id);
+      setSelectedRequestId(visibleRequests[0].id);
     }
-  }, [orderedRequests, searchContext.detectedWeather, searchContext.place, searchContext.timeLabel, selectedRequestId]);
+  }, [visibleRequests, searchContext.detectedWeather, searchContext.place, searchContext.timeLabel, selectedRequestId]);
 
   const addRequest = () => {
     const clean = requestDraft.trim();
@@ -64,13 +67,13 @@ export function ReportScreen({
     const newRequest: ReportRequest = {
       id: `request-${Date.now()}`,
       question: clean,
-      hint: `${searchContext.place} · ${searchContext.detectedWeather} 확인 요청`,
-      place: searchContext.place === '현재 위치' ? '내가 궁금한 장소' : searchContext.place,
-      distance: '주변',
+      hint: '현재 상황 확인 요청',
+      place: resolveRequestPlace(clean, searchContext.place),
+      distance: '질문 지역',
       answers: 0,
       time: '방금',
       status: '답변 대기',
-      mark: '새',
+      mark: getRequestMark(clean),
       accent: '#f4f5f2',
       createdAt: new Date().toISOString(),
       source: 'local',
@@ -130,27 +133,13 @@ export function ReportScreen({
       <View style={styles.requestCard}>
         <Text style={styles.requestKicker}>현장 제보</Text>
         <Text style={styles.requestTitle}>
-          {searchContext.place} 근처 사람에게 묻고, 지금 본 날씨로 답해요.
+          궁금한 지역의 현재 상황을 물어보세요.
         </Text>
-        <View style={styles.reportGuide}>
-          <View style={styles.reportStep}>
-            <Text style={styles.reportStepLabel}>요청</Text>
-            <Text style={styles.reportStepText}>장소를 올림</Text>
-          </View>
-          <View style={styles.reportStep}>
-            <Text style={styles.reportStepLabel}>답변</Text>
-            <Text style={styles.reportStepText}>근처가 확인</Text>
-          </View>
-          <View style={styles.reportStep}>
-            <Text style={styles.reportStepLabel}>반영</Text>
-            <Text style={styles.reportStepText}>판정에 사용</Text>
-          </View>
-        </View>
         <View style={styles.requestForm}>
           <TextInput
             value={requestDraft}
             onChangeText={setRequestDraft}
-            placeholder={`예: ${searchContext.place} 지금 ${searchContext.detectedWeather} 맞아요?`}
+            placeholder="예: 광화문 지금 비 와요?"
             placeholderTextColor="#8f7f87"
             style={styles.requestInput}
           />
@@ -162,12 +151,12 @@ export function ReportScreen({
 
       <View style={styles.reportSectionHeader}>
         <Text style={styles.reportSectionTitle}>답변 기다리는 요청</Text>
-        <Text style={styles.reportSectionAction}>근처순</Text>
+        <Text style={styles.reportSectionAction}>내 주변</Text>
       </View>
 
-      {orderedRequests.length > 0 ? (
+      {visibleRequests.length > 0 ? (
         <View style={styles.requestList}>
-          {orderedRequests.map((request) => {
+          {visibleRequests.map((request) => {
             const isSelected = selectedRequestId === request.id;
             return (
               <Pressable
@@ -231,22 +220,56 @@ export function ReportScreen({
       )}
 
       <View style={styles.reportSectionHeader}>
-        <Text style={styles.reportSectionTitle}>방금 올라온 현장 글</Text>
-        <Text style={styles.reportSectionAction}>지도에서 보기</Text>
+        <Text style={styles.reportSectionTitle}>현장 답변 모아보기</Text>
+        <Text style={styles.reportSectionAction}>{feedMode === 'national' ? '전국' : '근처'}</Text>
+      </View>
+      <View style={styles.reportFeedMode}>
+        <Pressable
+          onPress={() => setFeedMode('nearby')}
+          style={[styles.reportFeedModeButton, feedMode === 'nearby' && styles.reportFeedModeButtonActive]}
+        >
+          <Text style={[styles.reportFeedModeText, feedMode === 'nearby' && styles.reportFeedModeTextActive]}>
+            근처
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setFeedMode('national')}
+          style={[styles.reportFeedModeButton, feedMode === 'national' && styles.reportFeedModeButtonActive]}
+        >
+          <Text style={[styles.reportFeedModeText, feedMode === 'national' && styles.reportFeedModeTextActive]}>
+            전국
+          </Text>
+        </Pressable>
       </View>
 
-      {orderedReports.length > 0 ? (
+      {visibleReports.length > 0 ? (
         <View style={styles.liveReportList}>
-          {orderedReports.map((report, index) => (
+          {visibleReports.map((report, index) => {
+            const tone = getReportTone(report.condition);
+
+            return (
             <View key={`${report.place}-${report.body}-${index}`} style={styles.liveReportItem}>
-              <View>
-                <Text style={styles.liveReportPlace}>{report.place}</Text>
-                <Text style={styles.liveReportBody}>
-                  {report.time} · {report.body}
+              <View style={[styles.liveReportMark, { backgroundColor: tone.bg }]}>
+                <Text style={[styles.liveReportMarkText, { color: tone.ink }]}>
+                  {getConditionMark(report.condition)}
                 </Text>
               </View>
-              <View style={styles.reportSide}>
-                <Text style={styles.liveReportCondition}>{report.condition}</Text>
+              <View style={styles.liveReportMain}>
+                <View style={styles.liveReportTopRow}>
+                  <Text numberOfLines={1} style={styles.liveReportPlace}>{report.place}</Text>
+                  <Text style={styles.liveReportTime}>{report.time}</Text>
+                </View>
+                <Text style={styles.liveReportBody}>{report.body}</Text>
+                <View style={styles.liveReportBottomRow}>
+                  <Text style={[styles.liveReportCondition, { backgroundColor: tone.pill, color: tone.ink }]}>
+                    {report.condition}
+                  </Text>
+                  <Text style={styles.liveReportSource}>
+                    {report.source === 'local' ? '내 제보' : '현장 글'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.liveReportAction}>
                 <Pressable
                   disabled={report.moderationStatus === 'pending'}
                   onPress={() => onReportIssue(report)}
@@ -261,7 +284,8 @@ export function ReportScreen({
                 </Pressable>
               </View>
             </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <EmptyState
@@ -280,4 +304,91 @@ function replaceRequestById(
   replacement: ReportRequest,
 ) {
   return requests.map((request) => (request.id === requestId ? replacement : request));
+}
+
+function getConditionMark(condition: string) {
+  if (condition.includes('맑')) return '맑';
+  if (condition.includes('비')) return '비';
+  if (condition.includes('눈')) return '눈';
+  if (condition.includes('안개')) return '안';
+  if (condition.includes('천둥') || condition.includes('번개')) return '번';
+  if (condition.includes('흐') || condition.includes('구름')) return '흐';
+
+  return condition.slice(0, 1) || '현';
+}
+
+function getReportTone(condition: string) {
+  if (condition.includes('맑')) return { bg: '#fff05a', pill: 'rgba(255,240,90,0.34)', ink: '#242424' };
+  if (condition.includes('비')) return { bg: '#74c9ee', pill: 'rgba(116,201,238,0.28)', ink: '#0a4660' };
+  if (condition.includes('눈')) return { bg: '#d7eef8', pill: 'rgba(215,238,248,0.54)', ink: '#24526a' };
+  if (condition.includes('안개')) return { bg: '#d6d2c4', pill: 'rgba(214,210,196,0.54)', ink: '#4f514c' };
+  if (condition.includes('천둥') || condition.includes('번개')) return { bg: '#242424', pill: 'rgba(36,36,36,0.10)', ink: '#242424' };
+
+  return { bg: '#c7d6c5', pill: 'rgba(199,214,197,0.42)', ink: '#2f4635' };
+}
+
+function resolveRequestPlace(question: string, fallbackPlace: string) {
+  const normalized = question.replace(/[?!,。]/g, ' ').replace(/\s+/g, ' ').trim();
+  const beforeWeather = normalized.match(
+    /(.+?)(?:오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|\d{1,2}\s*시|지금)?\s*(?:날씨|비|눈|안개|기온|우산|소나기|천둥|번개|바람)/,
+  )?.[1];
+  const candidate = cleanRequestPlace(beforeWeather ?? '');
+
+  if (candidate) return candidate;
+  if (fallbackPlace !== '현재 위치') return fallbackPlace;
+
+  return '궁금한 지역';
+}
+
+function cleanRequestPlace(value: string) {
+  return value
+    .replace(/.*(?:근데|그런데|이면|라면|하고|그리고)/, '')
+    .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|지금)\s*/g, '')
+    .replace(/\s*(날씨|비|눈|안개|기온|우산|소나기|천둥|번개|바람).*$/, '')
+    .trim();
+}
+
+function getRequestMark(question: string) {
+  const place = resolveRequestPlace(question, '궁금한 지역');
+
+  return place.slice(0, 1) || '새';
+}
+
+function createNationalReports(reports: LocalReport[]) {
+  const nationalReports: LocalReport[] = [
+    {
+      id: 'national-report-gangneung-rain',
+      place: '강릉 교동',
+      time: '방금',
+      condition: '비',
+      body: '갑자기 빗방울 굵어졌어요. 우산 없으면 조금 힘들 듯해요.',
+      source: 'mock',
+    },
+    {
+      id: 'national-report-busan-cloudy',
+      place: '부산 해운대',
+      time: '4분 전',
+      condition: '흐림',
+      body: '바람은 있는데 비는 아직 안 와요. 하늘은 많이 어두워졌어요.',
+      source: 'mock',
+    },
+    {
+      id: 'national-report-jeju-fog',
+      place: '제주 성산',
+      time: '8분 전',
+      condition: '안개',
+      body: '해안도로 쪽 시야가 뿌옇습니다. 운전 조심해야 해요.',
+      source: 'mock',
+    },
+    {
+      id: 'national-report-daegu-sunny',
+      place: '대구 수성구',
+      time: '12분 전',
+      condition: '맑음',
+      body: '햇빛 강하고 비 올 느낌은 거의 없어요.',
+      source: 'mock',
+    },
+  ];
+
+  return [...reports, ...nationalReports];
 }

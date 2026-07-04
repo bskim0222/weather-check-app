@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, Text, View } from 'react-native';
+import { Animated, Easing, Image, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 
 import { styles } from '../styles/appStyles';
@@ -56,15 +56,15 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         </Text>
       </View>
 
-      <View style={[styles.figmaWeatherMessage, { borderColor: figma.line, backgroundColor: figma.surface }]}>
+      <View style={styles.figmaWeatherMessage}>
         <Text
-          numberOfLines={2}
+          numberOfLines={3}
           adjustsFontSizeToFit
           style={[styles.figmaWeatherTitle, { color: figma.ink }]}
         >
           {title}
         </Text>
-        <Text numberOfLines={2} style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
+        <Text style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
           {current.summary}
         </Text>
       </View>
@@ -90,7 +90,12 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         </View>
       </View>
 
-      <View style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}
+        contentContainerStyle={styles.figmaWeatherHourlyContent}
+      >
         {getForecastStrip(current.temp, current.forecastRows, normalizedCondition).map((item) => (
           <View key={item.label} style={styles.figmaWeatherHour}>
             <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
@@ -98,7 +103,7 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
             <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}</Text>
           </View>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -140,6 +145,7 @@ function getDecisionPlaceLabel(searchContext: SearchContext, locationStatus: Loc
 
   if (locationStatus.phase === 'checking') return '현재 위치 확인 중';
   if (locationStatus.phase === 'denied') return '현재 위치 권한 꺼짐';
+  if (locationStatus.phase === 'unavailable') return locationStatus.label;
   if (locationStatus.phase === 'fallback') return locationStatus.placeName ?? '기본 위치 사용 중';
 
   return searchContext.place;
@@ -241,12 +247,15 @@ function getForecastStrip(
     return [
       { label: '지금', temp: `${temp}°`, condition: fallbackCondition },
       { label: '1h', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '2h', temp: `${temp}°`, condition: fallbackCondition },
       { label: '3h', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '4h', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '5h', temp: `${temp}°`, condition: fallbackCondition },
       { label: '6h', temp: `${temp}°`, condition: fallbackCondition },
     ];
   }
 
-  return rows.slice(0, 5).map((row, index) => ({
+  return rows.slice(0, 7).map((row, index) => ({
     label: formatForecastTimeLabel(row.time, index),
     temp: formatForecastTemp(row.temp),
     condition: getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition),
@@ -274,89 +283,322 @@ function getForecastStripCondition(text: string, fallbackCondition: string) {
 
 function ForecastMiniIcon({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {
   const normalizedCondition = normalizeWeatherCondition(condition);
-  const cloudPath = 'M10 24c0-4 3-7 7-7 1.2-3.6 4.7-6 8.8-6 5.4 0 9.8 4.2 10.1 9.4 3 .8 5.1 3.2 5.1 6.2 0 3.6-2.9 6.4-6.6 6.4H17.2C13.2 33 10 29 10 24Z';
-  const fogStroke = normalizedCondition === '안개' || normalizedCondition === '황사' ? stroke : dim;
 
-  if (normalizedCondition === '맑음' || normalizedCondition === '폭염') {
+  return (
+    <Svg width={34} height={34} viewBox="0 0 100 100" fill="none" style={styles.figmaWeatherHourIcon}>
+      <WeatherMiniSvgIcon condition={normalizedCondition} stroke={stroke} dim={dim} />
+    </Svg>
+  );
+}
+
+function WeatherMiniSvgIcon({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {
+  if (condition === '맑음') {
+    const angles = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+
     return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-        <Circle cx={22} cy={22} r={8.5} fill={stroke} opacity={0.98} />
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+      <>
+        <Circle cx="50" cy="50" r="22" fill={stroke} fillOpacity="0.15" />
+        {angles.map((angle) => {
+          const r1 = 26;
+          const r2 = angle % 60 === 0 ? 36 : 31;
+          const rad = (angle * Math.PI) / 180;
+
+          return (
+            <Line
+              key={angle}
+              x1={50 + r1 * Math.cos(rad)}
+              y1={50 + r1 * Math.sin(rad)}
+              x2={50 + r2 * Math.cos(rad)}
+              y2={50 + r2 * Math.sin(rad)}
+              stroke={stroke}
+              strokeWidth={angle % 60 === 0 ? 2.2 : 1.4}
+              strokeLinecap="round"
+              strokeOpacity={angle % 60 === 0 ? 1 : 0.55}
+            />
+          );
+        })}
+        <Circle cx="50" cy="50" r="18" stroke={stroke} strokeWidth="2" />
+        <Circle cx="50" cy="50" r="10" stroke={stroke} strokeWidth="1.6" strokeOpacity="0.4" />
+      </>
+    );
+  }
+
+  if (condition === '비') {
+    const drops = [
+      [26, 58, 23, 67],
+      [36, 62, 33, 71],
+      [46, 58, 43, 67],
+      [56, 62, 53, 71],
+      [66, 58, 63, 67],
+      [31, 70, 28, 79],
+      [51, 70, 48, 79],
+      [71, 70, 68, 79],
+    ];
+
+    return (
+      <>
+        <Path
+          d="M76 54 C82 54 87 49 87 43 C87 37 82 33 76 33 C75 26 68 20 60 21 C57 14 48 10 40 13 C33 11 25 17 24 25 C17 26 12 32 12 39 C12 46 18 52 25 52"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        {drops.map(([x1, y1, x2, y2]) => (
+          <Line key={`${x1}-${y1}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+        ))}
+      </>
+    );
+  }
+
+  if (condition === '소나기') {
+    return (
+      <>
+        <Path
+          d="M74 50 C80 50 84 45 84 40 C84 35 80 31 74 31 C73 25 67 20 59 21 C56 15 48 11 40 14 C33 12 26 18 25 26 C18 27 13 33 13 40 C13 46 18 51 25 51"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <Circle cx="88" cy="20" r="7" stroke={stroke} strokeWidth="1.8" strokeOpacity="0.5" />
+        {[30, 45, 60, 72].map((x) => (
+          <Line key={x} x1={x} y1="56" x2={x - 3} y2="64" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        ))}
+      </>
+    );
+  }
+
+  if (condition === '천둥번개' || condition === '폭풍우') {
+    return (
+      <>
+        <Path
+          d="M76 46 C83 46 88 40 88 34 C88 28 83 23 76 23 C75 16 68 10 59 11 C56 4 47 0 39 3 C32 1 24 7 23 16 C16 17 11 23 11 31 C11 38 17 44 24 44"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M54 46 L44 60 L50 60 L40 78 L60 58 L53 58 Z"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          fill={stroke}
+          fillOpacity="0.12"
+        />
+        <Line x1="20" y1="48" x2="17" y2="58" stroke={dim} strokeWidth="1.5" strokeLinecap="round" />
+        <Line x1="80" y1="48" x2="77" y2="58" stroke={dim} strokeWidth="1.5" strokeLinecap="round" />
+      </>
+    );
+  }
+
+  if (condition === '눈') {
+    const flakes = [
+      [24, 60, 6],
+      [36, 66, 4.5],
+      [50, 60, 7],
+      [64, 66, 5],
+      [76, 60, 4],
+    ];
+
+    return (
+      <>
+        <Path
+          d="M74 50 C80 50 85 45 85 39 C85 33 80 29 74 29 C73 22 66 17 58 18 C55 11 46 7 38 10 C31 8 23 14 22 22 C15 23 10 29 10 36 C10 43 16 49 23 49"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        {flakes.map(([cx, cy, r]) => (
+          <G key={`${cx}-${cy}`}>
+            {[0, 60, 120].map((angle) => {
+              const rad = (angle * Math.PI) / 180;
+
+              return (
+                <Line
+                  key={angle}
+                  x1={cx - r * Math.cos(rad)}
+                  y1={cy - r * Math.sin(rad)}
+                  x2={cx + r * Math.cos(rad)}
+                  y2={cy + r * Math.sin(rad)}
+                  stroke={stroke}
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+            <Circle cx={cx} cy={cy} r="1" fill={stroke} />
+          </G>
+        ))}
+      </>
+    );
+  }
+
+  if (condition === '안개') {
+    return (
+      <>
+        {[
+          [20, 32, 80, 0.35],
+          [14, 44, 86, 0.55],
+          [25, 56, 75, 0.72],
+          [17, 68, 83, 0.55],
+          [28, 80, 72, 0.35],
+        ].map(([x1, y, x2, opacity]) => (
+          <Line key={y} x1={x1} y1={y} x2={x2} y2={y} stroke={stroke} strokeWidth="2.6" strokeLinecap="round" strokeOpacity={opacity} />
+        ))}
+      </>
+    );
+  }
+
+  if (condition === '황사') {
+    return (
+      <>
+        <Circle cx="50" cy="38" r="16" stroke={stroke} strokeWidth="2" strokeOpacity="0.4" />
+        <Circle cx="50" cy="38" r="10" fill={stroke} fillOpacity="0.2" />
+        {[58, 68, 78].map((y, index) => (
           <Line
-            key={angle}
-            x1={22 + Math.cos((angle * Math.PI) / 180) * 13}
-            y1={22 + Math.sin((angle * Math.PI) / 180) * 13}
-            x2={22 + Math.cos((angle * Math.PI) / 180) * 17}
-            y2={22 + Math.sin((angle * Math.PI) / 180) * 17}
+            key={y}
+            x1="15"
+            y1={y}
+            x2="85"
+            y2={y}
             stroke={stroke}
+            strokeWidth="2.4"
             strokeLinecap="round"
-            strokeWidth={3}
-            opacity={0.74}
+            strokeOpacity={0.5 - index * 0.08}
           />
         ))}
-      </Svg>
+        {[30, 55, 70, 42, 65, 25, 80].map((cx, index) => (
+          <Circle key={`${cx}-${index}`} cx={cx} cy={[45, 35, 50, 60, 68, 65, 40][index]} r={[3, 2, 2.5, 2, 3, 2, 1.5][index]} fill={stroke} fillOpacity="0.5" />
+        ))}
+      </>
     );
   }
 
-  if (normalizedCondition === '비' || normalizedCondition === '소나기') {
+  if (condition === '폭염') {
     return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-        <Path d={cloudPath} fill={stroke} opacity={0.92} />
-        <Line x1={18} y1={31} x2={15} y2={39} stroke={dim} strokeLinecap="round" strokeWidth={4} />
-        <Line x1={27} y1={31} x2={24} y2={40} stroke={dim} strokeLinecap="round" strokeWidth={4} />
-        <Line x1={36} y1={31} x2={33} y2={38} stroke={dim} strokeLinecap="round" strokeWidth={4} />
-      </Svg>
+      <>
+        <Circle cx="50" cy="36" r="18" fill={stroke} fillOpacity="0.2" />
+        <Circle cx="50" cy="36" r="14" stroke={stroke} strokeWidth="2.2" />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+          const rad = (angle * Math.PI) / 180;
+
+          return (
+            <Line
+              key={angle}
+              x1={50 + 18 * Math.cos(rad)}
+              y1={36 + 18 * Math.sin(rad)}
+              x2={50 + 26 * Math.cos(rad)}
+              y2={36 + 26 * Math.sin(rad)}
+              stroke={stroke}
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {[62, 72, 82].map((y, index) => (
+          <Path
+            key={y}
+            d={`M18 ${y} C28 ${y - 4} 38 ${y + 4} 50 ${y} C62 ${y - 4} 72 ${y + 4} 82 ${y}`}
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeOpacity={1 - index * 0.2}
+          />
+        ))}
+      </>
     );
   }
 
-  if (normalizedCondition === '천둥번개' || normalizedCondition === '폭풍우') {
+  if (condition === '맑은 밤') {
     return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-        <Path d={cloudPath} fill={stroke} opacity={0.86} />
-        <Path d="M24 22 17 36h7l-3 9 10-15h-7l5-8Z" fill="#f0f35a" />
-      </Svg>
-    );
-  }
-
-  if (normalizedCondition === '눈') {
-    return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-        <Path d={cloudPath} fill={stroke} opacity={0.58} />
-        <Circle cx={17} cy={34} r={2.4} fill={dim} />
-        <Circle cx={25} cy={39} r={2.2} fill={dim} opacity={0.82} />
-        <Circle cx={34} cy={34} r={2.4} fill={dim} />
-      </Svg>
-    );
-  }
-
-  if (normalizedCondition === '안개' || normalizedCondition === '황사') {
-    return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-        <Circle cx={25} cy={18} r={7.4} fill={stroke} opacity={0.62} />
-        <Line x1={8} y1={25} x2={37} y2={21} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} />
-        <Line x1={7} y1={32} x2={37} y2={29} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} opacity={0.82} />
-        <Line x1={12} y1={38} x2={34} y2={36} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} opacity={0.64} />
-      </Svg>
-    );
-  }
-
-  if (normalizedCondition === '태풍') {
-    return (
-      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+      <>
         <Path
-          d="M34 17c-4.4-7-15.9-6.6-20.8.6 5.7-2.2 11.2-1.5 15.2 2.2-5.7-1-10.8.9-14.2 5.7 6.1-2 11.6-.8 15.7 3.6 2.7-3 4.3-7.4 4.1-12.1Z"
-          fill={stroke}
-          opacity={0.9}
+          d="M55 18 C40 20 28 34 28 50 C28 66 40 80 56 80 C42 76 32 64 32 50 C32 35 44 22 58 20 C57 18.5 56 18 55 18 Z"
+          stroke={stroke}
+          strokeWidth="2.2"
+          strokeLinejoin="round"
         />
-      </Svg>
+        {[
+          [68, 20, 3],
+          [78, 38, 2],
+          [60, 12, 2],
+          [76, 52, 2.5],
+        ].map(([cx, cy, r]) => (
+          <G key={`${cx}-${cy}`}>
+            <Line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+            <Line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+          </G>
+        ))}
+      </>
+    );
+  }
+
+  if (condition === '무지개') {
+    return (
+      <>
+        {[
+          [44, '#E04040'],
+          [38, '#E08020'],
+          [32, '#D4C000'],
+          [26, '#40A040'],
+          [20, '#2060C0'],
+          [14, '#6020A0'],
+        ].map(([radius, color]) => (
+          <Path
+            key={radius}
+            d={`M ${50 - Number(radius)} 72 A ${radius} ${radius} 0 0 1 ${50 + Number(radius)} 72`}
+            stroke={`${color}`}
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        ))}
+        <Circle cx="82" cy="30" r="10" stroke={stroke} strokeWidth="1.8" strokeOpacity="0.65" />
+        <Path
+          d="M28 55 C22 55 16 51 16 45 C16 39 22 35 28 36 C29 30 35 26 42 28 C46 22 54 24 56 30 C60 29 65 33 65 39 C65 44 60 48 55 48"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeOpacity="0.5"
+        />
+      </>
+    );
+  }
+
+  if (condition === '태풍') {
+    return (
+      <>
+        {[0, 90, 180, 270].map((startAngle) => (
+          <Path
+            key={startAngle}
+            d={`M 50 50 Q ${50 + 30 * Math.cos((startAngle * Math.PI) / 180)} ${50 + 30 * Math.sin((startAngle * Math.PI) / 180)} ${50 + 42 * Math.cos(((startAngle + 60) * Math.PI) / 180)} ${50 + 42 * Math.sin(((startAngle + 60) * Math.PI) / 180)}`}
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        ))}
+        <Circle cx="50" cy="50" r="8" stroke={stroke} strokeWidth="2.2" />
+        <Circle cx="50" cy="50" r="3" fill={stroke} fillOpacity="0.5" />
+        <Circle cx="50" cy="50" r="38" stroke={stroke} strokeWidth="0.8" strokeOpacity="0.2" strokeDasharray="4 6" />
+      </>
     );
   }
 
   return (
-    <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
-      <Path d={cloudPath} fill={stroke} opacity={0.82} />
-      <Circle cx={31} cy={18} r={8} fill={dim} opacity={0.42} />
-    </Svg>
+    <>
+      <Path
+        d="M72 62 C78 62 82 57 82 52 C82 47 78 43 72 43 C71 37 65 32 58 33 C55 27 48 23 40 26 C33 23 26 28 25 35 C19 36 15 41 15 47 C15 53 20 58 26 58"
+        stroke={stroke}
+        strokeWidth="1.8"
+        strokeOpacity="0.35"
+        strokeLinecap="round"
+      />
+      <Path
+        d="M74 68 C80 68 85 63 85 57 C85 51 80 47 74 47 C73 40 67 34 59 35 C56 28 48 24 40 27 C33 24 25 30 24 38 C17 39 12 45 12 52 C12 59 18 65 25 65"
+        stroke={stroke}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </>
   );
 }
 
@@ -412,12 +654,20 @@ function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; str
     );
 
     const fallAnimation = Animated.loop(
-      Animated.timing(fall, {
-        toValue: 1,
-        duration: condition === '눈' ? 2100 : 980,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }),
+      Animated.sequence([
+        Animated.timing(fall, {
+          toValue: 1,
+          duration: condition === '눈' ? 2100 : 980,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }),
+        Animated.timing(fall, {
+          toValue: 0,
+          duration: 0,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }),
+      ]),
     );
 
     const flashAnimation = Animated.loop(
@@ -450,22 +700,42 @@ function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; str
     );
 
     const spinAnimation = Animated.loop(
-      Animated.timing(spin, {
-        toValue: 1,
-        duration: condition === '태풍' ? 2200 : 5200,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }),
+      Animated.sequence([
+        Animated.timing(spin, {
+          toValue: 1,
+          duration: condition === '태풍' ? 2200 : 5200,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }),
+        Animated.timing(spin, {
+          toValue: 0,
+          duration: 0,
+          easing: Easing.linear,
+          useNativeDriver: false,
+        }),
+      ]),
     );
 
     const rainAnimations = rainValues.map((value, index) => {
       value.setValue(0);
       return Animated.loop(
         Animated.sequence([
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 0,
+            easing: Easing.linear,
+            useNativeDriver: false,
+          }),
           Animated.delay([0, 250, 100, 400, 150, 550, 350, 500][index]),
           Animated.timing(value, {
             toValue: 1,
             duration: condition === '소나기' ? 1400 : 1100,
+            easing: Easing.linear,
+            useNativeDriver: false,
+          }),
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 0,
             easing: Easing.linear,
             useNativeDriver: false,
           }),
@@ -477,10 +747,22 @@ function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; str
       value.setValue(0);
       return Animated.loop(
         Animated.sequence([
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 0,
+            easing: Easing.linear,
+            useNativeDriver: false,
+          }),
           Animated.delay([0, 500, 200, 700, 350][index]),
           Animated.timing(value, {
             toValue: 1,
             duration: 2200,
+            easing: Easing.linear,
+            useNativeDriver: false,
+          }),
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 0,
             easing: Easing.linear,
             useNativeDriver: false,
           }),

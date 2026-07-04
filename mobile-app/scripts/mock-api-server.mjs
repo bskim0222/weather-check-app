@@ -145,7 +145,7 @@ function createProviderSnapshot(context) {
       {
         providerId: 'kma',
         iconUri: 'https://www.kma.go.kr/favicon.ico',
-        name: '기상청',
+        name: '대한민국 기상청',
         mark: 'K',
         condition: weather.kma.condition,
         temp: weather.kma.temp,
@@ -156,7 +156,7 @@ function createProviderSnapshot(context) {
       {
         providerId: 'yr',
         iconUri: 'https://www.yr.no/favicon.ico',
-        name: 'Yr.no',
+        name: '노르웨이 기상청',
         mark: 'Yr',
         condition: weather.yr.condition,
         temp: weather.yr.temp,
@@ -166,7 +166,7 @@ function createProviderSnapshot(context) {
       },
       {
         providerId: 'fmi',
-        name: 'FMI ECMWF',
+        name: '핀란드 기상청',
         mark: 'FMI',
         condition: weather.windy.condition,
         temp: weather.windy.temp,
@@ -176,27 +176,27 @@ function createProviderSnapshot(context) {
       },
     ],
     summaries: [
-      createSummary('기상청', 'K', 'KMA', weather.kma.condition, weather.kma.value, providerColors.kma),
-      createSummary('Yr.no', 'Yr', 'Norway', weather.yr.condition, weather.yr.value, providerColors.yr),
-      createSummary('FMI ECMWF', 'FMI', 'ECMWF', weather.windy.condition, weather.windy.value, providerColors.fmi),
+      createSummary('대한민국 기상청', 'K', 'KMA', weather.kma.condition, weather.kma.value, providerColors.kma),
+      createSummary('노르웨이 기상청', 'Yr', 'MET Norway', weather.yr.condition, weather.yr.value, providerColors.yr),
+      createSummary('핀란드 기상청', 'FMI', 'FMI', weather.windy.condition, weather.windy.value, providerColors.fmi),
     ],
     differences: [
       {
-        name: '기상청',
+        name: '대한민국 기상청',
         mark: 'K',
         body: '국내 단기예보 기준으로 현재 시간대의 강수 가능성을 우선 확인합니다.',
         badge: '국내 예보',
         color: providerColors.kma,
       },
       {
-        name: 'Yr.no',
+        name: '노르웨이 기상청',
         mark: 'Yr',
         body: '강수량과 온도 흐름을 함께 보며 약한 비 가능성을 비교합니다.',
         badge: '강수량',
         color: providerColors.yr,
       },
       {
-        name: 'FMI ECMWF',
+        name: '핀란드 기상청',
         mark: 'FMI',
         body: 'ECMWF 기반 지점 예보로 같은 위치의 기온, 강수량, 구름량을 비교합니다.',
         badge: 'ECMWF 예보',

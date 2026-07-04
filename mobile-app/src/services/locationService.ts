@@ -5,6 +5,11 @@ import type { LocationStatus } from '../types/appState';
 import { resolveRemotePlaceName } from './geocoding';
 
 type BrowserGeolocationHost = {
+  isSecureContext?: boolean;
+  location?: {
+    hostname?: string;
+    protocol?: string;
+  };
   navigator?: {
     geolocation?: {
       getCurrentPosition: (
@@ -235,7 +240,19 @@ async function withLocationTimeout<T>(promise: Promise<T>, timeoutMs = 8000) {
 }
 
 function resolveWebCurrentLocation(): Promise<LocationStatus> {
-  const geolocation = (globalThis as BrowserGeolocationHost).navigator?.geolocation;
+  const browserHost = globalThis as BrowserGeolocationHost;
+
+  if (isInsecureWebGeolocationContext(browserHost)) {
+    return Promise.resolve({
+      phase: 'unavailable',
+      label: 'HTTPS 위치 권한 필요',
+      message:
+        '모바일 브라우저는 보안 연결이 아닌 로컬 링크에서 위치 권한창을 띄우지 않아요. Render HTTPS 링크나 설치 앱에서 현재 위치를 확인해주세요.',
+      source: 'web',
+    });
+  }
+
+  const geolocation = browserHost.navigator?.geolocation;
 
   if (!geolocation) {
     return Promise.resolve({
@@ -272,15 +289,19 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
         });
       },
       (error) => {
+        const permissionDenied = error.code === 1;
         resolve({
-          phase: error.code === 1 ? 'denied' : 'fallback',
-          label: error.code === 1 ? '위치 권한 꺼짐' : fallbackPlaceName,
+          phase: permissionDenied ? 'denied' : 'fallback',
+          label: permissionDenied ? '위치 권한 꺼짐' : fallbackPlaceName,
           message:
-            error.code === 1
+            permissionDenied
               ? '위치 권한이 꺼져 있어 기본 위치 기준으로 보여주고 있어요.'
               : '위치를 정확히 확인하지 못해 기본 위치 기준으로 보여주고 있어요.',
-          placeName: error.code === 1 ? undefined : fallbackPlaceName,
-          shortPlaceName: error.code === 1 ? undefined : '잠실동',
+          placeName: permissionDenied ? undefined : fallbackPlaceName,
+          shortPlaceName: permissionDenied ? undefined : '잠실동',
+          latitude: permissionDenied ? undefined : fallbackLatitude,
+          longitude: permissionDenied ? undefined : fallbackLongitude,
+          accuracyMeters: permissionDenied ? undefined : null,
           source: 'web',
         });
       },
@@ -291,6 +312,18 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
       },
     );
   });
+}
+
+function isInsecureWebGeolocationContext(host: BrowserGeolocationHost) {
+  if (host.isSecureContext === true) return false;
+
+  const protocol = host.location?.protocol;
+  const hostname = host.location?.hostname;
+
+  if (protocol === 'https:') return false;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return false;
+
+  return protocol === 'http:';
 }
 
 function splitFormattedAddress(value?: string | null) {

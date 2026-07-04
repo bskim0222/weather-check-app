@@ -1,26 +1,16 @@
-import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import type { ImageSourcePropType } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { DecisionCard } from '../components/DecisionCard';
-import { WeatherIcon } from '../components/WeatherIcon';
 import { weatherPresets } from '../data/mockWeather';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
 import type {
-  ForecastProviderId,
-  ForecastSource,
   LocalReport,
   SearchContext,
   WeatherKey,
   WeatherPreset,
 } from '../types/weather';
-
-const providerIcons: Partial<Record<ForecastProviderId, ImageSourcePropType>> = {
-  kma: require('../../assets/icon-kma.png'),
-  yr: require('../../assets/icon-yr.png'),
-  fmi: require('../../assets/icon-fmi.png'),
-};
 
 type DecisionScreenProps = {
   current: WeatherPreset;
@@ -140,48 +130,6 @@ export function DecisionScreen({
 
       <View style={styles.mockSection}>
         <View style={styles.mockSectionHead}>
-          <Text style={styles.mockSectionTitle}>이렇게 판단했어요!</Text>
-          <Pressable style={styles.mockSectionButton}>
-            <Text style={styles.mockSectionButtonText}>비교</Text>
-          </Pressable>
-        </View>
-        <View style={styles.reasonSummary}>
-          <Text style={styles.reasonSummaryTitle}>서비스별 현재값을 서로 맞춰봤어요</Text>
-          <Text style={styles.reasonSummaryText}>
-            같은 장소와 시간의 서비스별 날씨, 기온, 근처 제보를 함께 보고 판정 문장을 만들어요.
-          </Text>
-        </View>
-        <View style={styles.sourceGrid}>
-          {current.sources.map((source) => (
-            <View key={source.name} style={styles.evidenceRow}>
-              <ServiceIcon source={source} />
-              <View style={styles.evidenceContent}>
-                <Text style={styles.evidenceName}>{normalizeProviderName(source.name)}</Text>
-                <Text style={styles.evidenceSub}>현재 예보</Text>
-              </View>
-              <View style={styles.sourceWeatherPillCompact}>
-                <WeatherStatusIcon condition={source.condition} tone={source.color} />
-                <Text style={styles.sourceTempCompact}>{formatSourceTemperature(source.temp)}</Text>
-              </View>
-            </View>
-          ))}
-          <View style={styles.evidenceRow}>
-            <View style={[styles.sourceLogoFallback, { backgroundColor: '#ffd36b' }]}>
-              <Text style={[styles.sourceLogoFallbackText, { color: '#301a22' }]}>현</Text>
-            </View>
-            <View style={styles.evidenceContent}>
-              <Text style={styles.evidenceName}>생생날씨특파원</Text>
-              <Text style={styles.evidenceSub}>현장 제보가 쌓이면 예보와 함께 비교해요.</Text>
-            </View>
-            <View style={styles.liveEvidenceBadge}>
-              <Text style={styles.liveEvidenceBadgeText}>{current.live}</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.mockSection}>
-        <View style={styles.mockSectionHead}>
           <Text style={styles.mockSectionTitle}>근처 현장</Text>
           <Pressable style={styles.mockSectionButton}>
             <Text style={styles.mockSectionButtonText}>제보</Text>
@@ -247,79 +195,4 @@ function getWeatherKeyFromCondition(condition: string): WeatherKey | null {
     return 'cloudy';
   }
   return null;
-}
-
-function ServiceIcon({ source }: { source: ForecastSource }) {
-  const localIcon = source.providerId ? providerIcons[source.providerId] : undefined;
-
-  if (localIcon) {
-    return (
-      <View style={styles.sourceLogoFrame}>
-        <Image source={localIcon} style={styles.sourceLogoImage} />
-      </View>
-    );
-  }
-
-  if (!source.iconUri) {
-    return (
-      <View style={[styles.sourceLogoFallback, { backgroundColor: source.color }]}>
-        <Text style={styles.sourceLogoFallbackText}>{source.mark}</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.sourceLogoFrame}>
-      <Text style={styles.sourceLogoBehind}>{source.mark}</Text>
-      <Image source={{ uri: source.iconUri }} style={styles.sourceLogoImage} />
-    </View>
-  );
-}
-
-function WeatherStatusIcon({ condition, tone }: { condition: string; tone: string }) {
-  return <WeatherIcon condition={condition} style={styles.miniWeatherIconImage} />;
-}
-
-function getWeatherIconKind(condition: string) {
-  if (condition.includes('천둥') || condition.includes('번개') || condition.includes('불안정')) return 'thunder';
-  if (condition.includes('비') || condition.includes('강수')) return 'rain';
-  if (condition.includes('소나기')) return 'rain';
-  if (condition.includes('눈')) return 'snow';
-  if (condition.includes('안개') || condition.includes('시야') || condition.includes('습')) return 'fog';
-  if (condition.includes('맑') || condition.includes('비 없음')) return 'sunny';
-
-  return 'cloudy';
-}
-
-function getForecastIconTone(condition: string, fallback: string) {
-  const kind = getWeatherIconKind(condition);
-
-  if (kind === 'rain') return '#7faed0';
-  if (kind === 'snow') return '#eef8ff';
-  if (kind === 'thunder') return '#5e5276';
-  if (kind === 'fog') return '#d7d2cf';
-  if (kind === 'cloudy') return '#f1d7d0';
-
-  return fallback;
-}
-
-function getSoftTone(kind: string) {
-  if (kind === 'rain') return '#b8d7ef';
-  if (kind === 'snow') return '#ffffff';
-  if (kind === 'thunder') return '#ffd33d';
-  if (kind === 'fog') return '#bbb5b7';
-
-  return '#fff2e9';
-}
-
-function normalizeProviderName(name: string) {
-  if (name === '기상청') return '대한민국 기상청';
-  if (name === 'Yr.no') return '노르웨이 기상청';
-  if (name === 'FMI ECMWF') return '핀란드 기상청';
-
-  return name;
-}
-
-function formatSourceTemperature(value: string) {
-  return value.replace('도', '℃');
 }

@@ -184,17 +184,17 @@ function createForecastRows(
   fallbackRows: ForecastStep[],
   consensus: WeatherVote,
 ) {
-  if (rows.length === 0) return fallbackRows;
-
-  return rows.slice(0, 3).map((row, index) => {
-    const cell = pickRepresentativeCell(row, consensus);
+  return Array.from({ length: 7 }, (_, index) => {
+    const row = rows[index];
+    const fallbackRow = fallbackRows[index] ?? fallbackRows[fallbackRows.length - 1];
+    const cell = row ? pickRepresentativeCell(row, consensus) : null;
 
     return {
-      time: row.label,
-      title: cell?.weather ?? fallbackRows[index]?.title ?? '확인 필요',
-      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRows[index]?.temp ?? '--도',
-      note: getPrecipitationFromDetail(cell?.detail) ?? fallbackRows[index]?.note ?? '변화 확인',
-      mark: cell?.mark ?? fallbackRows[index]?.mark ?? consensus.label.slice(0, 1),
+      time: row?.label ?? fallbackRow?.time ?? `${index}시간 뒤`,
+      title: cell?.weather ?? fallbackRow?.title ?? '확인 필요',
+      temp: getTemperatureFromDetail(cell?.detail) ?? fallbackRow?.temp ?? '--도',
+      note: getPrecipitationFromDetail(cell?.detail) ?? fallbackRow?.note ?? '변화 확인',
+      mark: cell?.mark ?? fallbackRow?.mark ?? consensus.label.slice(0, 1),
     };
   });
 }
@@ -226,6 +226,7 @@ function normalizeProviderName(name: string) {
   if (name === '기상청') return '대한민국 기상청';
   if (name === 'Yr.no') return '노르웨이 기상청';
   if (name === 'FMI ECMWF') return '핀란드 기상청';
+  if (name.toLowerCase().includes('windy')) return '핀란드 기상청';
 
   return name;
 }

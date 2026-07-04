@@ -1,19 +1,10 @@
-﻿import { Image, Pressable, ScrollView, Text, View } from 'react-native';
-import type { ImageSourcePropType } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
 import type { CompareMode } from '../domain/compare';
 import { styles } from '../styles/appStyles';
 import type { CompareForecastCell, CompareRow, CompareServiceSummary } from '../types/weather';
-
-const serviceIcons: Record<string, ImageSourcePropType> = {
-  '대한민국 기상청': require('../../assets/icon-kma.png'),
-  기상청: require('../../assets/icon-kma.png'),
-  '노르웨이 기상청': require('../../assets/icon-yr.png'),
-  'Yr.no': require('../../assets/icon-yr.png'),
-  '핀란드 기상청': require('../../assets/icon-fmi.png'),
-  'FMI ECMWF': require('../../assets/icon-fmi.png'),
-};
 
 const fallbackServices: CompareServiceSummary[] = [
   { name: '대한민국 기상청', mark: 'K', subtitle: 'KMA', summary: '', weather: '', value: '', color: '#e6465f' },
@@ -90,18 +81,11 @@ export function ForecastComparePanel({
 }
 
 function CompareServiceLabel({ service }: { service: CompareServiceSummary }) {
-  const icon = serviceIcons[service.name];
   const label = normalizeServiceName(service.name);
 
   return (
     <View style={styles.compareTableServiceCell}>
-      {icon ? (
-        <Image source={icon} style={styles.compareTableServiceIcon} />
-      ) : (
-        <View style={[styles.compareTableServiceIconFallback, { backgroundColor: service.color }]}>
-          <Text style={styles.compareServiceMarkText}>{service.mark}</Text>
-        </View>
-      )}
+      <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareTableServiceIcon} />
       <Text style={styles.compareTableServiceText}>{label}</Text>
     </View>
   );
@@ -124,7 +108,7 @@ function CompareForecastCellView({ cell }: { cell: CompareForecastCell }) {
   return (
     <View style={styles.compareForecastCell}>
       <View style={styles.compareForecastIconFrame}>
-        <WeatherMiniIcon condition={cell.weather} tone={cell.tone} />
+        <WeatherMiniIcon condition={cell.weather} />
       </View>
       <View style={styles.compareForecastTextBox}>
         <Text style={styles.compareForecastWeather}>{cell.weather}</Text>
@@ -134,28 +118,8 @@ function CompareForecastCellView({ cell }: { cell: CompareForecastCell }) {
   );
 }
 
-function WeatherMiniIcon({ condition, tone }: { condition: string; tone: string }) {
-  return <WeatherIcon condition={condition} style={styles.miniWeatherIconImage} />;
-}
-
-function getWeatherIconKind(condition: string) {
-  if (condition.includes('비 없음')) return 'sunny';
-  if (condition.includes('천둥') || condition.includes('불안정')) return 'thunder';
-  if (condition.includes('비') || condition.includes('강수')) return 'rain';
-  if (condition.includes('눈')) return 'snow';
-  if (condition.includes('안개') || condition.includes('습')) return 'fog';
-  if (condition.includes('맑')) return 'sunny';
-
-  return 'cloudy';
-}
-
-function getSoftTone(kind: string) {
-  if (kind === 'rain') return '#b8d7ef';
-  if (kind === 'snow') return '#ffffff';
-  if (kind === 'thunder') return '#ffd33d';
-  if (kind === 'fog') return '#bbb5b7';
-
-  return '#fff2e9';
+function WeatherMiniIcon({ condition }: { condition: string }) {
+  return <WeatherIcon condition={condition} style={styles.compareForecastWeatherSvg} />;
 }
 
 function normalizeServiceName(name: string) {

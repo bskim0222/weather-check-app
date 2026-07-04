@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 
+import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { styles } from '../styles/appStyles';
 import type { CompareDifference } from '../types/weather';
 
@@ -29,9 +30,7 @@ export function CompareDifferenceSection({
       <View style={styles.compareDifferenceList}>
         {differences.map((item) => (
           <View key={item.name} style={styles.compareDifferenceItem}>
-            <View style={[styles.compareServiceMark, { backgroundColor: item.color }]}>
-              <Text style={styles.compareServiceMarkText}>{item.mark}</Text>
-            </View>
+            <ProviderServiceIcon mark={item.mark} name={item.name} style={styles.compareDifferenceLogo} />
             <View style={styles.compareDifferenceContent}>
               <Text style={styles.compareDifferenceName}>{item.name}</Text>
               <Text style={styles.compareDifferenceBody}>{item.body}</Text>

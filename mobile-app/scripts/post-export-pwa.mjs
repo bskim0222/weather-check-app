@@ -67,7 +67,11 @@ const meta = [
 
 const html = readFileSync(indexPath, 'utf8');
 const withoutPrevious = html.replace(/\n\s*<!-- weather-check-pwa:start -->[\s\S]*?<!-- weather-check-pwa:end -->/g, '');
-const nextHtml = withoutPrevious.replace(
+const viewportLocked = withoutPrevious.replace(
+  /<meta name="viewport" content="[^"]*" \/>/,
+  '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />',
+);
+const nextHtml = viewportLocked.replace(
   '</head>',
   `  <!-- weather-check-pwa:start -->\n    ${meta}\n    <!-- weather-check-pwa:end -->\n  </head>`,
 );

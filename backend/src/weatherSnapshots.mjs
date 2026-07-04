@@ -18,8 +18,8 @@ export async function createWeatherProviderSnapshot(context) {
     resolveFmiForecast(context),
     resolveWindyForecast(context),
   ]);
-  const thirdProvider = createThirdProvider(fmiForecast ? 'fmi' : 'windy');
-  const thirdForecast = fmiForecast ?? windyForecast;
+  const thirdProvider = createThirdProvider(shouldUseFmiProvider() || !shouldUseWindyProvider() ? 'fmi' : 'windy');
+  const thirdForecast = thirdProvider.providerId === 'fmi' ? fmiForecast : windyForecast;
   const liveProviderIds = [
     ...(kmaForecast ? ['kma'] : []),
     ...(yrForecast ? ['yr'] : []),
@@ -74,7 +74,7 @@ function createProviderMeta(thirdProviderId, liveProviderIds, fallbackProviderId
   };
 }
 
-function createBaseWeatherProviderSnapshot(context, weather, thirdProvider = createThirdProvider('windy')) {
+function createBaseWeatherProviderSnapshot(context, weather, thirdProvider = createThirdProvider('fmi')) {
   return {
     generatedAt: new Date().toISOString(),
     source: 'api',

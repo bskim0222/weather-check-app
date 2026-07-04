@@ -23,7 +23,6 @@ import { createRemoteFieldReport, fetchFieldReportSnapshot, moderateRemoteFieldR
 import { resolveRemoteLocation } from '../services/geocoding';
 import {
   createCheckingLocationStatus,
-  createFallbackLocationStatus,
   initialLocationStatus,
   resolveCurrentLocation,
 } from '../services/locationService';
@@ -255,13 +254,18 @@ export function useWeatherAppState() {
   const refreshLocationStatus = async () => {
     setLocationStatus(createCheckingLocationStatus());
     const nextLocationStatus = await resolveCurrentLocation();
-    const resolvedLocationStatus =
-      nextLocationStatus.phase === 'unavailable'
-        ? createFallbackLocationStatus()
-        : nextLocationStatus;
+    const resolvedLocationStatus = nextLocationStatus;
 
     setLocationStatus(resolvedLocationStatus);
     setJudgement((prev) => updateJudgementLocation(prev, resolvedLocationStatus));
+    if (resolvedLocationStatus.phase === 'denied' || resolvedLocationStatus.phase === 'unavailable') {
+      setRefreshLabel('위치 확인 필요');
+      setDataStatus({
+        phase: 'fallback',
+        label: resolvedLocationStatus.label,
+        message: resolvedLocationStatus.message,
+      });
+    }
 
     return resolvedLocationStatus;
   };
@@ -275,6 +279,8 @@ export function useWeatherAppState() {
     const resolvedLocationStatus = await refreshLocationStatus();
     const nextLocationJudgement = updateJudgementLocation(nextJudgement, resolvedLocationStatus);
     setJudgement(nextLocationJudgement);
+    if (!hasUsableCoordinates(resolvedLocationStatus)) return;
+
     refreshData('현재 위치', nextLocationJudgement.searchContext);
   };
 
@@ -448,7 +454,7 @@ function getProviderDisplayName(providerId: ForecastProviderId) {
   if (providerId === 'kma') return '대한민국 기상청';
   if (providerId === 'yr') return '노르웨이 기상청';
   if (providerId === 'fmi') return '핀란드 기상청';
-  if (providerId === 'windy') return 'Windy.com';
+  if (providerId === 'windy') return '핀란드 기상청';
 
   return '';
 }
@@ -468,6 +474,10 @@ function isSameWeatherContext(a: SearchContext, b: SearchContext) {
     a.target.latitude === b.target.latitude &&
     a.target.longitude === b.target.longitude
   );
+}
+
+function hasUsableCoordinates(locationStatus: LocationStatus) {
+  return typeof locationStatus.latitude === 'number' && typeof locationStatus.longitude === 'number';
 }
 
 function replaceReportById(reports: LocalReport[], localId: string | undefined, nextReport: LocalReport) {

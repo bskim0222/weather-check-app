@@ -1,18 +1,9 @@
-﻿import { Image, Text, View } from 'react-native';
-import type { ImageSourcePropType } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
 import { styles } from '../styles/appStyles';
 import type { CompareServiceSummary, SearchContext } from '../types/weather';
-
-const compareServiceIcons: Record<string, ImageSourcePropType> = {
-  '대한민국 기상청': require('../../assets/icon-kma.png'),
-  기상청: require('../../assets/icon-kma.png'),
-  '노르웨이 기상청': require('../../assets/icon-yr.png'),
-  'Yr.no': require('../../assets/icon-yr.png'),
-  '핀란드 기상청': require('../../assets/icon-fmi.png'),
-  'FMI ECMWF': require('../../assets/icon-fmi.png'),
-};
 
 type CompareOverviewProps = {
   searchContext: SearchContext;
@@ -23,9 +14,7 @@ export function CompareOverview({ searchContext, summaries }: CompareOverviewPro
   return (
     <View style={styles.compareHero}>
       <Text style={styles.compareKicker}>예보 비교</Text>
-      <Text style={styles.compareTitle}>
-        예보를 한눈에 비교해요.
-      </Text>
+      <Text style={styles.compareTitle}>예보를 한눈에 비교해요.</Text>
       <View style={styles.compareContextBar}>
         <Text style={styles.compareContextLabel}>질문 기준</Text>
         <Text style={styles.compareContextText}>{searchContext.raw}</Text>
@@ -47,19 +36,9 @@ export function CompareOverview({ searchContext, summaries }: CompareOverviewPro
 }
 
 function CompareServiceIcon({ service }: { service: CompareServiceSummary }) {
-  const icon = compareServiceIcons[service.name];
-
-  if (!icon) {
-    return (
-      <View style={[styles.compareServiceMark, { backgroundColor: service.color }]}>
-        <Text style={styles.compareServiceMarkText}>{service.mark}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.compareServiceLogoFrame}>
-      <Image source={icon} style={styles.compareServiceLogoImage} />
+      <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareServiceLogoSvg} />
     </View>
   );
 }
@@ -68,7 +47,7 @@ function CompareWeatherBadge({ service }: { service: CompareServiceSummary }) {
   return (
     <View style={styles.compareSummaryWeatherBadge}>
       <View style={styles.compareSummaryWeatherIcon}>
-        <WeatherMiniIcon condition={service.weather} tone={service.color} />
+        <WeatherMiniIcon condition={service.weather} />
       </View>
       <Text style={styles.compareSummaryWeatherText}>{service.weather}</Text>
       <Text style={styles.compareSummaryValueText}>{service.value}</Text>
@@ -84,26 +63,6 @@ function normalizeServiceName(name: string) {
   return name;
 }
 
-function WeatherMiniIcon({ condition, tone }: { condition: string; tone: string }) {
-  return <WeatherIcon condition={condition} style={styles.miniWeatherIconImage} />;
-}
-
-function getWeatherIconKind(condition: string) {
-  if (condition.includes('비 없음')) return 'sunny';
-  if (condition.includes('천둥') || condition.includes('불안정')) return 'thunder';
-  if (condition.includes('비') || condition.includes('강수')) return 'rain';
-  if (condition.includes('눈')) return 'snow';
-  if (condition.includes('안개') || condition.includes('습')) return 'fog';
-  if (condition.includes('맑')) return 'sunny';
-
-  return 'cloudy';
-}
-
-function getSoftTone(kind: string) {
-  if (kind === 'rain') return '#b8d7ef';
-  if (kind === 'snow') return '#ffffff';
-  if (kind === 'thunder') return '#ffd33d';
-  if (kind === 'fog') return '#bbb5b7';
-
-  return '#fff2e9';
+function WeatherMiniIcon({ condition }: { condition: string }) {
+  return <WeatherIcon condition={condition} style={styles.compareSummaryWeatherSvg} />;
 }

@@ -19,7 +19,7 @@ const tones = {
 
 export function getCompareFocusText(searchContext: SearchContext) {
   if (searchContext.detectedWeather === '천둥번개') {
-    return `${searchContext.place}의 ${searchContext.timeLabel} 천둥 가능성은 강수량보다 대기 불안정 신호가 더 중요해요. FMI ECMWF의 구름량과 현장 소리 제보를 같이 봅니다.`;
+    return `${searchContext.place}의 ${searchContext.timeLabel} 천둥 가능성은 강수량보다 대기 불안정 신호가 더 중요해요. 핀란드 기상청의 구름량과 현장 소리 제보를 같이 봅니다.`;
   }
 
   if (searchContext.detectedWeather === '눈') {

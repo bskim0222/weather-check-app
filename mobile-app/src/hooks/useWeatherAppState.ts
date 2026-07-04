@@ -11,6 +11,7 @@ import {
 } from '../domain/judgement';
 import {
   defaultQuestionSuggestions,
+  isExplicitCurrentLocationQuery,
   resolveReportPlace,
 } from '../domain/search';
 import { createProviderAdjustedPreset } from '../domain/providerJudgement';
@@ -228,6 +229,19 @@ export function useWeatherAppState() {
     if (!clean) return;
 
     const nextJudgement = createQuestionJudgement(clean);
+    if (nextJudgement.searchContext.target.kind === 'pending-place' && !nextJudgement.searchContext.locationQuery) {
+      setActiveTab('decision');
+      setRefreshLabel('장소 필요');
+      setDataStatus({
+        phase: 'error',
+        label: '장소를 입력해주세요',
+        message: isExplicitCurrentLocationQuery(clean)
+          ? '현재 위치를 보려면 오른쪽 위 새로고침 버튼을 눌러주세요.'
+          : '지금은 장소 중심으로 검색해요. 예: 광화문, 설악산, 부산 해운대처럼 장소명을 먼저 입력해주세요.',
+      });
+      return;
+    }
+
     setJudgement(nextJudgement);
     setQuestionText(clean);
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
@@ -247,8 +261,8 @@ export function useWeatherAppState() {
     resolveQuestionLocation(nextJudgement);
   };
 
-  const submitQuestion = () => {
-    runQuestion(questionText);
+  const submitQuestion = (query?: string) => {
+    runQuestion(query ?? questionText);
   };
 
   const refreshLocationStatus = async () => {

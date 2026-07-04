@@ -1,24 +1,34 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { styles } from '../styles/appStyles';
 
 type QuestionSearchBarProps = {
   isBusy?: boolean;
-  suggestions: string[];
   value: string;
   onChangeText: (value: string) => void;
-  onPickSuggestion: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (query?: string) => void;
 };
+
+const timeOptions = ['지금', '오늘 밤', '내일 오전', '내일 오후'];
+const weatherOptions = ['비', '흐림', '눈', '안개', '천둥'];
 
 export function QuestionSearchBar({
   isBusy = false,
-  suggestions,
   value,
   onChangeText,
-  onPickSuggestion,
   onSubmit,
 }: QuestionSearchBarProps) {
+  const [selectedTime, setSelectedTime] = useState(timeOptions[0]);
+  const [selectedWeather, setSelectedWeather] = useState(weatherOptions[0]);
+  const submitStructuredSearch = () => {
+    const place = value.trim();
+
+    if (!place) return;
+
+    onSubmit(`${place} ${selectedTime} ${selectedWeather}`);
+  };
+
   return (
     <View>
       <View style={styles.searchBox}>
@@ -27,9 +37,9 @@ export function QuestionSearchBar({
           editable={!isBusy}
           value={value}
           onChangeText={onChangeText}
-          onSubmitEditing={onSubmit}
+          onSubmitEditing={submitStructuredSearch}
           selectTextOnFocus
-          placeholder="잠실운동장 지금 비 와?"
+          placeholder="장소를 입력하세요. 예: 광화문"
           placeholderTextColor="rgba(34,36,38,0.36)"
           returnKeyType="search"
           style={styles.searchInput}
@@ -38,33 +48,70 @@ export function QuestionSearchBar({
           accessibilityLabel="질문 검색"
           accessibilityRole="button"
           disabled={isBusy}
-          onPress={onSubmit}
+          onPress={submitStructuredSearch}
           style={[styles.searchSubmit, isBusy && styles.searchSubmitDisabled]}
         >
           <Text style={styles.searchSubmitText}>{isBusy ? '…' : '↗'}</Text>
         </Pressable>
       </View>
 
-      {false && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.searchSuggestionList}
-        >
-          {suggestions.map((suggestion) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.searchSuggestionList}
+      >
+        {timeOptions.map((option) => {
+          const isActive = selectedTime === option;
+
+          return (
             <Pressable
-              key={suggestion}
-              accessibilityLabel={`${suggestion} 질문하기`}
+              key={option}
+              accessibilityLabel={`${option} 기준으로 보기`}
               accessibilityRole="button"
               disabled={isBusy}
-              onPress={() => onPickSuggestion(suggestion)}
-              style={[styles.searchSuggestionChip, isBusy && styles.searchSuggestionChipDisabled]}
+              onPress={() => setSelectedTime(option)}
+              style={[
+                styles.searchSuggestionChip,
+                isActive && styles.searchSuggestionChipActive,
+                isBusy && styles.searchSuggestionChipDisabled,
+              ]}
             >
-              <Text style={styles.searchSuggestionText}>{suggestion}</Text>
+              <Text style={[styles.searchSuggestionText, isActive && styles.searchSuggestionTextActive]}>
+                {option}
+              </Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      )}
+          );
+        })}
+      </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.searchSuggestionList}
+      >
+        {weatherOptions.map((option) => {
+          const isActive = selectedWeather === option;
+
+          return (
+            <Pressable
+              key={option}
+              accessibilityLabel={`${option} 가능성 보기`}
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={() => setSelectedWeather(option)}
+              style={[
+                styles.searchSuggestionChip,
+                isActive && styles.searchSuggestionChipActive,
+                isBusy && styles.searchSuggestionChipDisabled,
+              ]}
+            >
+              <Text style={[styles.searchSuggestionText, isActive && styles.searchSuggestionTextActive]}>
+                {option}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }

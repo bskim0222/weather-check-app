@@ -103,6 +103,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  searchSuggestionChipActive: {
+    backgroundColor: '#242424',
+  },
   searchSuggestionChipDisabled: {
     opacity: 0.55,
   },
@@ -110,6 +113,9 @@ export const styles = StyleSheet.create({
     color: 'rgba(36,36,36,0.60)',
     fontSize: 11,
     fontWeight: '900',
+  },
+  searchSuggestionTextActive: {
+    color: '#f4f5f2',
   },
   dataStatusBanner: {
     marginHorizontal: 18,

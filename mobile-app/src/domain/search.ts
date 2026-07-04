@@ -2,11 +2,11 @@ import type { SearchContext, WeatherKey } from '../types/weather';
 import { currentLocationReference, findKnownLocation } from './location';
 
 export const defaultQuestionSuggestions = [
-  '잠실운동장 지금 비 와?',
-  '부산 내일 오후에 비 올 것 같아?',
-  '석촌호수 내일 눈 와?',
-  '잠실새내역 퇴근길 천둥번개 올까?',
-  '송파 지금 안개 심해?',
+  '광화문',
+  '잠실운동장',
+  '부산 해운대',
+  '설악산',
+  '제주공항',
 ];
 
 export const defaultSearchContext: SearchContext = {
@@ -68,7 +68,8 @@ export function inferSearchContext(question: string, weatherKey: WeatherKey): Se
   const matchedLocation = findKnownLocation(clean);
   const locationQuery = matchedLocation?.label ?? extractLocationCandidate(clean);
   const hasPlaceCandidate = Boolean(locationQuery);
-  const place = matchedLocation?.label ?? locationQuery ?? '현재 위치';
+  const isCurrentLocationQuery = isExplicitCurrentLocationQuery(clean);
+  const place = matchedLocation?.label ?? locationQuery ?? (isCurrentLocationQuery ? '현재 위치' : '');
   const target = matchedLocation ?? (
     locationQuery
       ? {
@@ -77,7 +78,14 @@ export function inferSearchContext(question: string, weatherKey: WeatherKey): Se
           kind: 'pending-place' as const,
           radiusMeters: 1200,
         }
-      : currentLocationReference
+      : isCurrentLocationQuery
+        ? currentLocationReference
+        : {
+            id: 'missing-place',
+            label: '',
+            kind: 'pending-place' as const,
+            radiusMeters: 1200,
+          }
   );
   const timeLabel = inferTimeLabel(clean);
   const weatherHintFound = hasWeatherHint(clean);
@@ -88,17 +96,19 @@ export function inferSearchContext(question: string, weatherKey: WeatherKey): Se
       : `${place}의 ${timeLabel} 날씨를 ${weatherLabel} 기준으로 봤어요.`
     : hasPlaceCandidate
       ? `${place} 위치를 먼저 확인하고 있어요. 장소가 확인되면 그 위치 기준으로 판정할게요.`
-      : '장소 단어를 찾지 못해서 현재 위치 기준으로 봤어요.';
+      : isCurrentLocationQuery
+        ? '현재 위치 기준으로 봤어요.'
+        : '장소명을 먼저 입력해주세요.';
 
   return {
     raw: clean,
-    place,
+    place: place || '장소 미입력',
     target,
-    locationQuery,
+    locationQuery: locationQuery || undefined,
     timeLabel,
     detectedWeather: weatherLabel,
     interpretationNote,
-    needsClarification: !matchedLocation || !weatherHintFound,
+    needsClarification: !hasPlaceCandidate || !weatherHintFound,
   };
 }
 
@@ -126,15 +136,33 @@ function extractLocationCandidate(question: string) {
   const cleanedPlace = cleanLocationCandidate(placeWithParticle ?? '');
   if (cleanedPlace) return cleanedPlace;
 
-  return '';
+  const directPlace = cleanLocationCandidate(normalized);
+
+  return isLikelyPlaceCandidate(directPlace) ? directPlace : '';
 }
 
 function cleanLocationCandidate(value: string) {
   return value
     .replace(/.*(?:근데|그런데|이면|라면|하고|그리고|,)/, '')
-    .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|\d{1,2}시)\s*/g, '')
-    .replace(/\s*(날씨|비|눈|안개|기온|우산|소나기|천둥|번개).*$/, '')
+    .replace(/\b(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|지금|퇴근길|\d{1,2}\s*시)\b/g, ' ')
+    .replace(/\s*(날씨|비|눈|안개|기온|우산|소나기|천둥|번개|흐림|구름|맑음|바람).*$/, '')
+    .replace(/\s+(날씨|비|눈|안개|기온|우산|소나기|천둥|번개|흐림|구름|맑음|바람)\s*/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+}
+
+function isLikelyPlaceCandidate(value: string) {
+  if (value.length < 2) return false;
+  if (weatherHintWords.some((word) => value === word)) return false;
+  if (/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|지금)$/.test(value)) return false;
+
+  return /[가-힣A-Za-z0-9]/.test(value);
+}
+
+export function isExplicitCurrentLocationQuery(question: string) {
+  const clean = question.replace(/\s/g, '');
+
+  return clean.includes('현재위치') || clean.includes('내위치') || clean.includes('내주변') || clean.includes('여기');
 }
 
 function inferTimeLabel(question: string) {

@@ -29,10 +29,8 @@ export default function App() {
           />
           <QuestionSearchBar
             isBusy={appState.isBusy}
-            suggestions={appState.questionSuggestions}
             value={appState.questionText}
             onChangeText={appState.setQuestionText}
-            onPickSuggestion={appState.runQuestion}
             onSubmit={appState.submitQuestion}
           />
           <DataStatusBanner status={appState.dataStatus} />

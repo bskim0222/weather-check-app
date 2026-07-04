@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef } from 'react';
-import { Animated, Easing, Text, View } from 'react-native';
+import { Animated, Easing, Image, Text, View } from 'react-native';
 
 import { styles } from '../styles/appStyles';
 import type { SearchContext, WeatherPreset } from '../types/weather';
@@ -112,68 +112,25 @@ function getModernCardBackground(condition: string) {
 
 function WeatherArtwork({ current }: { current: WeatherPreset }) {
   const drift = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
-  const fall = useRef(new Animated.Value(0)).current;
-  const flash = useRef(new Animated.Value(0)).current;
-  const isThunder = current.condition === '천둥번개';
   const sample = getSoftSample(current.condition);
 
   useEffect(() => {
     drift.setValue(0);
-    pulse.setValue(0);
-    fall.setValue(0);
-    flash.setValue(0);
 
     const animation = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(drift, {
-            toValue: 1,
-            duration: 2600,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(drift, {
-            toValue: 0,
-            duration: 2600,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(pulse, {
-            toValue: 1,
-            duration: isThunder ? 620 : 1800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulse, {
-            toValue: 0,
-            duration: isThunder ? 760 : 1800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.timing(fall, {
+      Animated.sequence([
+        Animated.timing(drift, {
           toValue: 1,
-          duration: sample.key === 'rain' ? 520 : sample.key === 'snow' ? 1200 : 1700,
-          easing: Easing.linear,
+          duration: 2600,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.sequence([
-          Animated.timing(flash, {
-            toValue: 1,
-            duration: isThunder ? 140 : 900,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(flash, {
-            toValue: 0,
-            duration: isThunder ? 520 : 900,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(drift, {
+          toValue: 0,
+          duration: 2600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]),
     );
 
@@ -182,7 +139,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     return () => {
       animation.stop();
     };
-  }, [current.condition, drift, fall, flash, isThunder, pulse, sample.key]);
+  }, [current.condition, drift]);
 
   const weatherFloatStyle = {
     transform: [
@@ -201,50 +158,38 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
       { rotate: '-4deg' },
     ],
   };
-  const pulseStyle = {
-    opacity: pulse.interpolate({
-      inputRange: [0, 1],
-      outputRange: isThunder ? [0.86, 1] : [0.82, 1],
-    }),
-    transform: [
-      {
-        scale: pulse.interpolate({
-          inputRange: [0, 1],
-          outputRange: isThunder ? [0.96, 1.08] : [0.97, 1.04],
-        }),
-      },
-    ],
-  };
-  const fallStyle = {
-    transform: [
-      {
-        translateY: fall.interpolate({
-          inputRange: [0, 1],
-          outputRange: sample.key === 'rain' ? [-8, 10] : [-3, 6],
-        }),
-      },
-    ],
-    opacity: fall.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: [0.42, 1, 0.42],
-    }),
-  };
-
   return (
     <Animated.View style={[styles.weatherHeroArt, weatherFloatStyle]}>
-      <View style={[styles.softSampleTile, styles.softHeroSampleTile, { backgroundColor: sample.background }]}>
-        <SoftSampleGraphic sampleKey={sample.key} pulseStyle={pulseStyle} fallStyle={fallStyle} flash={flash} />
-        <View style={styles.softSampleLabelBlock}>
-          <Text style={[styles.softSampleLabel, sample.dark && styles.softSampleLabelDark]}>
-            {sample.label}
-          </Text>
-          <Text style={[styles.softSampleSubLabel, sample.dark && styles.softSampleSubLabelDark]}>
-            {sample.subLabel}
-          </Text>
-        </View>
-      </View>
+      <Image source={{ uri: getSoft3dSvgUri(sample.key) }} style={styles.softSvgImage} />
     </Animated.View>
   );
+}
+
+function getSoft3dSvgUri(sampleKey: SoftSampleKey) {
+  const cloudColor = sampleKey === 'thunder' ? '#4e5663' : sampleKey === 'rain' ? '#155f82' : '#738177';
+  const cloud = `<g><ellipse cx="78" cy="78" rx="42" ry="28" fill="#f7f5ec"/><circle cx="54" cy="77" r="22" fill="#f7f5ec"/><circle cx="94" cy="68" r="28" fill="${cloudColor}"/></g>`;
+  const drops = (color: string) => `<g opacity=".9" stroke="${color}" stroke-width="9" stroke-linecap="round"><path d="M58 105l-7 37"/><path d="M94 104l-7 38"/><path d="M124 107l-7 31"/></g>`;
+  const bolt = (color: string) => `<path d="M94 38L65 98h24l-15 52 52-72H99l20-40z" fill="${color}" opacity=".92"/>`;
+  const flakes = () => `<g fill="#242424" opacity=".42"><circle cx="52" cy="82" r="5"/><circle cx="105" cy="74" r="5"/><circle cx="77" cy="112" r="5"/><circle cx="119" cy="123" r="5"/></g>`;
+  const fogLines = () => `<g stroke="#242424" stroke-width="9" stroke-linecap="round" opacity=".9"><path d="M28 67c29-8 60 8 101-4"/><path d="M21 101c34-10 76 10 120-2"/><path d="M31 132c34-6 62 7 98 0"/></g>`;
+
+  let content = cloud;
+
+  if (sampleKey === 'sun') {
+    content = `<circle cx="82" cy="72" r="42" fill="#fff36d"/><g stroke="#242424" stroke-width="6" stroke-linecap="round" opacity=".35"><path d="M82 16v16M82 112v16M26 72h16M122 72h16M43 33l11 11M121 33l-11 11M43 111l11-11M121 111l-11-11"/></g>`;
+  } else if (sampleKey === 'rain') {
+    content = `${cloud}${drops('#e6f8ff')}`;
+  } else if (sampleKey === 'thunder') {
+    content = `${cloud}${bolt('#e8f05d')}${drops('#9ed4e9')}`;
+  } else if (sampleKey === 'snow') {
+    content = `${cloud}${flakes()}`;
+  } else if (sampleKey === 'fog') {
+    content = `${cloud}${fogLines()}`;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 178">${content}</svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 function SoftSampleGraphic({

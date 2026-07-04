@@ -656,6 +656,11 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  softSvgImage: {
+    width: 214,
+    height: 214,
+    resizeMode: 'contain',
+  },
   softHeroGraphic: {
     width: 146,
     height: 140,

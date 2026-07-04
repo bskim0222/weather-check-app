@@ -240,7 +240,6 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   if (isSunny) {
     return (
       <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
-        <Animated.View style={[styles.weatherArtPlate, { backgroundColor: getWeatherPlateColor(current) }, pulseStyle]} />
         <Animated.View style={[styles.sunHalo, { borderColor: current.accent }, pulseStyle]} />
         <Animated.View style={[styles.sunCore, { backgroundColor: current.accent }, pulseStyle]} />
       </Animated.View>
@@ -249,7 +248,6 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
 
   return (
     <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
-      <Animated.View style={[styles.weatherArtPlate, { backgroundColor: getWeatherPlateColor(current) }, pulseStyle]} />
       {isThunder && <Animated.View style={[styles.thunderFlash, { opacity: flash }]} />}
       <Animated.View style={[styles.cloudPuffLarge, { backgroundColor: puffColor }, pulseStyle]} />
       <Animated.View style={[styles.cloudBase, { backgroundColor: shapeColor }, pulseStyle]} />
@@ -327,13 +325,4 @@ function getDropColor(current: WeatherPreset) {
 function getFogLineColor(current: WeatherPreset) {
   if (current.condition === '흐림') return 'rgba(36,36,36,0.22)';
   return 'rgba(36,36,36,0.34)';
-}
-
-function getWeatherPlateColor(current: WeatherPreset) {
-  if (current.condition === '비') return 'rgba(225,248,255,0.24)';
-  if (current.condition === '천둥번개') return 'rgba(255,244,117,0.18)';
-  if (current.condition === '눈') return 'rgba(255,255,255,0.48)';
-  if (current.condition === '안개') return 'rgba(255,248,239,0.34)';
-  if (current.condition === '흐림') return 'rgba(255,248,230,0.34)';
-  return 'rgba(255,255,255,0.28)';
 }

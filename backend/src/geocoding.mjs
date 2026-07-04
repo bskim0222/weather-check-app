@@ -32,7 +32,7 @@ export async function geocodePlaceCandidates(query, raw = '', limit = 6) {
 
   if (!cleanQuery) return [];
 
-  const cacheKey = `candidates:${normalizeQuery(cleanQuery)}:${limit}`;
+  const cacheKey = `candidates:${normalizeQuery(cleanQuery)}:${limit}:${getKakaoRestApiKey() ? 'kakao' : 'fallback'}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
 
   const aliasCandidates = findAliasCandidates(cleanQuery);
@@ -150,10 +150,12 @@ async function fetchKakaoCandidates(query) {
     analyze_type: 'similar',
   });
 
-  return [
-    ...keywordRows.map(createKakaoKeywordCandidate),
-    ...addressRows.map(createKakaoAddressCandidate),
-  ].filter(Boolean);
+  const keywordCandidates = keywordRows.map(createKakaoKeywordCandidate).filter(Boolean);
+  const addressCandidates = addressRows.map(createKakaoAddressCandidate).filter(Boolean);
+
+  return prefersAdministrativePlace(query)
+    ? [...addressCandidates, ...keywordCandidates]
+    : [...keywordCandidates, ...addressCandidates];
 }
 
 async function fetchKakaoRows(endpoint, params) {
@@ -467,6 +469,12 @@ function getNominatimRadiusMeters(row) {
   if (row?.type === 'station' || row?.type === 'subway') return 700;
 
   return 1000;
+}
+
+function prefersAdministrativePlace(query) {
+  const clean = cleanPlaceQuery(query).replace(/\s+/g, '');
+
+  return /(특별시|광역시|특별자치시|특별자치도|도|시|군|구|읍|면|동|리)$/.test(clean);
 }
 
 function cleanPlaceQuery(value) {

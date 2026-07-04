@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { readDatabase, writeDatabase } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
-import { geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
+import { diagnoseKakaoLocal, geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
 
@@ -38,6 +38,11 @@ async function routeRequest(request, response) {
 
   if (request.method === 'GET' && url.pathname === '/provider-status') {
     sendJson(response, 200, createProviderStatus());
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/places/kakao-status') {
+    sendJson(response, 200, await diagnoseKakaoLocal(url.searchParams.get('query') ?? '광화문'));
     return;
   }
 

@@ -61,6 +61,49 @@ export async function reverseGeocodePoint(latitude, longitude) {
   return result;
 }
 
+export async function diagnoseKakaoLocal(query = '광화문') {
+  const restApiKey = getKakaoRestApiKey();
+
+  if (!restApiKey) {
+    return {
+      configured: false,
+      ok: false,
+      status: 0,
+      message: 'KAKAO_REST_API_KEY is not configured.',
+    };
+  }
+
+  const url = new URL(kakaoKeywordEndpoint);
+  url.searchParams.set('query', cleanPlaceQuery(query) || '광화문');
+  url.searchParams.set('size', '1');
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `KakaoAK ${restApiKey}`,
+      },
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    return {
+      configured: true,
+      ok: response.ok,
+      status: response.status,
+      count: Array.isArray(payload?.documents) ? payload.documents.length : 0,
+      errorType: payload?.errorType,
+      message: payload?.message,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      ok: false,
+      status: 0,
+      message: error instanceof Error ? error.message : 'Unknown Kakao Local error.',
+    };
+  }
+}
+
 function createAlias(id, names, label, latitude, longitude, radiusMeters) {
   return {
     id,

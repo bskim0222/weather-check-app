@@ -16,9 +16,10 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
   const placeLabel = getDecisionPlaceLabel(searchContext, locationStatus);
   const title = getDisplayTitle(current.title);
   const artworkCaption = getArtworkCaption(current.condition);
+  const cardBackground = getModernCardBackground(current.condition);
 
   return (
-    <View style={[styles.decisionCard, styles.decisionCardModern, { backgroundColor: current.bg }]}>
+    <View style={[styles.decisionCard, styles.decisionCardModern, { backgroundColor: cardBackground }]}>
       <View style={[styles.decisionBackdropOrbLarge, { backgroundColor: current.accent }]} />
       <View style={styles.decisionBackdropOrbSoft} />
 
@@ -97,6 +98,16 @@ function getArtworkCaption(condition: string) {
   if (condition === '안개') return '안개 상황을 부드럽지만 흐리지 않게';
 
   return '흐림 상황을 차분하지만 답답하지 않게';
+}
+
+function getModernCardBackground(condition: string) {
+  if (condition === '맑음') return '#eef0ca';
+  if (condition === '비') return '#d7ecf4';
+  if (condition === '천둥번개') return '#dedbe4';
+  if (condition === '눈') return '#e6f1f5';
+  if (condition === '안개') return '#e8e0d5';
+
+  return '#e3e7df';
 }
 
 function WeatherArtwork({ current }: { current: WeatherPreset }) {

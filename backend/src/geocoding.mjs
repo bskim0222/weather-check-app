@@ -457,5 +457,11 @@ function unique(values) {
 }
 
 function getKakaoRestApiKey() {
-  return typeof process.env.KAKAO_REST_API_KEY === 'string' ? process.env.KAKAO_REST_API_KEY.trim() : '';
+  if (typeof process.env.KAKAO_REST_API_KEY !== 'string') return '';
+
+  return process.env.KAKAO_REST_API_KEY
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/^KakaoAK\s+/i, '')
+    .trim();
 }

@@ -53,9 +53,6 @@ export function DecisionScreen({
 }: DecisionScreenProps) {
   const weatherOptions = Object.entries(weatherPresets) as [WeatherKey, WeatherPreset][];
   const activeWeatherKey = getWeatherKeyFromCondition(current.condition) ?? weatherKey;
-  const actionHint = searchContext.needsClarification
-    ? '장소나 시간을 더 구체적으로 물어보면 판정이 더 또렷해져요.'
-    : `${searchContext.detectedWeather} 기준으로 보면 첫 1~3시간 변화가 가장 중요해요.`;
 
   return (
     <View>
@@ -179,42 +176,6 @@ export function DecisionScreen({
             <View style={styles.liveEvidenceBadge}>
               <Text style={styles.liveEvidenceBadgeText}>{current.live}</Text>
             </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.mockSection}>
-        <View style={styles.mockSectionHead}>
-          <Text style={styles.mockSectionTitle}>다음 6시간 날씨</Text>
-          <Pressable style={styles.mockSectionButton}>
-            <Text style={styles.mockSectionButtonText}>예보 흐름</Text>
-          </Pressable>
-        </View>
-        <View style={styles.forecastPanel}>
-          <View style={styles.forecastLead}>
-            <Text style={styles.forecastLeadLabel}>흐름</Text>
-            <Text style={styles.forecastLeadText}>{current.forecastLead}</Text>
-            <View style={styles.forecastHint}>
-              <Text style={styles.forecastHintLabel}>행동 힌트</Text>
-              <Text style={styles.forecastHintText}>{actionHint}</Text>
-            </View>
-          </View>
-          <View style={styles.forecastRows}>
-            {current.forecastRows.map((row) => (
-              <View key={`${row.time}-${row.title}`} style={styles.forecastRow}>
-                <View style={styles.forecastWeatherIconFrame}>
-                  <WeatherStatusIcon condition={row.title} tone={getForecastIconTone(row.title, current.accent)} />
-                </View>
-                <View style={styles.forecastMain}>
-                  <Text style={styles.forecastTime}>{row.time}</Text>
-                  <Text style={styles.forecastTitle}>{row.title}</Text>
-                </View>
-                <View style={styles.forecastSide}>
-                  <Text style={styles.forecastTemp}>{row.temp}</Text>
-                  <Text style={styles.forecastNote}>{row.note}</Text>
-                </View>
-              </View>
-            ))}
           </View>
         </View>
       </View>

@@ -91,13 +91,11 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
       </View>
 
       <View style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}>
-        {getForecastStrip(current.temp).map((item) => (
+        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition).map((item) => (
           <View key={item.label} style={styles.figmaWeatherHour}>
             <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
-            <View style={[styles.figmaWeatherHourTrack, { backgroundColor: figma.line }]}>
-              <View style={[styles.figmaWeatherHourBar, { height: item.height, backgroundColor: figma.stroke }]} />
-            </View>
-            <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}°</Text>
+            <ForecastMiniIcon condition={item.condition} stroke={figma.stroke} dim={figma.dim} />
+            <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}</Text>
           </View>
         ))}
       </View>
@@ -234,14 +232,132 @@ function createFigmaPreset(bg: string, stroke: string, ink: string, dim: string,
   };
 }
 
-function getForecastStrip(temp: number) {
-  return [
-    { label: 'Now', temp, height: 26 },
-    { label: '3pm', temp: temp + 1, height: 32 },
-    { label: '6pm', temp: temp - 1, height: 23 },
-    { label: '9pm', temp: temp - 2, height: 18 },
-    { label: '12am', temp: temp - 3, height: 14 },
-  ];
+function getForecastStrip(
+  temp: number,
+  rows: WeatherPreset['forecastRows'],
+  fallbackCondition: string,
+) {
+  if (rows.length === 0) {
+    return [
+      { label: '지금', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '1h', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '3h', temp: `${temp}°`, condition: fallbackCondition },
+      { label: '6h', temp: `${temp}°`, condition: fallbackCondition },
+    ];
+  }
+
+  return rows.slice(0, 5).map((row, index) => ({
+    label: formatForecastTimeLabel(row.time, index),
+    temp: formatForecastTemp(row.temp),
+    condition: getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition),
+  }));
+}
+
+function formatForecastTimeLabel(label: string, index: number) {
+  if (index === 0 || label.includes('지금')) return '지금';
+
+  const hourMatch = label.match(/(\d+)\s*시간/);
+  if (hourMatch) return `${hourMatch[1]}h`;
+
+  return label.replace(/\s*뒤/g, '').replace(/\s+/g, '');
+}
+
+function formatForecastTemp(value: string | number) {
+  if (typeof value === 'number') return `${value}°`;
+
+  return value.replace(/도/g, '°').replace(/\s+/g, '');
+}
+
+function getForecastStripCondition(text: string, fallbackCondition: string) {
+  return normalizeWeatherCondition(text.trim().length > 0 ? text : fallbackCondition);
+}
+
+function ForecastMiniIcon({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {
+  const normalizedCondition = normalizeWeatherCondition(condition);
+  const cloudPath = 'M10 24c0-4 3-7 7-7 1.2-3.6 4.7-6 8.8-6 5.4 0 9.8 4.2 10.1 9.4 3 .8 5.1 3.2 5.1 6.2 0 3.6-2.9 6.4-6.6 6.4H17.2C13.2 33 10 29 10 24Z';
+  const fogStroke = normalizedCondition === '안개' || normalizedCondition === '황사' ? stroke : dim;
+
+  if (normalizedCondition === '맑음' || normalizedCondition === '폭염') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Circle cx={22} cy={22} r={8.5} fill={stroke} opacity={0.98} />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+          <Line
+            key={angle}
+            x1={22 + Math.cos((angle * Math.PI) / 180) * 13}
+            y1={22 + Math.sin((angle * Math.PI) / 180) * 13}
+            x2={22 + Math.cos((angle * Math.PI) / 180) * 17}
+            y2={22 + Math.sin((angle * Math.PI) / 180) * 17}
+            stroke={stroke}
+            strokeLinecap="round"
+            strokeWidth={3}
+            opacity={0.74}
+          />
+        ))}
+      </Svg>
+    );
+  }
+
+  if (normalizedCondition === '비' || normalizedCondition === '소나기') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Path d={cloudPath} fill={stroke} opacity={0.92} />
+        <Line x1={18} y1={31} x2={15} y2={39} stroke={dim} strokeLinecap="round" strokeWidth={4} />
+        <Line x1={27} y1={31} x2={24} y2={40} stroke={dim} strokeLinecap="round" strokeWidth={4} />
+        <Line x1={36} y1={31} x2={33} y2={38} stroke={dim} strokeLinecap="round" strokeWidth={4} />
+      </Svg>
+    );
+  }
+
+  if (normalizedCondition === '천둥번개' || normalizedCondition === '폭풍우') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Path d={cloudPath} fill={stroke} opacity={0.86} />
+        <Path d="M24 22 17 36h7l-3 9 10-15h-7l5-8Z" fill="#f0f35a" />
+      </Svg>
+    );
+  }
+
+  if (normalizedCondition === '눈') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Path d={cloudPath} fill={stroke} opacity={0.58} />
+        <Circle cx={17} cy={34} r={2.4} fill={dim} />
+        <Circle cx={25} cy={39} r={2.2} fill={dim} opacity={0.82} />
+        <Circle cx={34} cy={34} r={2.4} fill={dim} />
+      </Svg>
+    );
+  }
+
+  if (normalizedCondition === '안개' || normalizedCondition === '황사') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Circle cx={25} cy={18} r={7.4} fill={stroke} opacity={0.62} />
+        <Line x1={8} y1={25} x2={37} y2={21} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} />
+        <Line x1={7} y1={32} x2={37} y2={29} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} opacity={0.82} />
+        <Line x1={12} y1={38} x2={34} y2={36} stroke={fogStroke} strokeLinecap="round" strokeWidth={4} opacity={0.64} />
+      </Svg>
+    );
+  }
+
+  if (normalizedCondition === '태풍') {
+    return (
+      <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+        <Path
+          d="M34 17c-4.4-7-15.9-6.6-20.8.6 5.7-2.2 11.2-1.5 15.2 2.2-5.7-1-10.8.9-14.2 5.7 6.1-2 11.6-.8 15.7 3.6 2.7-3 4.3-7.4 4.1-12.1Z"
+          fill={stroke}
+          opacity={0.9}
+        />
+      </Svg>
+    );
+  }
+
+  return (
+    <Svg width={32} height={32} viewBox="0 0 44 44" style={styles.figmaWeatherHourIcon}>
+      <Path d={cloudPath} fill={stroke} opacity={0.82} />
+      <Circle cx={31} cy={18} r={8} fill={dim} opacity={0.42} />
+    </Svg>
+  );
 }
 
 function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {

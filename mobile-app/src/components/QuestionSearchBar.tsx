@@ -11,7 +11,6 @@ type QuestionSearchBarProps = {
 };
 
 const timeOptions = ['지금', '오늘 밤', '내일 오전', '내일 오후'];
-const weatherOptions = ['비', '흐림', '눈', '안개', '천둥'];
 
 export function QuestionSearchBar({
   isBusy = false,
@@ -20,13 +19,12 @@ export function QuestionSearchBar({
   onSubmit,
 }: QuestionSearchBarProps) {
   const [selectedTime, setSelectedTime] = useState(timeOptions[0]);
-  const [selectedWeather, setSelectedWeather] = useState(weatherOptions[0]);
   const submitStructuredSearch = () => {
     const place = value.trim();
 
     if (!place) return;
 
-    onSubmit(`${place} ${selectedTime} ${selectedWeather}`);
+    onSubmit(`${place} ${selectedTime} 날씨`);
   };
 
   return (
@@ -84,34 +82,6 @@ export function QuestionSearchBar({
         })}
       </ScrollView>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.searchSuggestionList}
-      >
-        {weatherOptions.map((option) => {
-          const isActive = selectedWeather === option;
-
-          return (
-            <Pressable
-              key={option}
-              accessibilityLabel={`${option} 가능성 보기`}
-              accessibilityRole="button"
-              disabled={isBusy}
-              onPress={() => setSelectedWeather(option)}
-              style={[
-                styles.searchSuggestionChip,
-                isActive && styles.searchSuggestionChipActive,
-                isBusy && styles.searchSuggestionChipDisabled,
-              ]}
-            >
-              <Text style={[styles.searchSuggestionText, isActive && styles.searchSuggestionTextActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
     </View>
   );
 }

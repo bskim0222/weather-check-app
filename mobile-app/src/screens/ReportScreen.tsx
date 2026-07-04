@@ -139,7 +139,7 @@ export function ReportScreen({
           <TextInput
             value={requestDraft}
             onChangeText={setRequestDraft}
-            placeholder="예: 광화문 지금 비 와요?"
+            placeholder="예: 청와대 지금 날씨 어떤가요?"
             placeholderTextColor="#8f7f87"
             style={styles.requestInput}
           />

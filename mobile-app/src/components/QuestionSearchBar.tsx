@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
@@ -12,24 +12,20 @@ type QuestionSearchBarProps = {
   onSubmit: (query?: string, location?: LocationReference) => void;
 };
 
-const timeOptions = ['지금', '오늘 밤', '내일 오전', '내일 오후'];
-
 export function QuestionSearchBar({
   isBusy = false,
   value,
   onChangeText,
   onSubmit,
 }: QuestionSearchBarProps) {
-  const [selectedTime, setSelectedTime] = useState(timeOptions[0]);
   const [placeCandidates, setPlaceCandidates] = useState<PlaceCandidate[]>([]);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
   const submitStructuredSearch = async () => {
+    const query = value.trim();
     const place = normalizePlaceInput(value);
 
-    if (!place) return;
-
-    const query = `${place} ${selectedTime} 날씨`;
+    if (!query || !place) return;
 
     setIsSearchingPlace(true);
     const candidates = await searchRemotePlaces(place, query);
@@ -51,10 +47,10 @@ export function QuestionSearchBar({
   };
 
   const submitCandidate = (candidate: PlaceCandidate) => {
-    const query = `${candidate.location.label} ${selectedTime} 날씨`;
+    const query = value.trim() || candidate.location.label;
 
     setPlaceCandidates([]);
-    onChangeText(candidate.location.label);
+    onChangeText(query);
     onSubmit(query, candidate.location);
   };
 
@@ -71,7 +67,7 @@ export function QuestionSearchBar({
           }}
           onSubmitEditing={submitStructuredSearch}
           selectTextOnFocus
-          placeholder="장소를 입력하세요. 예: 광화문"
+          placeholder="예: 서서울CC 내일 오전 9시"
           placeholderTextColor="rgba(34,36,38,0.36)"
           returnKeyType="search"
           style={styles.searchInput}
@@ -108,36 +104,6 @@ export function QuestionSearchBar({
           ))}
         </View>
       ) : null}
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.searchSuggestionList}
-      >
-        {timeOptions.map((option) => {
-          const isActive = selectedTime === option;
-
-          return (
-            <Pressable
-              key={option}
-              accessibilityLabel={`${option} 기준으로 보기`}
-              accessibilityRole="button"
-              disabled={isBusy}
-              onPress={() => setSelectedTime(option)}
-              style={[
-                styles.searchSuggestionChip,
-                isActive && styles.searchSuggestionChipActive,
-                isBusy && styles.searchSuggestionChipDisabled,
-              ]}
-            >
-              <Text style={[styles.searchSuggestionText, isActive && styles.searchSuggestionTextActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
     </View>
   );
 }
@@ -145,7 +111,8 @@ export function QuestionSearchBar({
 function normalizePlaceInput(value: string) {
   return value
     .replace(/[?？!！]/g, ' ')
-    .replace(/(오늘\s*밤|내일\s*오전|내일\s*오후|지금|오늘|내일|날씨)/g, ' ')
+    .replace(/(오늘\s*밤|내일\s*오전|내일\s*오후|오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|퇴근길|지금|\d{1,2}\s*시)/g, ' ')
+    .replace(/\s*(날씨|비\s*(?:와|오|올|내리|안|소식)|눈\s*(?:와|오|올|내리|안|소식)|안개|기온|우산|소나기|천둥|번개|흐림|맑음|바람).*$/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

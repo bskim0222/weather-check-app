@@ -96,8 +96,8 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}
         contentContainerStyle={styles.figmaWeatherHourlyContent}
       >
-        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition).map((item) => (
-          <View key={item.label} style={styles.figmaWeatherHour}>
+        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext.timeLabel).map((item, index) => (
+          <View key={`${item.label}-${index}`} style={styles.figmaWeatherHour}>
             <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
             <ForecastMiniIcon condition={item.condition} stroke={figma.stroke} dim={figma.dim} />
             <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}</Text>
@@ -242,10 +242,11 @@ function getForecastStrip(
   temp: number,
   rows: WeatherPreset['forecastRows'],
   fallbackCondition: string,
+  baseTimeLabel: string,
 ) {
   if (rows.length === 0) {
     return [
-      { label: '지금', temp: `${temp}°`, condition: fallbackCondition },
+      { label: formatForecastTimeLabel('지금', 0, baseTimeLabel), temp: `${temp}°`, condition: fallbackCondition },
       { label: '1h', temp: `${temp}°`, condition: fallbackCondition },
       { label: '2h', temp: `${temp}°`, condition: fallbackCondition },
       { label: '3h', temp: `${temp}°`, condition: fallbackCondition },
@@ -256,19 +257,48 @@ function getForecastStrip(
   }
 
   return rows.slice(0, 7).map((row, index) => ({
-    label: formatForecastTimeLabel(row.time, index),
+    label: formatForecastTimeLabel(row.time, index, baseTimeLabel),
     temp: formatForecastTemp(row.temp),
     condition: getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition),
   }));
 }
 
-function formatForecastTimeLabel(label: string, index: number) {
-  if (index === 0 || label.includes('지금')) return '지금';
+function formatForecastTimeLabel(label: string, index: number, baseTimeLabel: string) {
+  if (index === 0) {
+    if (baseTimeLabel && baseTimeLabel !== '지금') return formatReadableTimeLabel(baseTimeLabel);
+    if (label.includes('지금')) return '지금';
+  }
 
   const hourMatch = label.match(/(\d+)\s*시간/);
   if (hourMatch) return `${hourMatch[1]}h`;
 
-  return label.replace(/\s*뒤/g, '').replace(/\s+/g, '');
+  return formatReadableTimeLabel(label.replace(/\s*뒤/g, ''));
+}
+
+function formatReadableTimeLabel(label: string) {
+  const clean = label.replace(/\s+/g, '');
+  const dateHourMatch = clean.match(/^0?(\d{1,2})\/0?(\d{1,2})(\d{1,2})시$/);
+
+  if (dateHourMatch) {
+    return `${Number(dateHourMatch[1])}/${Number(dateHourMatch[2])}\n${dateHourMatch[3].padStart(2, '0')}시`;
+  }
+
+  const spacedDateHourMatch = label.match(/0?(\d{1,2})\/0?(\d{1,2})\s*(\d{1,2})시/);
+  if (spacedDateHourMatch) {
+    return `${Number(spacedDateHourMatch[1])}/${Number(spacedDateHourMatch[2])}\n${spacedDateHourMatch[3].padStart(2, '0')}시`;
+  }
+
+  const relativeHourMatch = clean.match(/^(오늘|내일|모레|주말)?(?:아침|오전|오후|저녁|밤|새벽|점심|낮)?(\d{1,2})시$/);
+  if (relativeHourMatch) {
+    return `${relativeHourMatch[1] || '오늘'}\n${relativeHourMatch[2].padStart(2, '0')}시`;
+  }
+
+  const dayPartMatch = clean.match(/^(오늘|내일|모레|주말)?(아침|오전|오후|저녁|밤|새벽|점심|낮)$/);
+  if (dayPartMatch) {
+    return [dayPartMatch[1], dayPartMatch[2]].filter(Boolean).join('\n');
+  }
+
+  return label.replace(/\s+/g, '\n');
 }
 
 function formatForecastTemp(value: string | number) {

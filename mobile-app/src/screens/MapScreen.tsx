@@ -5,6 +5,7 @@ import { EmptyState } from '../components/EmptyState';
 import { FieldReportList } from '../components/FieldReportList';
 import { FieldReportMapCard } from '../components/FieldReportMapCard';
 import { formatRadius } from '../domain/location';
+import { getNearbySectionTitle } from '../domain/locationDisplay';
 import { getMockFieldReportSnapshot } from '../services/fieldReports';
 import { styles } from '../styles/appStyles';
 import type { LocalReport, SearchContext } from '../types/weather';
@@ -25,6 +26,7 @@ export function MapScreen({ reports, searchContext, onReportIssue }: MapScreenPr
   const visibleReports = orderedReports.slice(0, 3);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const selectedReport = orderedReports[selectedIndex] ?? orderedReports[0];
+  const nearbySectionTitle = getNearbySectionTitle(searchContext);
 
   return (
     <View>
@@ -62,14 +64,14 @@ export function MapScreen({ reports, searchContext, onReportIssue }: MapScreenPr
       ) : (
         <EmptyState
           title="지도에 표시할 현장 글이 없어요"
-          body={`${searchContext.place} 주변 글이 생기면 지도 핀과 목록에 바로 표시됩니다.`}
+          body={`${nearbySectionTitle} 글이 생기면 지도 핀과 목록에 바로 표시됩니다.`}
           action="제보 탭에서 요청을 먼저 올려보세요"
         />
       )}
 
       {orderedReports.length > 0 && (
         <View style={styles.mapListHeader}>
-          <Text style={styles.mapListTitle}>근처 현장</Text>
+          <Text style={styles.mapListTitle}>{nearbySectionTitle}</Text>
           <Text style={styles.mapListAction}>제보</Text>
         </View>
       )}

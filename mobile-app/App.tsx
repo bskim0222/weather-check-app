@@ -24,7 +24,6 @@ export default function App() {
           <AppHeader
             locationStatus={appState.locationStatus}
             refreshLabel={appState.refreshLabel}
-            screenTitle={appState.screenTitle}
             onRefresh={appState.refreshCurrentLocation}
           />
           <QuestionSearchBar

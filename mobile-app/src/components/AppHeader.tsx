@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { getCurrentLocationDisplay } from '../domain/locationDisplay';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
 
@@ -7,15 +8,14 @@ type AppHeaderProps = {
   locationStatus: LocationStatus;
   onRefresh: () => void;
   refreshLabel: string;
-  screenTitle: string;
 };
 
-export function AppHeader({ locationStatus, onRefresh, refreshLabel, screenTitle }: AppHeaderProps) {
+export function AppHeader({ locationStatus, onRefresh, refreshLabel }: AppHeaderProps) {
   return (
     <View style={styles.header}>
       <View>
         <Text style={styles.brand}>웨더체크</Text>
-        <Text style={styles.headerSub}>{screenTitle} · {locationStatus.label}</Text>
+        <Text style={styles.headerSub}>현재위치 · {getCurrentLocationDisplay(locationStatus)}</Text>
       </View>
       <Pressable
         accessibilityHint={refreshLabel}

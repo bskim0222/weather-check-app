@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
 import { DecisionCard } from '../components/DecisionCard';
 import { weatherPresets } from '../data/mockWeather';
+import { getFieldReportPlaceDisplay, getNearbySectionTitle } from '../domain/locationDisplay';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
 import type {
@@ -43,6 +44,8 @@ export function DecisionScreen({
 }: DecisionScreenProps) {
   const weatherOptions = Object.entries(weatherPresets) as [WeatherKey, WeatherPreset][];
   const activeWeatherKey = getWeatherKeyFromCondition(current.condition) ?? weatherKey;
+  const currentLocationLabel = getFieldReportPlaceDisplay(locationStatus);
+  const nearbySectionTitle = getNearbySectionTitle(searchContext);
 
   return (
     <View>
@@ -86,7 +89,7 @@ export function DecisionScreen({
           <View style={styles.localReportTitleBlock}>
             <View style={styles.localReportTitleRow}>
               <Text style={styles.localReportTitle}>현재 위치의 날씨상황을 알려주세요</Text>
-              <Text style={styles.localReportPlace}>{searchContext.place}</Text>
+              <Text style={styles.localReportPlace}>{currentLocationLabel}</Text>
             </View>
             <Text style={styles.localReportCaption}>
               지금 보이는 날씨를 한 줄로 남기면 생생날씨특파원에 반영돼요.
@@ -130,7 +133,7 @@ export function DecisionScreen({
 
       <View style={styles.mockSection}>
         <View style={styles.mockSectionHead}>
-          <Text style={styles.mockSectionTitle}>근처 현장</Text>
+          <Text style={styles.mockSectionTitle}>{nearbySectionTitle}</Text>
           <Pressable style={styles.mockSectionButton}>
             <Text style={styles.mockSectionButtonText}>제보</Text>
           </Pressable>
@@ -166,7 +169,7 @@ export function DecisionScreen({
         ) : (
           <EmptyState
             title="아직 근처 제보가 없어요"
-            body={`${searchContext.place} 근처의 실제 날씨 글이 올라오면 판정 근거에 함께 반영됩니다.`}
+            body={`${nearbySectionTitle} 글이 올라오면 판정 근거에 함께 반영됩니다.`}
             action="첫 제보를 한 줄로 남겨주세요"
           />
         )}

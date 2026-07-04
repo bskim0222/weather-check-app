@@ -221,8 +221,16 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
 
   return (
     <Animated.View style={[styles.weatherHeroArt, weatherFloatStyle]}>
-      <View style={styles.softHeroGraphic}>
+      <View style={[styles.softSampleTile, styles.softHeroSampleTile, { backgroundColor: sample.background }]}>
         <SoftSampleGraphic sampleKey={sample.key} pulseStyle={pulseStyle} fallStyle={fallStyle} flash={flash} />
+        <View style={styles.softSampleLabelBlock}>
+          <Text style={[styles.softSampleLabel, sample.dark && styles.softSampleLabelDark]}>
+            {sample.label}
+          </Text>
+          <Text style={[styles.softSampleSubLabel, sample.dark && styles.softSampleSubLabelDark]}>
+            {sample.subLabel}
+          </Text>
+        </View>
       </View>
     </Animated.View>
   );

@@ -15,62 +15,41 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
   const compactSignal = getCompactSignal(current.condition, current.signal);
   const placeLabel = getDecisionPlaceLabel(searchContext, locationStatus);
   const title = getDisplayTitle(current.title);
+  const artworkCaption = getArtworkCaption(current.condition);
 
   return (
-    <View style={[styles.decisionCard, { backgroundColor: current.bg }]}>
+    <View style={[styles.decisionCard, styles.decisionCardModern, { backgroundColor: current.bg }]}>
       <View style={[styles.decisionBackdropOrbLarge, { backgroundColor: current.accent }]} />
       <View style={styles.decisionBackdropOrbSoft} />
 
-      <View style={styles.decisionTopRow}>
-        <View style={styles.decisionPlaceBlock}>
-          <Text style={styles.decisionPlaceKicker}>판정 위치</Text>
-          <Text numberOfLines={1} style={styles.decisionPlaceText}>{placeLabel}</Text>
-        </View>
-        <View style={[styles.decisionTimeBadge, { backgroundColor: current.accent }]}>
-          <Text style={[styles.decisionTimeBadgeText, { color: current.accentInk }]}>
-            {searchContext.timeLabel}
+      <View style={styles.decisionModernTop}>
+        <View style={styles.decisionModernPill}>
+          <Text numberOfLines={1} style={styles.decisionModernPillText}>
+            {searchContext.timeLabel} · {placeLabel}
           </Text>
         </View>
-      </View>
-
-      <View style={styles.decisionHeroLayout}>
-        <View style={styles.decisionHeroTextBlock}>
-          <View style={[styles.decisionConditionBadge, { backgroundColor: current.accent }]}>
-            <Text style={[styles.decisionConditionBadgeText, { color: current.accentInk }]}>
-              {current.condition}
-            </Text>
-          </View>
-          <Text style={styles.decisionTitle}>{title}</Text>
-          <Text style={styles.decisionSummary}>{current.summary}</Text>
-        </View>
-        <View style={styles.decisionVisualStage}>
-          <WeatherArtwork current={current} />
+        <View style={styles.decisionModernTempRow}>
+          <Text style={styles.decisionModernTemp}>{current.temp}</Text>
+          <Text style={styles.decisionModernDegree}>°C</Text>
         </View>
       </View>
 
-      <View style={styles.decisionTempPanel}>
-        <View style={styles.tempRow}>
-          <Text style={styles.temperature}>{current.temp}</Text>
-          <Text style={styles.degree}>°C</Text>
-        </View>
-        <View style={styles.decisionUpdateBlock}>
-          <Text style={styles.decisionUpdateLabel}>데이터</Text>
-          <Text style={styles.decisionUpdateText}>방금 갱신</Text>
-        </View>
+      <View style={styles.decisionModernArtStage}>
+        <WeatherArtwork current={current} />
       </View>
 
-      <View style={styles.signalGrid}>
-        <View style={[styles.signalItem, { backgroundColor: current.accent }]}>
-          <Text style={[styles.signalLabel, { color: current.accentInk }]}>판정</Text>
-          <Text numberOfLines={1} style={[styles.signalValue, { color: current.accentInk }]}>{current.level}</Text>
-        </View>
-        <View style={[styles.signalItem, { backgroundColor: current.accent }]}>
-          <Text style={[styles.signalLabel, { color: current.accentInk }]}>현장</Text>
-          <Text numberOfLines={1} style={[styles.signalValue, { color: current.accentInk }]}>{current.live}</Text>
-        </View>
-        <View style={[styles.signalItem, { backgroundColor: current.accent }]}>
-          <Text style={[styles.signalLabel, { color: current.accentInk }]}>신호</Text>
-          <Text numberOfLines={1} style={[styles.signalValue, { color: current.accentInk }]}>{compactSignal}</Text>
+      <View style={styles.decisionModernCopy}>
+        <Text style={styles.decisionModernCaption}>{artworkCaption}</Text>
+        <Text style={styles.decisionModernTitle}>{title}</Text>
+        <Text style={styles.decisionModernSummary}>{current.summary}</Text>
+      </View>
+
+      <View style={styles.decisionModernFoot}>
+        <Text numberOfLines={1} style={styles.decisionModernFootText}>
+          {current.signal}
+        </Text>
+        <View style={styles.decisionModernFootPill}>
+          <Text style={styles.decisionModernFootPillText}>{compactSignal}</Text>
         </View>
       </View>
     </View>
@@ -108,6 +87,16 @@ function getCompactSignal(condition: string, signal: string) {
   if (condition === '안개') return '시야 확인';
 
   return signal;
+}
+
+function getArtworkCaption(condition: string) {
+  if (condition === '맑음') return '맑은 날씨를 선명하지만 과하지 않게';
+  if (condition === '비') return '비 상황을 또렷하지만 무겁지 않게';
+  if (condition === '천둥번개') return '천둥 신호를 강하지만 과하지 않게';
+  if (condition === '눈') return '눈 상황을 귀엽지만 과하지 않게';
+  if (condition === '안개') return '안개 상황을 부드럽지만 흐리지 않게';
+
+  return '흐림 상황을 차분하지만 답답하지 않게';
 }
 
 function WeatherArtwork({ current }: { current: WeatherPreset }) {
@@ -231,17 +220,9 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   };
 
   return (
-    <Animated.View style={[styles.weatherArt, weatherFloatStyle]}>
-      <View style={[styles.softSampleTile, { backgroundColor: sample.background }]}>
+    <Animated.View style={[styles.weatherHeroArt, weatherFloatStyle]}>
+      <View style={styles.softHeroGraphic}>
         <SoftSampleGraphic sampleKey={sample.key} pulseStyle={pulseStyle} fallStyle={fallStyle} flash={flash} />
-        <View style={styles.softSampleLabelBlock}>
-          <Text style={[styles.softSampleLabel, sample.dark && styles.softSampleLabelDark]}>
-            {sample.label}
-          </Text>
-          <Text style={[styles.softSampleSubLabel, sample.dark && styles.softSampleSubLabelDark]}>
-            {sample.subLabel}
-          </Text>
-        </View>
       </View>
     </Animated.View>
   );

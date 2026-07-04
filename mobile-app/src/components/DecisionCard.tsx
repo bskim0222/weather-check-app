@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, Text, View } from 'react-native';
+import { Animated, Easing, Text, View } from 'react-native';
 
 import { styles } from '../styles/appStyles';
 import type { SearchContext, WeatherPreset } from '../types/weather';
@@ -112,10 +112,12 @@ function getModernCardBackground(condition: string) {
 
 function WeatherArtwork({ current }: { current: WeatherPreset }) {
   const drift = useRef(new Animated.Value(0)).current;
+  const flash = useRef(new Animated.Value(1)).current;
   const sample = getSoftSample(current.condition);
 
   useEffect(() => {
     drift.setValue(0);
+    flash.setValue(1);
 
     const animation = Animated.loop(
       Animated.sequence([
@@ -139,7 +141,7 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
     return () => {
       animation.stop();
     };
-  }, [current.condition, drift]);
+  }, [current.condition, drift, flash]);
 
   const weatherFloatStyle = {
     transform: [
@@ -160,36 +162,11 @@ function WeatherArtwork({ current }: { current: WeatherPreset }) {
   };
   return (
     <Animated.View style={[styles.weatherHeroArt, weatherFloatStyle]}>
-      <Image source={{ uri: getSoft3dSvgUri(sample.key) }} style={styles.softSvgImage} />
+      <View style={styles.softObjectCanvas}>
+        <SoftSampleGraphic sampleKey={sample.key} pulseStyle={{}} fallStyle={{}} flash={flash} />
+      </View>
     </Animated.View>
   );
-}
-
-function getSoft3dSvgUri(sampleKey: SoftSampleKey) {
-  const cloudColor = sampleKey === 'thunder' ? '#4e5663' : sampleKey === 'rain' ? '#155f82' : '#738177';
-  const cloud = `<g><ellipse cx="78" cy="78" rx="42" ry="28" fill="#f7f5ec"/><circle cx="54" cy="77" r="22" fill="#f7f5ec"/><circle cx="94" cy="68" r="28" fill="${cloudColor}"/></g>`;
-  const drops = (color: string) => `<g opacity=".9" stroke="${color}" stroke-width="9" stroke-linecap="round"><path d="M58 105l-7 37"/><path d="M94 104l-7 38"/><path d="M124 107l-7 31"/></g>`;
-  const bolt = (color: string) => `<path d="M94 38L65 98h24l-15 52 52-72H99l20-40z" fill="${color}" opacity=".92"/>`;
-  const flakes = () => `<g fill="#242424" opacity=".42"><circle cx="52" cy="82" r="5"/><circle cx="105" cy="74" r="5"/><circle cx="77" cy="112" r="5"/><circle cx="119" cy="123" r="5"/></g>`;
-  const fogLines = () => `<g stroke="#242424" stroke-width="9" stroke-linecap="round" opacity=".9"><path d="M28 67c29-8 60 8 101-4"/><path d="M21 101c34-10 76 10 120-2"/><path d="M31 132c34-6 62 7 98 0"/></g>`;
-
-  let content = cloud;
-
-  if (sampleKey === 'sun') {
-    content = `<circle cx="82" cy="72" r="42" fill="#fff36d"/><g stroke="#242424" stroke-width="6" stroke-linecap="round" opacity=".35"><path d="M82 16v16M82 112v16M26 72h16M122 72h16M43 33l11 11M121 33l-11 11M43 111l11-11M121 111l-11-11"/></g>`;
-  } else if (sampleKey === 'rain') {
-    content = `${cloud}${drops('#e6f8ff')}`;
-  } else if (sampleKey === 'thunder') {
-    content = `${cloud}${bolt('#e8f05d')}${drops('#9ed4e9')}`;
-  } else if (sampleKey === 'snow') {
-    content = `${cloud}${flakes()}`;
-  } else if (sampleKey === 'fog') {
-    content = `${cloud}${fogLines()}`;
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 178">${content}</svg>`;
-
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 function SoftSampleGraphic({

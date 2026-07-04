@@ -25,7 +25,7 @@ export function QuestionSearchBar({
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
   const submitStructuredSearch = async () => {
-    const place = value.trim();
+    const place = normalizePlaceInput(value);
 
     if (!place) return;
 
@@ -140,4 +140,12 @@ export function QuestionSearchBar({
 
     </View>
   );
+}
+
+function normalizePlaceInput(value: string) {
+  return value
+    .replace(/[?？!！]/g, ' ')
+    .replace(/(오늘\s*밤|내일\s*오전|내일\s*오후|지금|오늘|내일|날씨)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

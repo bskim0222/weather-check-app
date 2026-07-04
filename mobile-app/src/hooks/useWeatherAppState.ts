@@ -245,7 +245,7 @@ export function useWeatherAppState() {
     }
 
     setJudgement(nextJudgement);
-    setQuestionText(clean);
+    setQuestionText(getQuestionInputPlace(nextJudgement.searchContext, resolvedLocation));
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
     setActiveTab('decision');
     if (nextJudgement.searchContext.target.kind === 'pending-place') {
@@ -407,6 +407,9 @@ export function useWeatherAppState() {
     setJudgement((currentJudgement) =>
       currentJudgement.createdAt === nextJudgement.createdAt ? resolvedJudgement : currentJudgement,
     );
+    setQuestionText((currentText) =>
+      isSearchInputForJudgement(currentText, nextJudgement.searchContext) ? resolvedLocation.label : currentText,
+    );
     refreshData('장소 확인', resolvedSearchContext);
   };
 
@@ -461,6 +464,29 @@ function applyResolvedLocationToJudgement(
     judgement.source,
     judgement.createdAt,
   );
+}
+
+function getQuestionInputPlace(searchContext: SearchContext, resolvedLocation?: LocationReference) {
+  if (resolvedLocation?.label) return resolvedLocation.label;
+  if (searchContext.locationQuery) return searchContext.locationQuery;
+  if (searchContext.target.kind !== 'current' && searchContext.place !== '장소 미입력') return searchContext.place;
+
+  return '';
+}
+
+function isSearchInputForJudgement(currentText: string, searchContext: SearchContext) {
+  const cleanText = normalizeSearchInput(currentText);
+  const query = normalizeSearchInput(searchContext.locationQuery ?? '');
+  const place = normalizeSearchInput(searchContext.place);
+
+  return cleanText === query || cleanText === place || cleanText === normalizeSearchInput(searchContext.raw);
+}
+
+function normalizeSearchInput(value: string) {
+  return value
+    .replace(/(오늘\s*밤|내일\s*오전|내일\s*오후|지금|오늘|내일|날씨)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function hasWeatherIntent(searchContext: SearchContext) {

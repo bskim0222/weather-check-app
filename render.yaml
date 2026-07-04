@@ -15,7 +15,7 @@ services:
       - key: EXPO_PUBLIC_API_BASE_URL
         value: https://weather-check-backend-hvfs.onrender.com
       - key: NODE_VERSION
-        value: 24
+        value: 22
 
   - type: web
     name: weather-check-backend

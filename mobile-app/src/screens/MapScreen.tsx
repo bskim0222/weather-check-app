@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
@@ -13,6 +13,7 @@ type MapScreenProps = {
   current: WeatherPreset;
   reports: LocalReport[];
   searchContext: SearchContext;
+  onUseCurrentLocation: () => void;
   onReportIssue: (report: LocalReport) => void;
 };
 
@@ -20,6 +21,7 @@ export function MapScreen({
   current,
   reports,
   searchContext,
+  onUseCurrentLocation,
   onReportIssue,
 }: MapScreenProps) {
   const fieldSnapshot = useMemo(
@@ -32,6 +34,11 @@ export function MapScreen({
     [orderedReports, searchContext.place],
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchContext.place]);
+
   const selectedCluster = resolveSelectedCluster(visibleClusters, selectedIndex);
   const clusterReports = selectedCluster?.reports ?? [];
   const nearbySectionTitle = getNearbySectionTitle(searchContext);
@@ -59,6 +66,7 @@ export function MapScreen({
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
         onSelectCluster={setSelectedIndex}
+        onUseCurrentLocation={onUseCurrentLocation}
       />
 
       {selectedCluster ? (

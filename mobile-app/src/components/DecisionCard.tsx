@@ -100,7 +100,7 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
           <Text style={[styles.figmaWeatherHourIntroLabel, { color: figma.dim }]}>예보 비교 요약</Text>
           <Text style={[styles.figmaWeatherHourIntroText, { color: figma.ink }]}>3개 예보 종합 흐름</Text>
         </View>
-        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext.timeLabel).map((item, index) => (
+        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext).map((item, index) => (
           <View key={`${item.label}-${index}`} style={styles.figmaWeatherHour}>
             <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
             <ForecastMiniIcon condition={item.condition} stroke={figma.stroke} dim={figma.dim} />
@@ -246,15 +246,17 @@ function getForecastStrip(
   temp: number,
   rows: WeatherPreset['forecastRows'],
   fallbackCondition: string,
-  baseTimeLabel: string,
+  searchContext: SearchContext,
 ) {
   const fallbackRow = rows[rows.length - 1];
+  const baseDate = getForecastBaseDate(searchContext);
+  const isCurrentContext = isCurrentForecastContext(searchContext);
 
   return Array.from({ length: 10 }, (_, index) => {
     const row = rows[index] ?? fallbackRow;
 
     return {
-      label: formatForecastSequenceLabel(index, baseTimeLabel),
+      label: formatForecastSequenceLabel(index, baseDate, isCurrentContext),
       temp: row ? formatForecastTemp(row.temp) : `${temp}°`,
       condition: row
         ? getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition)
@@ -263,25 +265,20 @@ function getForecastStrip(
   });
 }
 
-function formatForecastSequenceLabel(index: number, baseTimeLabel: string) {
-  const baseDate = getForecastBaseDate(baseTimeLabel);
-
-  if (!baseDate) {
-    return index === 0 ? '지금' : `${String((new Date().getHours() + index) % 24).padStart(2, '0')}시`;
-  }
-
-  if (index === 0 && isCurrentTimeLabel(baseTimeLabel)) return '지금';
+function formatForecastSequenceLabel(index: number, baseDate: Date, isCurrentContext: boolean) {
+  if (index === 0 && isCurrentContext) return '지금';
+  if (index === 0) return '기준';
 
   const itemDate = new Date(baseDate.getTime() + index * 60 * 60 * 1000);
 
   return formatForecastDateHourLabel(itemDate, baseDate);
 }
 
-function getForecastBaseDate(baseTimeLabel: string) {
+function getForecastBaseDate(searchContext: SearchContext) {
   const now = new Date();
-  const clean = (baseTimeLabel || '').replace(/\s+/g, '');
+  const clean = `${searchContext.raw} ${searchContext.timeLabel}`.replace(/\s+/g, '');
 
-  if (!clean || isCurrentTimeLabel(clean)) return now;
+  if (isCurrentForecastContext(searchContext)) return now;
 
   const dayOffset = clean.includes('모레') ? 2 : clean.includes('내일') ? 1 : 0;
   const hour = getForecastBaseHour(clean, now.getHours());
@@ -293,10 +290,14 @@ function getForecastBaseDate(baseTimeLabel: string) {
   return baseDate;
 }
 
-function isCurrentTimeLabel(label: string) {
-  const clean = (label || '').replace(/\s+/g, '');
+function isCurrentForecastContext(searchContext: SearchContext) {
+  const raw = (searchContext.raw || '').replace(/\s+/g, '');
+  const label = (searchContext.timeLabel || '').replace(/\s+/g, '');
 
-  return !clean || clean === '지금' || clean === '현재';
+  if (searchContext.target.kind === 'current' && (!raw || raw === '현재위치')) return true;
+  if (label === '지금' || label === '현재') return true;
+
+  return false;
 }
 
 function getForecastBaseHour(cleanLabel: string, fallbackHour: number) {

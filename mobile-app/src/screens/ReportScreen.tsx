@@ -120,7 +120,7 @@ export function ReportScreen({
     createRemoteReportRequest(newRequest).then((remoteRequest) => {
       if (!remoteRequest) return;
 
-      onRequestsChange((prev) => replaceRequestById(prev, newRequest.id, remoteRequest));
+      onRequestsChange((prev) => replaceRequestById(prev, newRequest.id, { ...remoteRequest, source: 'local' }));
       setSelectedRequestId(remoteRequest.id);
     });
     setSelectedRequestId(newRequest.id);

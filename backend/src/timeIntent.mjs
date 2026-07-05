@@ -21,9 +21,9 @@ export function getForecastWindow(items, getTimeMs, targetMs, limit = 8) {
     .sort((a, b) => a.timeMs - b.timeMs);
 
   if (normalized.length === 0) return items.slice(0, limit);
-  if (!Number.isFinite(targetMs)) return normalized.slice(0, limit).map((row) => row.item);
 
-  const startIndex = findForecastStartIndex(normalized, targetMs);
+  const effectiveTargetMs = Number.isFinite(targetMs) ? targetMs : Date.now();
+  const startIndex = findForecastStartIndex(normalized, effectiveTargetMs);
 
   return normalized.slice(startIndex, startIndex + limit).map((row) => row.item);
 }

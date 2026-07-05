@@ -227,10 +227,23 @@ function pickRepresentativeCell(
   consensus: WeatherVote,
 ): CompareForecastCell {
   const cells = [row.kma, row.yr, row.windy];
-  const consensusCell = cells.find((cell) => getWeatherVote(cell.weather).key === consensus.key);
+  const rowConsensus = getRowWeatherConsensus(cells) ?? consensus;
+  const consensusCell = cells.find((cell) => getWeatherVote(cell.weather).key === rowConsensus.key);
   const cautionCell = cells.find((cell) => ['rain', 'thunder', 'snow'].includes(getWeatherVote(cell.weather).key));
 
   return consensusCell ?? cautionCell ?? row.kma ?? row.yr ?? row.windy;
+}
+
+function getRowWeatherConsensus(cells: CompareForecastCell[]) {
+  const voteCounts = new Map<string, { count: number; vote: WeatherVote }>();
+
+  cells.forEach((cell) => {
+    const vote = getWeatherVote(cell.weather);
+    const current = voteCounts.get(vote.key) ?? { count: 0, vote };
+    voteCounts.set(vote.key, { count: current.count + 1, vote });
+  });
+
+  return Array.from(voteCounts.values()).sort((a, b) => b.count - a.count)[0]?.vote;
 }
 
 function getTemperatureFromDetail(detail: string | undefined) {

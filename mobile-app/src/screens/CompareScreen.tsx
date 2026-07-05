@@ -31,6 +31,7 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
         caption={compareCaption}
         mode={mode}
         rows={rows}
+        searchContext={searchContext}
         services={providerSnapshot.summaries}
         onModeChange={setMode}
       />

@@ -498,7 +498,7 @@ function getProviderDisplayName(providerId: ForecastProviderId) {
 
 function waitForMinimumLoadingTime() {
   return new Promise((resolve) => {
-    setTimeout(resolve, 800);
+    setTimeout(resolve, 150);
   });
 }
 

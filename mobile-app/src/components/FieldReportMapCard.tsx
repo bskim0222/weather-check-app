@@ -37,12 +37,12 @@ export function FieldReportMapCard({
         selectedIndex={selectedIndex}
         visibleReports={visibleReports}
       />
-      <View style={styles.mapScrim} />
-      <View style={styles.mapGlowZoneOne} />
-      <View style={styles.mapGlowZoneTwo} />
-      <View style={styles.mapRoadOne} />
-      <View style={styles.mapRoadTwo} />
-      <View style={styles.mapRoadThree} />
+      <View pointerEvents="none" style={styles.mapScrim} />
+      <View pointerEvents="none" style={styles.mapGlowZoneOne} />
+      <View pointerEvents="none" style={styles.mapGlowZoneTwo} />
+      <View pointerEvents="none" style={styles.mapRoadOne} />
+      <View pointerEvents="none" style={styles.mapRoadTwo} />
+      <View pointerEvents="none" style={styles.mapRoadThree} />
       {visibleReports.map((report, index) => {
         const marker = markerPositions[index] ?? markerPositions[0];
         const isActive = selectedIndex === index;
@@ -62,10 +62,10 @@ export function FieldReportMapCard({
           </Pressable>
         );
       })}
-      <View style={styles.mapCurrentLocation}>
+      <View pointerEvents="none" style={styles.mapCurrentLocation}>
         <View style={styles.mapCurrentDot} />
       </View>
-      <View style={styles.mapOverlay}>
+      <View pointerEvents="box-none" style={styles.mapOverlay}>
         <View style={styles.mapOverlayTop}>
           <View style={styles.mapRadiusChip}>
             <Text style={styles.mapRadiusChipText}>{searchContext.place} 반경 {radiusLabel}</Text>

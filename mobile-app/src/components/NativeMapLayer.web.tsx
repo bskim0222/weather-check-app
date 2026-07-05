@@ -26,6 +26,7 @@ export function NativeMapLayer({ searchContext }: NativeMapLayerProps) {
               height: '100%',
               width: '100%',
               filter: 'saturate(0.78) contrast(0.94) brightness(1.03)',
+              touchAction: 'pan-x pan-y pinch-zoom',
             },
             loading: 'lazy',
             referrerPolicy: 'no-referrer-when-downgrade',

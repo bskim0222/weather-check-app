@@ -52,7 +52,9 @@ export function ForecastComparePanel({
 
       <View style={styles.comparePanel}>
         <View style={styles.comparePanelTitle}>
-          <Text style={styles.comparePanelHeading}>{mode === 'hourly' ? '시간대별 예보 비교' : '날짜별 예보 비교'}</Text>
+          <Text style={styles.comparePanelHeading}>
+            {mode === 'hourly' ? '시간대별 예보 비교' : '날짜별 예보 비교'}
+          </Text>
           <Text style={styles.comparePanelCaption}>{caption}</Text>
         </View>
 
@@ -147,7 +149,7 @@ function CompareDailyPeriod({
 
 function formatDailyPeriodDetail(detail: string) {
   const parts = detail.split('·').map((part) => part.trim()).filter(Boolean);
-  const temp = parts.find((part) => /-?\d+\s*℃/.test(part)) ?? parts[0] ?? '';
+  const temp = parts.find((part) => /-?\d+\s*도/.test(part)) ?? parts[0] ?? '';
   const precipitation = parts.find((part) => /mm|%/.test(part) && part !== temp);
 
   return precipitation ? `${temp}\n${precipitation}` : temp;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { FieldReportList } from '../components/FieldReportList';
@@ -8,7 +8,7 @@ import { formatRadius } from '../domain/location';
 import { getNearbySectionTitle } from '../domain/locationDisplay';
 import { getMockFieldReportSnapshot } from '../services/fieldReports';
 import { styles } from '../styles/appStyles';
-import type { LocalReport, SearchContext, WeatherPreset } from '../types/weather';
+import type { LocalReport, MapReportCluster, SearchContext, WeatherPreset } from '../types/weather';
 
 type MapScreenProps = {
   current: WeatherPreset;
@@ -24,9 +24,13 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
   );
   const orderedReports = fieldSnapshot.reports;
   const radiusLabel = formatRadius(searchContext.target);
-  const visibleReports = orderedReports.slice(0, 5);
+  const visibleClusters = useMemo(
+    () => createMapReportClusters(orderedReports, searchContext.place),
+    [orderedReports, searchContext.place],
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const selectedReport = orderedReports[selectedIndex] ?? orderedReports[0];
+  const selectedCluster = resolveSelectedCluster(visibleClusters, selectedIndex);
+  const clusterReports = selectedCluster?.reports ?? [];
   const nearbySectionTitle = getNearbySectionTitle(searchContext);
 
   return (
@@ -43,7 +47,7 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
           </View>
         </View>
         <Text style={styles.mapControlCaption}>
-          지도 위에서 최근 현장 글 {fieldSnapshot.reports.length}개를 확인해요.
+          정확한 위치 대신 약 700m 생활권 단위로 묶어 보여줘요.
         </Text>
       </View>
 
@@ -52,31 +56,23 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
         radiusLabel={radiusLabel}
         searchContext={searchContext}
         selectedIndex={selectedIndex}
-        visibleReports={visibleReports}
-        onSelectReport={setSelectedIndex}
+        visibleClusters={visibleClusters}
+        onSelectCluster={setSelectedIndex}
       />
 
-      {selectedReport ? (
+      {selectedCluster ? (
         <View style={styles.mapSelectedCard}>
           <View>
-            <Text style={styles.mapSelectedKicker}>선택한 현장 글</Text>
-            <Text style={styles.mapSelectedPlace}>{selectedReport.place}</Text>
-            <Text style={styles.mapSelectedBody}>{selectedReport.body}</Text>
+            <Text style={styles.mapSelectedKicker}>
+              위치 보호 묶음 · {selectedCluster.privacyRadiusLabel}
+            </Text>
+            <Text style={styles.mapSelectedPlace}>{selectedCluster.label}</Text>
+            <Text style={styles.mapSelectedBody}>
+              포함된 현장 글 {selectedCluster.count}개 · 정확한 위치는 공개하지 않아요
+            </Text>
           </View>
           <View style={styles.mapSelectedSide}>
-            <Text style={styles.mapSelectedCondition}>{selectedReport.condition}</Text>
-            <Pressable
-              disabled={selectedReport.moderationStatus === 'pending'}
-              onPress={() => onReportIssue(selectedReport)}
-              style={[
-                styles.reportIssueButton,
-                selectedReport.moderationStatus === 'pending' && styles.reportIssueButtonPending,
-              ]}
-            >
-              <Text style={styles.reportIssueText}>
-                {selectedReport.moderationStatus === 'pending' ? '검토중' : '신고'}
-              </Text>
-            </Pressable>
+            <Text style={styles.mapSelectedCondition}>{selectedCluster.dominantCondition}</Text>
           </View>
         </View>
       ) : (
@@ -89,18 +85,82 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
 
       {orderedReports.length > 0 && (
         <View style={styles.mapListHeader}>
-          <Text style={styles.mapListTitle}>{nearbySectionTitle}</Text>
-          <Text style={styles.mapListAction}>전체</Text>
+          <Text style={styles.mapListTitle}>{selectedCluster?.label ?? nearbySectionTitle}</Text>
+          <Text style={styles.mapListAction}>{clusterReports.length}개</Text>
         </View>
       )}
       <FieldReportList
-        reports={orderedReports}
-        selectedIndex={selectedIndex}
-        onSelectReport={setSelectedIndex}
+        reports={clusterReports}
+        selectedIndex={0}
+        onSelectReport={() => undefined}
         onReportIssue={onReportIssue}
       />
     </View>
   );
+}
+
+function createMapReportClusters(reports: LocalReport[], fallbackPlace: string): MapReportCluster[] {
+  const groups = new Map<string, LocalReport[]>();
+
+  reports.forEach((report) => {
+    const key = normalizeClusterLabel(report.place || fallbackPlace);
+    const group = groups.get(key) ?? [];
+    group.push(report);
+    groups.set(key, group);
+  });
+
+  return Array.from(groups.entries()).map(([label, group], index) => ({
+    id: `cluster-${index}-${label}`,
+    label: `${label} 일대`,
+    count: group.length,
+    dominantCondition: getDominantCondition(group),
+    privacyRadiusLabel: '약 700m 묶음',
+    reports: group,
+  }));
+}
+
+function resolveSelectedCluster(clusters: MapReportCluster[], selectedIndex: number) {
+  if (selectedIndex === -1) return mergeClusters('지도 화면 안', clusters);
+  if (selectedIndex === -2) return mergeClusters('주변 나머지', clusters.slice(3));
+
+  return clusters[selectedIndex] ?? clusters[0];
+}
+
+function mergeClusters(label: string, clusters: MapReportCluster[]) {
+  const reports = clusters.flatMap((cluster) => cluster.reports);
+  const firstCluster = clusters[0];
+
+  if (!firstCluster) return undefined;
+
+  return {
+    ...firstCluster,
+    id: `merged-${label}`,
+    label,
+    count: reports.length,
+    dominantCondition: getDominantCondition(reports),
+    reports,
+  };
+}
+
+function normalizeClusterLabel(place: string) {
+  const clean = place.trim();
+  if (!clean) return '이 주변';
+
+  const parts = clean.split(/\s+/).filter(Boolean);
+  const dong = parts.find((part) => /동$|읍$|면$|리$/.test(part));
+  if (dong) return dong;
+
+  return parts.at(-1) ?? clean;
+}
+
+function getDominantCondition(reports: LocalReport[]) {
+  const counts = new Map<string, number>();
+
+  reports.forEach((report) => {
+    counts.set(report.condition, (counts.get(report.condition) ?? 0) + 1);
+  });
+
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '현장 제보';
 }
 
 function getMapDecisionLabel(condition: string) {

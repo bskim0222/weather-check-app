@@ -67,6 +67,15 @@ export type LocalReport = {
 
 export type FieldReport = LocalReport;
 
+export type MapReportCluster = {
+  id: string;
+  label: string;
+  count: number;
+  dominantCondition: string;
+  privacyRadiusLabel: string;
+  reports: LocalReport[];
+};
+
 export type ForecastSource = {
   providerId?: ForecastProviderId;
   iconUri?: string;

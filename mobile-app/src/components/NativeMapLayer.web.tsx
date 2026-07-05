@@ -3,13 +3,13 @@ import { Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
 import { styles } from '../styles/appStyles';
-import type { LocalReport, SearchContext } from '../types/weather';
+import type { MapReportCluster, SearchContext } from '../types/weather';
 
 type NativeMapLayerProps = {
   searchContext: SearchContext;
   selectedIndex: number;
-  visibleReports: LocalReport[];
-  onSelectReport: (index: number) => void;
+  visibleClusters: MapReportCluster[];
+  onSelectCluster: (index: number) => void;
 };
 
 type KakaoWindow = Window & {
@@ -20,13 +20,19 @@ type KakaoWindow = Window & {
       Map: new (container: HTMLElement, options: Record<string, unknown>) => {
         setCenter?: (center: unknown) => void;
         setLevel?: (level: number) => void;
+        getLevel?: () => number;
         addControl?: (control: unknown, position: unknown) => void;
       };
       Marker: new (options: Record<string, unknown>) => unknown;
-      CustomOverlay?: new (options: Record<string, unknown>) => unknown;
+      CustomOverlay?: new (options: Record<string, unknown>) => {
+        setMap?: (map: unknown | null) => void;
+      };
       ZoomControl?: new () => unknown;
       ControlPosition?: {
         RIGHT?: unknown;
+      };
+      event?: {
+        addListener: (target: unknown, eventName: string, callback: () => void) => void;
       };
     };
   };
@@ -37,8 +43,8 @@ const KAKAO_SCRIPT_ID = 'weather-check-kakao-map-sdk';
 export function NativeMapLayer({
   searchContext,
   selectedIndex,
-  visibleReports,
-  onSelectReport,
+  visibleClusters,
+  onSelectCluster,
 }: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const [kakaoReady, setKakaoReady] = useState(false);
@@ -64,8 +70,11 @@ export function NativeMapLayer({
       return;
     }
 
+    let cleanupMarkers = () => {};
+    let isDisposed = false;
+
     kakao.load(() => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || isDisposed) return;
 
       const mapCenter = new kakao.LatLng(center.latitude, center.longitude);
       const map = new kakao.Map(containerRef.current, {
@@ -77,49 +86,69 @@ export function NativeMapLayer({
         map.addControl(new kakao.ZoomControl(), kakao.ControlPosition.RIGHT);
       }
 
-      new kakao.Marker({
-        position: mapCenter,
-        map,
-      });
-
       setKakaoMapMounted(true);
 
-      visibleReports.slice(0, 5).forEach((report, index) => {
-        const offset = getMarkerOffset(index);
-        const markerPosition = new kakao.LatLng(
-          center.latitude + offset.latitude,
-          center.longitude + offset.longitude,
-        );
+      const renderReportMarkers = () => {
+        cleanupMarkers();
+        const overlays: Array<{ setMap?: (map: unknown | null) => void }> = [];
+        const level = map.getLevel?.() ?? 4;
+        const markerItems = getVisibleMarkerItems(visibleClusters, level);
 
-        if (!kakao.CustomOverlay) {
-          new kakao.Marker({
+        markerItems.forEach((item, markerIndex) => {
+          const offset = getMarkerOffset(markerIndex);
+          const markerPosition = new kakao.LatLng(
+            center.latitude + offset.latitude,
+            center.longitude + offset.longitude,
+          );
+
+          if (!kakao.CustomOverlay) return;
+
+          const markerNode = createReportMarkerElement(
+            item.cluster,
+            item.clusterIndex === selectedIndex,
+          );
+          const selectReport = (event?: Event) => {
+            event?.preventDefault();
+            event?.stopPropagation();
+            onSelectCluster(item.clusterIndex);
+          };
+
+          markerNode.addEventListener('click', selectReport);
+          markerNode.addEventListener('touchend', selectReport, { passive: false });
+
+          const overlay = new kakao.CustomOverlay({
             position: markerPosition,
+            content: markerNode,
             map,
+            yAnchor: 0.5,
+            xAnchor: 0.5,
+            zIndex: item.clusterIndex === selectedIndex ? 9 : 5,
           });
-          return;
-        }
 
-        const markerNode = createReportMarkerElement(report, index === selectedIndex);
-        markerNode.onclick = () => onSelectReport(index);
-
-        new kakao.CustomOverlay({
-          position: markerPosition,
-          content: markerNode,
-          map,
-          yAnchor: 0.5,
-          xAnchor: 0.5,
-          zIndex: index === selectedIndex ? 9 : 5,
+          overlays.push(overlay);
         });
-      });
+
+        cleanupMarkers = () => {
+          overlays.forEach((overlay) => overlay.setMap?.(null));
+        };
+      };
+
+      renderReportMarkers();
+      kakao.event?.addListener(map, 'zoom_changed', renderReportMarkers);
     });
+
+    return () => {
+      isDisposed = true;
+      cleanupMarkers();
+    };
   }, [
     center.latitude,
     center.longitude,
     kakaoReady,
-    onSelectReport,
+    onSelectCluster,
     selectedIndex,
     shouldUseKakao,
-    visibleReports,
+    visibleClusters,
   ]);
 
   if (shouldUseKakao) {
@@ -135,7 +164,7 @@ export function NativeMapLayer({
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                touchAction: 'pan-x pan-y pinch-zoom',
+                touchAction: 'auto',
               },
             })}
         <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao Loading'} />
@@ -185,20 +214,22 @@ function MapProviderBadge({ label }: { label: string }) {
   );
 }
 
-function createReportMarkerElement(report: LocalReport, isActive: boolean) {
+function createReportMarkerElement(cluster: MapReportCluster, isActive: boolean) {
   const marker = document.createElement('button');
   marker.type = 'button';
-  marker.textContent = getMarkerLabel(report);
-  marker.setAttribute('aria-label', `${report.place} 현장 글 보기`);
-  marker.style.width = isActive ? '52px' : '44px';
-  marker.style.height = isActive ? '52px' : '44px';
+  marker.textContent = `${cluster.count}`;
+  marker.setAttribute('aria-label', `${cluster.label} 현장 글 ${cluster.count}개 보기`);
+  marker.style.width = isActive ? '62px' : '54px';
+  marker.style.height = isActive ? '62px' : '54px';
   marker.style.borderRadius = '999px';
-  marker.style.border = isActive ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.88)';
-  marker.style.background = getMarkerTone(report);
-  marker.style.color = getMarkerInk(report);
+  marker.style.border = isActive ? '3px solid rgba(255,255,255,0.92)' : '2px solid rgba(255,255,255,0.68)';
+  marker.style.background = getClusterTone(cluster);
+  marker.style.color = getClusterInk(cluster);
   marker.style.fontWeight = '900';
-  marker.style.fontSize = isActive ? '16px' : '14px';
-  marker.style.boxShadow = '0 14px 28px rgba(36,36,36,0.24)';
+  marker.style.fontSize = isActive ? '20px' : '17px';
+  marker.style.boxShadow = isActive
+    ? '0 18px 34px rgba(36,36,36,0.24)'
+    : '0 12px 26px rgba(36,36,36,0.16)';
   marker.style.cursor = 'pointer';
   marker.style.display = 'flex';
   marker.style.alignItems = 'center';
@@ -210,39 +241,75 @@ function createReportMarkerElement(report: LocalReport, isActive: boolean) {
   return marker;
 }
 
-function getMarkerLabel(report?: LocalReport) {
-  const condition = report?.condition ?? '';
+function getVisibleMarkerItems(clusters: MapReportCluster[], zoomLevel: number) {
+  const visibleClusters = clusters.slice(0, 8);
 
-  if (condition.includes('천둥') || condition.includes('번개')) return '번';
-  if (condition.includes('소나기')) return '소';
-  if (condition.includes('비')) return '비';
-  if (condition.includes('눈')) return '눈';
-  if (condition.includes('안개')) return '안';
-  if (condition.includes('황사')) return '황';
-  if (condition.includes('미세')) return '미';
-  if (condition.includes('맑')) return '맑';
-  if (condition.includes('흐') || condition.includes('구름')) return '흐';
+  if (visibleClusters.length <= 1) {
+    return visibleClusters.map((cluster, clusterIndex) => ({ cluster, clusterIndex }));
+  }
 
-  return '현';
+  if (zoomLevel >= 7) {
+    const mergedReports = visibleClusters.flatMap((cluster) => cluster.reports);
+    return [
+      {
+        cluster: {
+          ...visibleClusters[0],
+          id: 'merged-area',
+          label: '지도 화면 안',
+          count: mergedReports.length,
+          reports: mergedReports,
+        },
+        clusterIndex: -1,
+      },
+    ];
+  }
+
+  if (zoomLevel >= 5) {
+    const primaryClusters = visibleClusters.slice(0, 3).map((cluster, clusterIndex) => ({
+      cluster,
+      clusterIndex,
+    }));
+    const remainingReports = visibleClusters.slice(3).flatMap((cluster) => cluster.reports);
+
+    if (remainingReports.length <= 0) return primaryClusters;
+
+    return [
+      ...primaryClusters,
+      {
+        cluster: {
+          ...visibleClusters[3],
+          id: 'nearby-more',
+          label: '주변 나머지',
+          count: remainingReports.length,
+          reports: remainingReports,
+        },
+        clusterIndex: -2,
+      },
+    ];
+  }
+
+  return visibleClusters.map((cluster, clusterIndex) => ({ cluster, clusterIndex }));
 }
 
-function getMarkerTone(report: LocalReport) {
-  const condition = report.condition;
+function getClusterTone(cluster: MapReportCluster) {
+  const condition = cluster.dominantCondition;
 
-  if (condition.includes('비') || condition.includes('소나기')) return '#2f86d9';
-  if (condition.includes('눈')) return '#d8eff8';
-  if (condition.includes('천둥') || condition.includes('번개')) return '#302b3f';
-  if (condition.includes('안개')) return '#d8d0c1';
-  if (condition.includes('황사') || condition.includes('미세')) return '#d7bd7a';
-  if (condition.includes('맑')) return '#fff05a';
-  if (condition.includes('흐') || condition.includes('구름')) return '#bfc9bd';
+  if (condition.includes('비') || condition.includes('소나기')) return 'rgba(47,134,217,0.72)';
+  if (condition.includes('눈')) return 'rgba(216,239,248,0.78)';
+  if (condition.includes('천둥') || condition.includes('번개')) return 'rgba(48,43,63,0.76)';
+  if (condition.includes('안개')) return 'rgba(216,208,193,0.76)';
+  if (condition.includes('황사') || condition.includes('미세')) return 'rgba(215,189,122,0.78)';
+  if (condition.includes('맑')) return 'rgba(255,240,90,0.76)';
+  if (condition.includes('흐') || condition.includes('구름')) return 'rgba(191,201,189,0.78)';
 
-  return '#242424';
+  return 'rgba(36,36,36,0.70)';
 }
 
-function getMarkerInk(report: LocalReport) {
-  const tone = getMarkerTone(report);
-  return tone === '#302b3f' || tone === '#242424' || tone === '#2f86d9' ? '#ffffff' : '#242424';
+function getClusterInk(cluster: MapReportCluster) {
+  const condition = cluster.dominantCondition;
+  return condition.includes('비') || condition.includes('천둥') || condition.includes('번개')
+    ? '#ffffff'
+    : '#242424';
 }
 
 function loadKakaoMapScript(appKey: string) {

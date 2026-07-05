@@ -1,12 +1,13 @@
 import { Text, View } from 'react-native';
 
 import { styles } from '../styles/appStyles';
-import type { LocalReport, SearchContext } from '../types/weather';
+import type { MapReportCluster, SearchContext } from '../types/weather';
 
 type NativeMapLayerProps = {
   searchContext: SearchContext;
   selectedIndex: number;
-  visibleReports: LocalReport[];
+  visibleClusters: MapReportCluster[];
+  onSelectCluster: (index: number) => void;
 };
 
 export function NativeMapLayer({ searchContext }: NativeMapLayerProps) {

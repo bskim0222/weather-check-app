@@ -2,6 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 
 import { ProviderServiceIcon } from './ProviderServiceIcon';
+import { WeatherIcon } from './WeatherIcon';
 import type { CompareMode } from '../domain/compare';
 import { styles } from '../styles/appStyles';
 import type { CompareForecastCell, CompareRow, CompareServiceSummary, SearchContext } from '../types/weather';
@@ -250,14 +251,7 @@ function formatDailyPeriodDetail(detail: string) {
 }
 
 function WeatherMiniIcon({ condition }: { condition: string }) {
-  const normalized = normalizeCompareWeatherCondition(condition);
-  const palette = getCompareWeatherPalette(normalized);
-
-  return (
-    <Svg viewBox="0 0 64 64" style={styles.compareForecastWeatherSvg}>
-      <CompareWeatherShape condition={normalized} palette={palette} />
-    </Svg>
-  );
+  return <WeatherIcon condition={condition} style={styles.compareForecastWeatherSvg} />;
 }
 
 type CompareWeatherCondition =

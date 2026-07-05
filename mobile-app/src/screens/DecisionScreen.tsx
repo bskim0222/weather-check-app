@@ -2,7 +2,6 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { DecisionCard } from '../components/DecisionCard';
-import { weatherPresets } from '../data/mockWeather';
 import { getFieldReportPlaceDisplay, getNearbySectionTitle } from '../domain/locationDisplay';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
@@ -20,12 +19,10 @@ type DecisionScreenProps = {
   reportText: string;
   reports: LocalReport[];
   searchContext: SearchContext;
-  weatherKey: WeatherKey;
   onReportConditionChange: (value: string) => void;
   onReportTextChange: (value: string) => void;
   onSubmitReport: () => void;
   onReportIssue: (report: LocalReport) => void;
-  onWeatherChange: (weather: WeatherKey) => void;
 };
 
 export function DecisionScreen({
@@ -35,54 +32,17 @@ export function DecisionScreen({
   reportText,
   reports,
   searchContext,
-  weatherKey,
   onReportConditionChange,
   onReportTextChange,
   onSubmitReport,
   onReportIssue,
-  onWeatherChange,
 }: DecisionScreenProps) {
-  const weatherOptions = Object.entries(weatherPresets) as [WeatherKey, WeatherPreset][];
-  const activeWeatherKey = getWeatherKeyFromCondition(current.condition) ?? weatherKey;
   const currentLocationLabel = getFieldReportPlaceDisplay(locationStatus);
   const nearbySectionTitle = getNearbySectionTitle(searchContext);
   const nearbyReports = getNearbyDecisionReports(reports, currentLocationLabel, searchContext);
 
   return (
     <View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.weatherSwitch}
-      >
-        {weatherOptions.map(([key, item]) => {
-          const isActive = activeWeatherKey === key;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => onWeatherChange(key)}
-              style={[
-                styles.weatherChip,
-                isActive && {
-                  backgroundColor: item.accent,
-                  borderColor: item.accent,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.weatherChipText,
-                  isActive && styles.weatherChipTextActive,
-                  isActive && { color: item.accentInk },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
       <DecisionCard current={current} locationStatus={locationStatus} searchContext={searchContext} />
 
       <View style={styles.localReportCard}>

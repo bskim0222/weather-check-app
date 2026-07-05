@@ -46,12 +46,10 @@ export default function App() {
                 reportText={appState.reportText}
                 reports={appState.reports}
                 searchContext={appState.searchContext}
-                weatherKey={appState.weatherKey}
                 onReportConditionChange={appState.setReportCondition}
                 onReportTextChange={appState.setReportText}
                 onSubmitReport={appState.submitReport}
                 onReportIssue={appState.reportFieldReport}
-                onWeatherChange={appState.changeWeather}
               />
             )}
             {appState.activeTab === 'map' && (

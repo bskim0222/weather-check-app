@@ -103,8 +103,11 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext).map((item, index) => (
           <View key={`${item.label}-${index}`} style={styles.figmaWeatherHour}>
             <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
-            <ForecastMiniIcon condition={item.condition} stroke={figma.stroke} dim={figma.dim} />
+            <ForecastMiniIcon condition={item.condition} stroke={figma.ink} dim={figma.dim} />
             <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}</Text>
+            {item.precipitation ? (
+              <Text style={[styles.figmaWeatherHourRain, { color: figma.dim }]}>{item.precipitation}</Text>
+            ) : null}
           </View>
         ))}
       </ScrollView>
@@ -261,6 +264,7 @@ function getForecastStrip(
       condition: row
         ? getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition)
         : fallbackCondition,
+      precipitation: row ? getForecastPrecipitation(`${row.title} ${row.note} ${row.mark}`) : null,
     };
   });
 }
@@ -386,6 +390,19 @@ function formatForecastTemp(value: string | number) {
   return value.replace(/도/g, '°').replace(/\s+/g, '');
 }
 
+function getForecastPrecipitation(text: string) {
+  if (!includesAny(text.toLowerCase(), ['비', '강수', '소나기', '천둥', 'rain', 'shower', 'storm'])) return null;
+
+  const match = text.match(/\d+(?:\.\d+)?\s*mm/i);
+
+  if (!match) return null;
+
+  const amount = Number(match[0].replace(/mm/i, '').trim());
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  return match[0].replace(/\s+/g, '');
+}
+
 function getForecastStripCondition(text: string, fallbackCondition: string) {
   return normalizeWeatherCondition(text.trim().length > 0 ? text : fallbackCondition);
 }
@@ -394,7 +411,7 @@ function ForecastMiniIcon({ condition, stroke, dim }: { condition: string; strok
   const normalizedCondition = normalizeWeatherCondition(condition);
 
   return (
-    <Svg width={34} height={34} viewBox="0 0 100 100" fill="none" style={styles.figmaWeatherHourIcon}>
+    <Svg width={40} height={40} viewBox="0 0 100 100" fill="none" style={styles.figmaWeatherHourIcon}>
       <WeatherMiniSvgIcon condition={normalizedCondition} stroke={stroke} dim={dim} />
     </Svg>
   );

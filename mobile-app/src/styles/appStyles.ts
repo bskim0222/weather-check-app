@@ -1106,7 +1106,7 @@ export const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 3,
     marginTop: 20,
-    minHeight: 78,
+    minHeight: 88,
     borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
@@ -1140,8 +1140,8 @@ export const styles = StyleSheet.create({
   figmaWeatherHour: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: 42,
-    minHeight: 58,
+    width: 48,
+    minHeight: 68,
   },
   figmaWeatherHourLabel: {
     fontSize: 9,
@@ -1149,9 +1149,9 @@ export const styles = StyleSheet.create({
     fontWeight: '900',
   },
   figmaWeatherHourIcon: {
-    width: 28,
-    height: 28,
-    marginVertical: 2,
+    width: 36,
+    height: 36,
+    marginVertical: 1,
   },
   figmaWeatherHourTrack: {
     width: 3,
@@ -1169,6 +1169,12 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 15,
     fontWeight: '900',
+  },
+  figmaWeatherHourRain: {
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
+    marginTop: -2,
   },
   decisionModernFoot: {
     display: 'none',
@@ -2218,8 +2224,8 @@ export const styles = StyleSheet.create({
     height: 34,
   },
   compareForecastWeatherSvg: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
   },
   miniSunHalo: {
     position: 'absolute',
@@ -4200,9 +4206,9 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   compareForecastCell: {
-    height: 62,
+    height: 72,
     paddingHorizontal: 3,
-    paddingVertical: 5,
+    paddingVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -4213,8 +4219,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   compareForecastIconFrame: {
-    width: 26,
-    height: 26,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',

@@ -13,11 +13,11 @@ type FieldReportMapCardProps = {
 };
 
 const markerPositions = [
-  { top: '39%', left: '45%', tone: '#f4f5f2' },
-  { top: '51%', left: '20%', tone: '#b8cbd6' },
-  { top: '25%', left: '69%', tone: '#d6c8c0' },
-  { top: '62%', left: '72%', tone: '#74c9ee' },
-  { top: '31%', left: '28%', tone: '#fff05a' },
+  { top: '42%', left: '48%', tone: '#242424' },
+  { top: '54%', left: '22%', tone: '#74c9ee' },
+  { top: '27%', left: '70%', tone: '#fff05a' },
+  { top: '66%', left: '72%', tone: '#f1b2aa' },
+  { top: '32%', left: '29%', tone: '#c8e8f8' },
 ] as const;
 
 export function FieldReportMapCard({
@@ -37,12 +37,11 @@ export function FieldReportMapCard({
         selectedIndex={selectedIndex}
         visibleReports={visibleReports}
       />
-      <View pointerEvents="none" style={styles.mapScrim} />
-      <View pointerEvents="none" style={styles.mapGlowZoneOne} />
-      <View pointerEvents="none" style={styles.mapGlowZoneTwo} />
+
       {visibleReports.map((report, index) => {
         const marker = markerPositions[index] ?? markerPositions[0];
         const isActive = selectedIndex === index;
+
         return (
           <Pressable
             key={`${report.place}-${index}`}
@@ -55,13 +54,17 @@ export function FieldReportMapCard({
               { top: marker.top, left: marker.left, backgroundColor: marker.tone },
             ]}
           >
-            <Text style={styles.mapReportMarkerText}>{getMarkerCount(index, report)}</Text>
+            <Text style={[styles.mapReportMarkerText, marker.tone === '#242424' && styles.mapReportMarkerTextDark]}>
+              {getMarkerLabel(report)}
+            </Text>
           </Pressable>
         );
       })}
+
       <View pointerEvents="none" style={styles.mapCurrentLocation}>
         <View style={styles.mapCurrentDot} />
       </View>
+
       <View pointerEvents="box-none" style={styles.mapOverlay}>
         <View style={styles.mapOverlayTop}>
           <View style={styles.mapRadiusChip}>
@@ -69,19 +72,27 @@ export function FieldReportMapCard({
           </View>
           <Text style={styles.mapOverlayCount}>{visibleReports.length}곳</Text>
         </View>
-        <Text style={styles.mapTitle}>주변 제보는 {dominantCondition} 쪽이에요</Text>
-        <Text style={styles.mapCaption}>
-          손가락으로 지도를 움직이고 확대해 주변 제보와 질문 위치를 확인합니다.
-        </Text>
+        <Text numberOfLines={1} style={styles.mapTitle}>주변 제보는 {dominantCondition} 쪽이에요</Text>
+        {!!selectedReport && (
+          <Text numberOfLines={2} style={styles.mapCaption}>
+            {selectedReport.place} · {selectedReport.body}
+          </Text>
+        )}
       </View>
     </View>
   );
 }
 
-function getMarkerCount(index: number, report?: LocalReport) {
-  if (!report) return '0';
+function getMarkerLabel(report?: LocalReport) {
+  const condition = report?.condition ?? '';
 
-  const counts = ['24', '8', '3'];
+  if (condition.includes('천둥') || condition.includes('번개')) return '번';
+  if (condition.includes('소나기')) return '소';
+  if (condition.includes('비')) return '비';
+  if (condition.includes('눈')) return '눈';
+  if (condition.includes('안개')) return '안';
+  if (condition.includes('맑')) return '맑';
+  if (condition.includes('흐') || condition.includes('구름')) return '흐';
 
-  return counts[index] ?? '1';
+  return '현';
 }

@@ -3197,6 +3197,9 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
+  mapReportMarkerTextDark: {
+    color: '#f4f5f2',
+  },
   mapCurrentLocation: {
     position: 'absolute',
     top: '46%',

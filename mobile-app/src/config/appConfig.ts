@@ -13,6 +13,7 @@ export const appConfig = {
   apiBaseUrl: env.EXPO_PUBLIC_API_BASE_URL ?? webApiBaseUrl,
   kmaApiKey: env.EXPO_PUBLIC_KMA_API_KEY ?? '',
   windyApiKey: env.EXPO_PUBLIC_WINDY_API_KEY ?? '',
+  kakaoJavaScriptKey: env.EXPO_PUBLIC_KAKAO_JAVASCRIPT_KEY ?? '',
   yrUserAgent: env.EXPO_PUBLIC_YR_USER_AGENT ?? '',
 };
 

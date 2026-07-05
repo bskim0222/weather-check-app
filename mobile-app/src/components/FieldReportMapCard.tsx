@@ -10,7 +10,6 @@ type FieldReportMapCardProps = {
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
-  onMapGestureChange: (isInteracting: boolean) => void;
   onSelectCluster: (index: number) => void;
 };
 
@@ -20,11 +19,11 @@ export function FieldReportMapCard({
   searchContext,
   selectedIndex,
   visibleClusters,
-  onMapGestureChange,
   onSelectCluster,
 }: FieldReportMapCardProps) {
   const selectedCluster = resolveSelectedCluster(visibleClusters, selectedIndex);
   const dominantCondition = selectedCluster?.dominantCondition ?? searchContext.detectedWeather;
+  const previewReport = selectedCluster?.reports[0];
 
   return (
     <View style={styles.mapCard}>
@@ -32,21 +31,20 @@ export function FieldReportMapCard({
         searchContext={searchContext}
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
-        onMapGestureChange={onMapGestureChange}
         onSelectCluster={onSelectCluster}
       />
 
       <View pointerEvents="box-none" style={styles.mapOverlay}>
         <View style={styles.mapOverlayTop}>
           <View style={styles.mapRadiusChip}>
-            <Text style={styles.mapRadiusChipText}>{searchContext.place} · 위치보호 묶음</Text>
+            <Text style={styles.mapRadiusChipText}>{searchContext.place} 주변</Text>
           </View>
           <Text numberOfLines={1} style={styles.mapOverlayCount}>{decisionSummary}</Text>
         </View>
         <Text numberOfLines={1} style={styles.mapTitle}>주변 제보는 {dominantCondition} 쪽이에요</Text>
         {!!selectedCluster && (
           <Text numberOfLines={2} style={styles.mapCaption}>
-            {selectedCluster.label} · 최근 제보 {selectedCluster.count}개를 익명 묶음으로 보여줘요
+            {selectedCluster.label} · {previewReport?.body ?? `최근 제보 ${selectedCluster.count}개`}
           </Text>
         )}
       </View>

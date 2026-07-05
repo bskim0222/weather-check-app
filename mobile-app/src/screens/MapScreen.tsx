@@ -14,7 +14,6 @@ type MapScreenProps = {
   current: WeatherPreset;
   reports: LocalReport[];
   searchContext: SearchContext;
-  onMapGestureChange: (isInteracting: boolean) => void;
   onReportIssue: (report: LocalReport) => void;
 };
 
@@ -22,7 +21,6 @@ export function MapScreen({
   current,
   reports,
   searchContext,
-  onMapGestureChange,
   onReportIssue,
 }: MapScreenProps) {
   const fieldSnapshot = useMemo(
@@ -65,18 +63,17 @@ export function MapScreen({
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
         onSelectCluster={setSelectedIndex}
-        onMapGestureChange={onMapGestureChange}
       />
 
       {selectedCluster ? (
         <View style={styles.mapSelectedCard}>
           <View>
             <Text style={styles.mapSelectedKicker}>
-              위치 보호 묶음 · {selectedCluster.privacyRadiusLabel}
+              선택한 묶음 · {selectedCluster.privacyRadiusLabel}
             </Text>
             <Text style={styles.mapSelectedPlace}>{selectedCluster.label}</Text>
             <Text style={styles.mapSelectedBody}>
-              포함된 현장 글 {selectedCluster.count}개 · 정확한 위치는 공개하지 않아요
+              포함된 현장 글 {selectedCluster.count}개
             </Text>
           </View>
           <View style={styles.mapSelectedSide}>

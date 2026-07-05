@@ -16,7 +16,8 @@ export function createProviderAdjustedPreset(
   const sources = providerSnapshot.sources.length > 0 ? providerSnapshot.sources : basePreset.sources;
   const judgementSources = getJudgementSources(sources, providerSnapshot);
   const votes = judgementSources.map((source) => getWeatherVote(source.condition));
-  const consensus = getConsensusVote(votes) ?? getWeatherVote(basePreset.condition);
+  const baseVote = getWeatherVote(basePreset.condition);
+  const consensus = getForcedPresetVote(basePreset, providerSnapshot) ?? getConsensusVote(votes) ?? baseVote;
   const visualPreset = weatherPresets[consensus.key];
   const agreeingCount = votes.filter((vote) => vote.key === consensus.key).length;
   const tone = getJudgementTone(consensus.key, agreeingCount, judgementSources.length);
@@ -39,6 +40,17 @@ export function createProviderAdjustedPreset(
     forecastLead: createForecastLead(providerSnapshot.hourlyRows, consensus),
     forecastRows: createForecastRows(providerSnapshot.hourlyRows, visualPreset.forecastRows, consensus),
   };
+}
+
+function getForcedPresetVote(
+  basePreset: WeatherPreset,
+  providerSnapshot: WeatherProviderSnapshot,
+) {
+  if (providerSnapshot.context.detectedWeather === basePreset.condition) {
+    return getWeatherVote(basePreset.condition);
+  }
+
+  return null;
 }
 
 function getJudgementSources(

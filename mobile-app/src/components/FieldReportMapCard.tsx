@@ -40,9 +40,6 @@ export function FieldReportMapCard({
       <View pointerEvents="none" style={styles.mapScrim} />
       <View pointerEvents="none" style={styles.mapGlowZoneOne} />
       <View pointerEvents="none" style={styles.mapGlowZoneTwo} />
-      <View pointerEvents="none" style={styles.mapRoadOne} />
-      <View pointerEvents="none" style={styles.mapRoadTwo} />
-      <View pointerEvents="none" style={styles.mapRoadThree} />
       {visibleReports.map((report, index) => {
         const marker = markerPositions[index] ?? markerPositions[0];
         const isActive = selectedIndex === index;

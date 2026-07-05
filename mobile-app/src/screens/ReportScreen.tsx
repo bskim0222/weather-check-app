@@ -64,7 +64,6 @@ export function ReportScreen({
   const [activeReportTab, setActiveReportTab] = useState<ReportTab>('ask');
   const [requestDraft, setRequestDraft] = useState('');
   const [replyDraft, setReplyDraft] = useState('');
-  const [feedMode, setFeedMode] = useState<'nearby' | 'national'>('national');
   const [selectedRequestId, setSelectedRequestId] = useState(requests[0]?.id ?? '');
   const [replyNotice, setReplyNotice] = useState('');
   const [answerModalVisible, setAnswerModalVisible] = useState(false);
@@ -76,9 +75,8 @@ export function ReportScreen({
   );
   const orderedReports = fieldSnapshot.reports;
   const orderedRequests = fieldSnapshot.requests;
-  const visibleReports = feedMode === 'national' ? createNationalReports(orderedReports) : orderedReports;
+  const visibleReports = createNationalReports(orderedReports);
   const myQuestions = orderedRequests.filter((request) => request.source === 'local');
-  const answerableRequests = orderedRequests;
   const selectedRequest = useMemo(
     () => orderedRequests.find((request) => request.id === selectedRequestId),
     [orderedRequests, selectedRequestId],
@@ -91,8 +89,7 @@ export function ReportScreen({
       return;
     }
 
-    const selectedRequestExists = orderedRequests.some((request) => request.id === selectedRequestId);
-    if (!selectedRequestExists) {
+    if (!orderedRequests.some((request) => request.id === selectedRequestId)) {
       setSelectedRequestId(orderedRequests[0].id);
     }
   }, [orderedRequests, selectedRequestId]);
@@ -117,15 +114,16 @@ export function ReportScreen({
     };
 
     onRequestsChange((prev) => [newRequest, ...prev]);
+    setSelectedRequestId(newRequest.id);
+    setRequestDraft('');
+    setReplyNotice('질문을 올렸어요. 답변이 달리면 내 질문에서 확인할 수 있어요.');
+
     createRemoteReportRequest(newRequest).then((remoteRequest) => {
       if (!remoteRequest) return;
 
       onRequestsChange((prev) => replaceRequestById(prev, newRequest.id, { ...remoteRequest, source: 'local' }));
       setSelectedRequestId(remoteRequest.id);
     });
-    setSelectedRequestId(newRequest.id);
-    setRequestDraft('');
-    setReplyNotice('질문을 올렸어요. 답변이 달리면 내 질문에서 확인할 수 있어요.');
   };
 
   const submitReply = () => {
@@ -152,6 +150,10 @@ export function ReportScreen({
     };
 
     onAddReport(replyReport);
+    setReplyDraft('');
+    setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
+    setAnswerModalVisible(false);
+
     answerRemoteReportRequest(selectedRequest.id, '답변 있음', '방금 답변됨').then((remoteRequest) => {
       if (!remoteRequest) return;
 
@@ -162,9 +164,6 @@ export function ReportScreen({
 
       onAddReport(remoteReport);
     });
-    setReplyDraft('');
-    setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
-    setAnswerModalVisible(false);
   };
 
   const openAnswerModal = (request: ReportRequest) => {
@@ -183,7 +182,7 @@ export function ReportScreen({
     <View>
       <View style={styles.reportHeaderBlock}>
         <Text style={styles.reportHeaderTitle}>생생날씨특파원</Text>
-        <Text style={styles.reportHeaderCaption}>묻고, 답하고, 현장 날씨를 모아요</Text>
+        <Text style={styles.reportHeaderCaption}>물어보고, 답하고, 전국 현장 날씨를 모아요.</Text>
       </View>
 
       <View style={styles.reportTabbedCard}>
@@ -191,6 +190,7 @@ export function ReportScreen({
           {reportTabs.map((tab) => {
             const selected = activeReportTab === tab.key;
             const tabColor = selected ? tabTone[tab.key].panel : tone.inactive;
+
             return (
               <Pressable
                 key={tab.key}
@@ -229,7 +229,7 @@ export function ReportScreen({
 
           {activeReportTab === 'questions' && (
             <QuestionsPanel
-              requests={answerableRequests}
+              requests={orderedRequests}
               onAnswer={openAnswerModal}
               tone={tone}
             />
@@ -237,10 +237,8 @@ export function ReportScreen({
 
           {activeReportTab === 'feed' && (
             <FeedPanel
-              feedMode={feedMode}
               reports={visibleReports}
               onReportIssue={onReportIssue}
-              setFeedMode={setFeedMode}
               tone={tone}
             />
           )}
@@ -283,20 +281,20 @@ function AskPanel({
 }) {
   return (
     <>
-      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>궁금한 지역의 현재 날씨</Text>
-      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>현장에 있는 사람에게 바로 물어보세요.</Text>
+      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>궁금한 지역의 현재 상황을 물어보세요</Text>
+      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>근처에 있는 사람의 현장 답변을 기다려요.</Text>
       <View style={styles.reportBigQuestionBox}>
         <TextInput
           value={requestDraft}
           onChangeText={setRequestDraft}
-          placeholder="예: 청와대 지금 비 와?"
+          placeholder="예: 청와대 지금 비 와요?"
           placeholderTextColor="#8a8178"
           style={styles.reportBigQuestionInput}
           onSubmitEditing={onAddRequest}
           returnKeyType="send"
         />
         <Pressable onPress={onAddRequest} style={styles.reportRoundSubmit}>
-          <Text style={styles.reportRoundSubmitText}>→</Text>
+          <Text style={styles.reportRoundSubmitText}>보내기</Text>
         </Pressable>
       </View>
       {!!replyNotice && <Text style={[styles.reportInlineNotice, { color: tone.ink }]}>{replyNotice}</Text>}
@@ -320,7 +318,7 @@ function AskPanel({
       ) : (
         <EmptyState
           title="아직 내가 한 질문이 없어요"
-          body="궁금한 지역을 물어보면 여기에서 답변 상태를 볼 수 있어요."
+          body="궁금한 지역을 물어보면 여기서 답변 상태를 볼 수 있어요."
         />
       )}
     </>
@@ -338,11 +336,10 @@ function QuestionsPanel({
 }) {
   return (
     <>
-      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>가까운데 계시면 답장을 보내주세요</Text>
-      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>현장 날씨가 궁금한 친구에게 지금 상황을 알려줄 수 있어요.</Text>
-      <View style={styles.reportFilterPill}>
-        <Text style={styles.reportFilterPillText}>가까운 질문 우선</Text>
-      </View>
+      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>가까운데 계시면 현장날씨가 궁금한 친구에게 답장을 보내주세요</Text>
+      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>
+        답변은 질문 장소 근처에서만 남길 수 있게 설계할 거예요.
+      </Text>
 
       {requests.length > 0 ? (
         <View style={styles.requestList}>
@@ -351,7 +348,7 @@ function QuestionsPanel({
               key={request.id}
               request={request}
               onPress={() => onAnswer(request)}
-              actionLabel={request.answers > 0 ? '답변보기' : '답변하기'}
+              actionLabel="답변쓰기"
             />
           ))}
         </View>
@@ -366,85 +363,51 @@ function QuestionsPanel({
 }
 
 function FeedPanel({
-  feedMode,
   reports,
   onReportIssue,
-  setFeedMode,
   tone,
 }: {
-  feedMode: 'nearby' | 'national';
   reports: LocalReport[];
   onReportIssue: (report: LocalReport) => void;
-  setFeedMode: (mode: 'nearby' | 'national') => void;
   tone: (typeof tabTone)[ReportTab];
 }) {
   return (
     <>
-      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>실시간 현장 제보</Text>
+      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>전국 실시간 현장 제보</Text>
       <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>질문 답변과 현재위치 제보가 최신순으로 올라와요.</Text>
-      <View style={styles.reportFeedMode}>
-        <Pressable
-          onPress={() => setFeedMode('nearby')}
-          style={[styles.reportFeedModeButton, feedMode === 'nearby' && styles.reportFeedModeButtonActive]}
-        >
-          <Text style={[styles.reportFeedModeText, feedMode === 'nearby' && styles.reportFeedModeTextActive]}>
-            근처
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setFeedMode('national')}
-          style={[styles.reportFeedModeButton, feedMode === 'national' && styles.reportFeedModeButtonActive]}
-        >
-          <Text style={[styles.reportFeedModeText, feedMode === 'national' && styles.reportFeedModeTextActive]}>
-            전국
-          </Text>
-        </Pressable>
-      </View>
 
       {reports.length > 0 ? (
         <View style={styles.liveReportList}>
-          {reports.map((report, index) => {
-            const itemTone = getReportTone(report.condition);
-
-            return (
-              <View key={`${report.place}-${report.body}-${index}`} style={styles.liveReportItem}>
-                <View style={styles.liveReportMain}>
-                  <View style={styles.liveReportTopRow}>
-                    <Text numberOfLines={1} style={styles.liveReportPlace}>{report.place}</Text>
-                    <Text style={styles.liveReportTime}>{report.time}</Text>
-                  </View>
-                  <Text style={styles.liveReportBody}>{report.body}</Text>
-                  <View style={styles.liveReportBottomRow}>
-                    <Text style={[styles.liveReportCondition, { backgroundColor: itemTone.pill, color: itemTone.ink }]}>
-                      {report.condition}
-                    </Text>
-                    <Text style={styles.liveReportSource}>
-                      {report.source === 'local' ? '현재위치 제보' : '질문 답변'}
-                    </Text>
-                  </View>
+          {reports.map((report, index) => (
+            <View key={`${report.place}-${report.body}-${index}`} style={styles.liveReportItem}>
+              <View style={styles.liveReportMain}>
+                <View style={styles.liveReportTopRow}>
+                  <Text numberOfLines={1} style={styles.liveReportPlace}>{report.place}</Text>
+                  <Text style={styles.liveReportTime}>{report.time}</Text>
                 </View>
-                <View style={styles.liveReportAction}>
-                  <Pressable
-                    disabled={report.moderationStatus === 'pending'}
-                    onPress={() => onReportIssue(report)}
-                    style={[
-                      styles.reportIssueButton,
-                      report.moderationStatus === 'pending' && styles.reportIssueButtonPending,
-                    ]}
-                  >
-                    <Text style={styles.reportIssueText}>
-                      {report.moderationStatus === 'pending' ? '검토중' : '신고'}
-                    </Text>
-                  </Pressable>
-                </View>
+                <Text numberOfLines={2} style={styles.liveReportBody}>{report.body}</Text>
               </View>
-            );
-          })}
+              <View style={styles.liveReportAction}>
+                <Pressable
+                  disabled={report.moderationStatus === 'pending'}
+                  onPress={() => onReportIssue(report)}
+                  style={[
+                    styles.reportIssueButton,
+                    report.moderationStatus === 'pending' && styles.reportIssueButtonPending,
+                  ]}
+                >
+                  <Text style={styles.reportIssueText}>
+                    {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
         </View>
       ) : (
         <EmptyState
           title="올라온 현장 글이 없어요"
-          body="질문 답변이나 현재위치 제보가 등록되면 최신순으로 쌓입니다."
+          body="질문 답변이나 현재위치 제보가 등록되면 최신순으로 보입니다."
         />
       )}
     </>
@@ -464,8 +427,9 @@ function ReportQuestionItem({
     <Pressable onPress={onPress} style={styles.requestListItem}>
       <View style={styles.requestListContent}>
         <Text style={styles.requestQuestion}>{request.question}</Text>
-        <Text style={styles.requestHint}>
-          {request.place} · {request.time} · 현장 답변 {request.answers}개
+        <Text style={styles.requestHint}>{request.place} · {request.time}</Text>
+        <Text style={styles.requestAnswerMeta}>
+          현장 답변 {request.answers}개 · 질문 장소 근처에서만 답변 가능
         </Text>
       </View>
       <Text style={styles.requestStatus}>{actionLabel}</Text>
@@ -492,12 +456,13 @@ function AnswerModal({
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <View style={styles.reportModalBackdrop}>
         <View style={styles.reportModalCard}>
-          <Text style={styles.replyEyebrow}>선택한 질문에 답변하기</Text>
+          <Text style={styles.replyEyebrow}>선택한 질문에 답변쓰기</Text>
           <Text style={styles.replyQuestion}>{request?.question ?? '질문을 선택해주세요'}</Text>
+          <Text style={styles.replyNotice}>질문 장소 근처에서 확인한 현재 날씨만 남겨주세요.</Text>
           {!!request && request.answers > 0 && (
             <View style={styles.reportAnswerBubble}>
               <Text style={styles.reportAnswerText}>
-                {`${request.place} 주변에서 현장답변 ${request.answers}개가 도착했어요.\n- 방금 확인: 비는 약하거나 소강 상태예요.\n- 주변 제보: 바닥은 젖었지만 이동은 가능해요.`}
+                {`${request.place} 주변에서 현장 답변 ${request.answers}개가 도착했어요.\n- 방금 확인: 비는 약하거나 멈춘 상태예요.\n- 주변 제보: 바닥은 젖었지만 이동은 가능해요.`}
               </Text>
             </View>
           )}
@@ -539,7 +504,7 @@ function MyQuestionModal({
           <View style={styles.reportAnswerBubble}>
             <Text style={styles.reportAnswerText}>
               {request && request.answers > 0
-                ? `${request.place} 주변에서 답변 ${request.answers}개가 도착했어요. 실제 답변 목록은 서버 저장 구조를 붙이면서 여기로 연결할게요.`
+                ? `${request.place} 주변에서 답변 ${request.answers}개가 도착했어요. 실제 답변 목록은 서버 저장 구조를 붙이면서 이곳에 연결할게요.`
                 : '아직 도착한 답변이 없어요.'}
             </Text>
           </View>
@@ -560,29 +525,8 @@ function replaceRequestById(
   return requests.map((request) => (request.id === requestId ? replacement : request));
 }
 
-function getConditionMark(condition: string) {
-  if (condition.includes('맑')) return '맑';
-  if (condition.includes('비')) return '비';
-  if (condition.includes('눈')) return '눈';
-  if (condition.includes('안개')) return '안';
-  if (condition.includes('천둥') || condition.includes('번개')) return '번';
-  if (condition.includes('흐') || condition.includes('구름')) return '흐';
-
-  return condition.slice(0, 1) || '현';
-}
-
-function getReportTone(condition: string) {
-  if (condition.includes('맑')) return { bg: '#fff05a', pill: 'rgba(255,240,90,0.34)', ink: '#242424' };
-  if (condition.includes('비')) return { bg: '#74c9ee', pill: 'rgba(116,201,238,0.28)', ink: '#0a4660' };
-  if (condition.includes('눈')) return { bg: '#d7eef8', pill: 'rgba(215,238,248,0.54)', ink: '#24526a' };
-  if (condition.includes('안개')) return { bg: '#d6d2c4', pill: 'rgba(214,210,196,0.54)', ink: '#4f514c' };
-  if (condition.includes('천둥') || condition.includes('번개')) return { bg: '#242424', pill: 'rgba(36,36,36,0.10)', ink: '#242424' };
-
-  return { bg: '#c7d6c5', pill: 'rgba(199,214,197,0.42)', ink: '#2f4635' };
-}
-
 function resolveRequestPlace(question: string, fallbackPlace: string) {
-  const normalized = question.replace(/[?!,。]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normalized = question.replace(/[?!,.]/g, ' ').replace(/\s+/g, ' ').trim();
   const beforeWeather = normalized.match(
     /(.+?)(?:오늘|내일|모레|주말|아침|오전|오후|저녁|밤|지금|\d{1,2}\s*시|\s*(?:날씨|비|안개|기온|우산|소나기|천둥|번개|바람))/,
   )?.[1];
@@ -596,7 +540,7 @@ function resolveRequestPlace(question: string, fallbackPlace: string) {
 
 function cleanRequestPlace(value: string) {
   return value
-    .replace(/.*(?:근데|그런데|이면|하고|그리고)/, '')
+    .replace(/.*(?:근데|그러면|혹시|그리고)/, '')
     .replace(/^(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|지금)\s*/g, '')
     .replace(/\s*(날씨|비|안개|기온|우산|소나기|천둥|번개|바람).*$/, '')
     .trim();
@@ -631,7 +575,7 @@ function createNationalReports(reports: LocalReport[]) {
       place: '제주 성산',
       time: '8분 전',
       condition: '안개',
-      body: '해안도로 쪽 시야가 뿌옇습니다. 운전은 조심해야 해요.',
+      body: '해안가 쪽 시야가 뿌옇습니다. 운전은 조심해야 해요.',
       source: 'mock',
     },
     {
@@ -647,6 +591,7 @@ function createNationalReports(reports: LocalReport[]) {
   return [...reports, ...nationalReports].sort((a, b) => {
     const aCreated = a.createdAt ? Date.parse(a.createdAt) : 0;
     const bCreated = b.createdAt ? Date.parse(b.createdAt) : 0;
+
     return bCreated - aCreated;
   });
 }

@@ -52,6 +52,7 @@ export default function App() {
             )}
             {appState.activeTab === 'map' && (
               <MapScreen
+                current={appState.current}
                 reports={appState.reports}
                 searchContext={appState.searchContext}
                 onReportIssue={appState.reportFieldReport}

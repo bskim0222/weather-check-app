@@ -1,5 +1,5 @@
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
 import { styles } from '../styles/appStyles';
@@ -31,6 +31,7 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
   const containerRef = useRef<HTMLElement | null>(null);
   const [kakaoReady, setKakaoReady] = useState(false);
   const [kakaoFailed, setKakaoFailed] = useState(false);
+  const [kakaoMapMounted, setKakaoMapMounted] = useState(false);
   const center = useMemo(() => resolveMapCenter(searchContext), [searchContext]);
   const shouldUseKakao = appConfig.kakaoJavaScriptKey.trim().length > 0 && !kakaoFailed;
 
@@ -65,6 +66,8 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
         map,
       });
 
+      setKakaoMapMounted(true);
+
       visibleReports.slice(0, 5).forEach((_, index) => {
         const offset = getMarkerOffset(index);
         const markerPosition = new kakao.LatLng(
@@ -96,6 +99,7 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
                 touchAction: 'pan-x pan-y pinch-zoom',
               },
             })}
+        <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao 로딩중'} />
       </View>
     );
   }
@@ -129,6 +133,15 @@ function OpenStreetMapLayer({
             loading: 'lazy',
             referrerPolicy: 'no-referrer-when-downgrade',
           })}
+      <MapProviderBadge label="기본 지도" />
+    </View>
+  );
+}
+
+function MapProviderBadge({ label }: { label: string }) {
+  return (
+    <View pointerEvents="none" style={styles.mapProviderBadge}>
+      <Text style={styles.mapProviderBadgeText}>{label}</Text>
     </View>
   );
 }

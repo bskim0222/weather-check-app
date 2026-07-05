@@ -2953,6 +2953,22 @@ export const styles = StyleSheet.create({
     left: 0,
     backgroundColor: '#d7d5cb',
   },
+  mapProviderBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    minHeight: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(36,36,36,0.82)',
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapProviderBadgeText: {
+    color: '#f4f5f2',
+    fontSize: 11,
+    fontWeight: '900',
+  },
   mapNativeFallback: {
     position: 'absolute',
     top: 0,

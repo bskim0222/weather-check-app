@@ -338,8 +338,8 @@ function QuestionsPanel({
 }) {
   return (
     <>
-      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>답변이 필요한 질문</Text>
-      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>내 주변과 관심 지역 질문부터 보여줘요.</Text>
+      <Text style={[styles.reportPanelTitle, { color: tone.ink }]}>가까운데 계시면 답장을 보내주세요</Text>
+      <Text style={[styles.reportPanelCaption, { color: tone.sub }]}>현장 날씨가 궁금한 친구에게 지금 상황을 알려줄 수 있어요.</Text>
       <View style={styles.reportFilterPill}>
         <Text style={styles.reportFilterPillText}>가까운 질문 우선</Text>
       </View>
@@ -408,11 +408,6 @@ function FeedPanel({
 
             return (
               <View key={`${report.place}-${report.body}-${index}`} style={styles.liveReportItem}>
-                <View style={[styles.liveReportMark, { backgroundColor: itemTone.bg }]}>
-                  <Text style={[styles.liveReportMarkText, { color: itemTone.ink }]}>
-                    {getConditionMark(report.condition)}
-                  </Text>
-                </View>
                 <View style={styles.liveReportMain}>
                   <View style={styles.liveReportTopRow}>
                     <Text numberOfLines={1} style={styles.liveReportPlace}>{report.place}</Text>
@@ -467,9 +462,6 @@ function ReportQuestionItem({
 }) {
   return (
     <Pressable onPress={onPress} style={styles.requestListItem}>
-      <View style={[styles.requestMark, { backgroundColor: request.accent || '#f4f5f2' }]}>
-        <Text style={styles.requestMarkText}>{request.mark}</Text>
-      </View>
       <View style={styles.requestListContent}>
         <Text style={styles.requestQuestion}>{request.question}</Text>
         <Text style={styles.requestHint}>

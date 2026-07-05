@@ -232,7 +232,9 @@ export function useWeatherAppState() {
       ? applyResolvedLocationToJudgement(createQuestionJudgement(clean), resolvedLocation)
       : createQuestionJudgement(clean);
     if (nextJudgement.searchContext.target.kind === 'pending-place' && !nextJudgement.searchContext.locationQuery) {
-      setActiveTab('decision');
+      if (activeTab !== 'map') {
+        setActiveTab('decision');
+      }
       setRefreshLabel('장소 필요');
       setDataStatus({
         phase: 'error',
@@ -247,7 +249,9 @@ export function useWeatherAppState() {
     setJudgement(nextJudgement);
     setQuestionText(clean);
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
-    setActiveTab('decision');
+    if (activeTab !== 'map') {
+      setActiveTab('decision');
+    }
     if (nextJudgement.searchContext.target.kind === 'pending-place') {
       setRefreshLabel('장소 확인 중');
       setDataStatus({

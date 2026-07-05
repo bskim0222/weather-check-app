@@ -9,6 +9,7 @@ type NativeMapLayerProps = {
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
+  onMapGestureChange: (isInteracting: boolean) => void;
   onSelectCluster: (index: number) => void;
 };
 
@@ -44,6 +45,7 @@ export function NativeMapLayer({
   searchContext,
   selectedIndex,
   visibleClusters,
+  onMapGestureChange,
   onSelectCluster,
 }: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
@@ -112,7 +114,12 @@ export function NativeMapLayer({
             event?.stopPropagation();
             onSelectCluster(item.clusterIndex);
           };
+          const stopMapDrag = (event?: Event) => {
+            event?.stopPropagation();
+          };
 
+          markerNode.addEventListener('pointerdown', stopMapDrag);
+          markerNode.addEventListener('pointerup', selectReport);
           markerNode.addEventListener('click', selectReport);
           markerNode.addEventListener('touchend', selectReport, { passive: false });
 
@@ -145,6 +152,7 @@ export function NativeMapLayer({
     center.latitude,
     center.longitude,
     kakaoReady,
+    onMapGestureChange,
     onSelectCluster,
     selectedIndex,
     shouldUseKakao,
@@ -161,11 +169,19 @@ export function NativeMapLayer({
               style: {
                 bottom: 0,
                 left: 0,
+                overscrollBehavior: 'contain',
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                touchAction: 'auto',
+                touchAction: 'none',
               },
+              onPointerDown: () => onMapGestureChange(true),
+              onPointerCancel: () => onMapGestureChange(false),
+              onPointerUp: () => onMapGestureChange(false),
+              onMouseLeave: () => onMapGestureChange(false),
+              onTouchCancel: () => onMapGestureChange(false),
+              onTouchEnd: () => onMapGestureChange(false),
+              onTouchStart: () => onMapGestureChange(true),
             })}
         <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao Loading'} />
       </View>

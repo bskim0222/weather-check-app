@@ -7,6 +7,7 @@ type NativeMapLayerProps = {
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
+  onMapGestureChange: (isInteracting: boolean) => void;
   onSelectCluster: (index: number) => void;
 };
 

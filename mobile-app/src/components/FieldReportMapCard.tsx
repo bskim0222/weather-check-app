@@ -10,6 +10,7 @@ type FieldReportMapCardProps = {
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
+  onMapGestureChange: (isInteracting: boolean) => void;
   onSelectCluster: (index: number) => void;
 };
 
@@ -19,6 +20,7 @@ export function FieldReportMapCard({
   searchContext,
   selectedIndex,
   visibleClusters,
+  onMapGestureChange,
   onSelectCluster,
 }: FieldReportMapCardProps) {
   const selectedCluster = resolveSelectedCluster(visibleClusters, selectedIndex);
@@ -30,6 +32,7 @@ export function FieldReportMapCard({
         searchContext={searchContext}
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
+        onMapGestureChange={onMapGestureChange}
         onSelectCluster={onSelectCluster}
       />
 

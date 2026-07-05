@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, View } from 'react-native';
 
 import { AppHeader } from './src/components/AppHeader';
@@ -13,6 +14,7 @@ import { styles } from './src/styles/appStyles';
 
 export default function App() {
   const appState = useWeatherAppState();
+  const [isMapInteracting, setIsMapInteracting] = useState(false);
   const androidTopInset =
     Platform.OS === 'android' ? Math.max(38, (NativeStatusBar.currentHeight ?? 24) + 14) : 0;
 
@@ -20,7 +22,11 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
       <View style={[styles.app, androidTopInset > 0 && { paddingTop: androidTopInset }]}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={!isMapInteracting}
+          showsVerticalScrollIndicator={false}
+        >
           <AppHeader
             locationStatus={appState.locationStatus}
             refreshLabel={appState.refreshLabel}
@@ -55,6 +61,7 @@ export default function App() {
                 current={appState.current}
                 reports={appState.reports}
                 searchContext={appState.searchContext}
+                onMapGestureChange={setIsMapInteracting}
                 onReportIssue={appState.reportFieldReport}
               />
             )}

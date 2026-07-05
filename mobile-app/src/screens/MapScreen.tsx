@@ -14,10 +14,17 @@ type MapScreenProps = {
   current: WeatherPreset;
   reports: LocalReport[];
   searchContext: SearchContext;
+  onMapGestureChange: (isInteracting: boolean) => void;
   onReportIssue: (report: LocalReport) => void;
 };
 
-export function MapScreen({ current, reports, searchContext, onReportIssue }: MapScreenProps) {
+export function MapScreen({
+  current,
+  reports,
+  searchContext,
+  onMapGestureChange,
+  onReportIssue,
+}: MapScreenProps) {
   const fieldSnapshot = useMemo(
     () => getMockFieldReportSnapshot(reports, searchContext),
     [reports, searchContext],
@@ -58,6 +65,7 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
         onSelectCluster={setSelectedIndex}
+        onMapGestureChange={onMapGestureChange}
       />
 
       {selectedCluster ? (

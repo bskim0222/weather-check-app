@@ -186,23 +186,34 @@ function getNearbyDecisionReports(
 ) {
   const currentPlace = normalizePlace(currentLocationLabel);
   const contextPlace = normalizePlace(searchContext.place);
+  const isCurrentContext = searchContext.target.kind === 'current';
+  const referencePlace = isCurrentContext ? currentPlace : contextPlace;
 
-  if (!currentPlace || currentPlace === '현재위치') {
+  if (!referencePlace || referencePlace === '현재위치') {
     return reports.filter((report) => report.source === 'local').slice(0, 6);
   }
 
-  return reports
-    .filter((report) => {
-      const place = normalizePlace(report.place);
-      if (report.source === 'local') return true;
-      if (place.includes(currentPlace) || currentPlace.includes(place)) return true;
-      if (contextPlace && searchContext.target.kind === 'current') {
-        return place.includes(contextPlace) || contextPlace.includes(place);
-      }
+  const matchedReports = reports.filter((report) => {
+    const place = normalizePlace(report.place);
 
-      return false;
-    })
-    .slice(0, 6);
+    return Boolean(place) && (place.includes(referencePlace) || referencePlace.includes(place));
+  });
+
+  if (matchedReports.length > 0) return matchedReports.slice(0, 6);
+
+  if (!isCurrentContext && contextPlace) {
+    return [
+      {
+        place: searchContext.place,
+        time: '확인 필요',
+        condition: searchContext.detectedWeather,
+        body: `${searchContext.place} 주변 현장 제보가 아직 없어요. 가까운 분의 제보가 필요해요.`,
+        source: 'mock' as const,
+      },
+    ];
+  }
+
+  return [];
 }
 
 function normalizePlace(place: string) {

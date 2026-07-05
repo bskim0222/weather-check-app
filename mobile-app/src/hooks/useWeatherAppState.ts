@@ -553,12 +553,22 @@ function replaceReportById(reports: LocalReport[], localId: string | undefined, 
 }
 
 function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItems: T[], localItems: T[]) {
+  const localById = new Map(
+    localItems
+      .filter((item) => item.source === 'local' && item.id)
+      .map((item) => [item.id, item]),
+  );
+  const mergedRemoteItems = remoteItems.map((remoteItem) => {
+    const localItem = remoteItem.id ? localById.get(remoteItem.id) : undefined;
+
+    return localItem ? { ...remoteItem, source: 'local' as const } : remoteItem;
+  });
   const remoteIds = new Set(remoteItems.map((item) => item.id).filter(Boolean));
   const pendingLocalItems = localItems.filter(
     (item) => item.source === 'local' && item.id && !remoteIds.has(item.id),
   );
 
-  return [...pendingLocalItems, ...remoteItems];
+  return [...pendingLocalItems, ...mergedRemoteItems];
 }
 
 function getCurrentReportPlace(locationStatus: LocationStatus, fallbackPlace: string) {

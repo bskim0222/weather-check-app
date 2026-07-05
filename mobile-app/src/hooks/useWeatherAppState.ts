@@ -96,6 +96,38 @@ export function useWeatherAppState() {
   }, [activeTab]);
 
   useEffect(() => {
+    if (!isPersistenceReady || appConfig.dataMode !== 'api') return;
+
+    let isCancelled = false;
+
+    const syncFieldReports = async () => {
+      const fieldSnapshot = await fetchFieldReportSnapshot([], searchContext, []);
+
+      if (isCancelled || fieldSnapshot.source !== 'api') return;
+
+      setReports((prev) => mergeSyncedItems(fieldSnapshot.reports, prev));
+      setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
+    };
+
+    syncFieldReports();
+    const syncIntervalMs = activeTab === 'report' || activeTab === 'map' ? 15000 : 30000;
+    const intervalId = setInterval(syncFieldReports, syncIntervalMs);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [
+    activeTab,
+    isPersistenceReady,
+    searchContext.detectedWeather,
+    searchContext.place,
+    searchContext.target.latitude,
+    searchContext.target.longitude,
+    searchContext.timeLabel,
+  ]);
+
+  useEffect(() => {
     let isMounted = true;
 
     readPersistedAppSnapshot().then((snapshot) => {
@@ -518,6 +550,15 @@ function replaceReportById(reports: LocalReport[], localId: string | undefined, 
   if (!localId) return [nextReport, ...reports];
 
   return reports.map((report) => (report.id === localId ? nextReport : report));
+}
+
+function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItems: T[], localItems: T[]) {
+  const remoteIds = new Set(remoteItems.map((item) => item.id).filter(Boolean));
+  const pendingLocalItems = localItems.filter(
+    (item) => item.source === 'local' && item.id && !remoteIds.has(item.id),
+  );
+
+  return [...pendingLocalItems, ...remoteItems];
 }
 
 function getCurrentReportPlace(locationStatus: LocationStatus, fallbackPlace: string) {

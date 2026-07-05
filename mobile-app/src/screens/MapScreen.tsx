@@ -48,6 +48,7 @@ export function MapScreen({ current, reports, searchContext, onReportIssue }: Ma
       </View>
 
       <FieldReportMapCard
+        decisionSummary={`${getMapDecisionLabel(current.condition)} · ${current.temp}°C`}
         radiusLabel={radiusLabel}
         searchContext={searchContext}
         selectedIndex={selectedIndex}

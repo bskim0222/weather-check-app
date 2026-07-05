@@ -9,6 +9,7 @@ type NativeMapLayerProps = {
   searchContext: SearchContext;
   selectedIndex: number;
   visibleReports: LocalReport[];
+  onSelectReport: (index: number) => void;
 };
 
 type KakaoWindow = Window & {
@@ -19,15 +20,26 @@ type KakaoWindow = Window & {
       Map: new (container: HTMLElement, options: Record<string, unknown>) => {
         setCenter?: (center: unknown) => void;
         setLevel?: (level: number) => void;
+        addControl?: (control: unknown, position: unknown) => void;
       };
       Marker: new (options: Record<string, unknown>) => unknown;
+      CustomOverlay?: new (options: Record<string, unknown>) => unknown;
+      ZoomControl?: new () => unknown;
+      ControlPosition?: {
+        RIGHT?: unknown;
+      };
     };
   };
 };
 
 const KAKAO_SCRIPT_ID = 'weather-check-kakao-map-sdk';
 
-export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayerProps) {
+export function NativeMapLayer({
+  searchContext,
+  selectedIndex,
+  visibleReports,
+  onSelectReport,
+}: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const [kakaoReady, setKakaoReady] = useState(false);
   const [kakaoFailed, setKakaoFailed] = useState(false);
@@ -61,6 +73,10 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
         level: 4,
       });
 
+      if (kakao.ZoomControl && kakao.ControlPosition?.RIGHT && map.addControl) {
+        map.addControl(new kakao.ZoomControl(), kakao.ControlPosition.RIGHT);
+      }
+
       new kakao.Marker({
         position: mapCenter,
         map,
@@ -68,20 +84,43 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
 
       setKakaoMapMounted(true);
 
-      visibleReports.slice(0, 5).forEach((_, index) => {
+      visibleReports.slice(0, 5).forEach((report, index) => {
         const offset = getMarkerOffset(index);
         const markerPosition = new kakao.LatLng(
           center.latitude + offset.latitude,
           center.longitude + offset.longitude,
         );
 
-        new kakao.Marker({
+        if (!kakao.CustomOverlay) {
+          new kakao.Marker({
+            position: markerPosition,
+            map,
+          });
+          return;
+        }
+
+        const markerNode = createReportMarkerElement(report, index === selectedIndex);
+        markerNode.onclick = () => onSelectReport(index);
+
+        new kakao.CustomOverlay({
           position: markerPosition,
+          content: markerNode,
           map,
+          yAnchor: 0.5,
+          xAnchor: 0.5,
+          zIndex: index === selectedIndex ? 9 : 5,
         });
       });
     });
-  }, [center.latitude, center.longitude, kakaoReady, shouldUseKakao, visibleReports]);
+  }, [
+    center.latitude,
+    center.longitude,
+    kakaoReady,
+    onSelectReport,
+    selectedIndex,
+    shouldUseKakao,
+    visibleReports,
+  ]);
 
   if (shouldUseKakao) {
     return (
@@ -144,6 +183,66 @@ function MapProviderBadge({ label }: { label: string }) {
       <Text style={styles.mapProviderBadgeText}>{label}</Text>
     </View>
   );
+}
+
+function createReportMarkerElement(report: LocalReport, isActive: boolean) {
+  const marker = document.createElement('button');
+  marker.type = 'button';
+  marker.textContent = getMarkerLabel(report);
+  marker.setAttribute('aria-label', `${report.place} 현장 글 보기`);
+  marker.style.width = isActive ? '52px' : '44px';
+  marker.style.height = isActive ? '52px' : '44px';
+  marker.style.borderRadius = '999px';
+  marker.style.border = isActive ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.88)';
+  marker.style.background = getMarkerTone(report);
+  marker.style.color = getMarkerInk(report);
+  marker.style.fontWeight = '900';
+  marker.style.fontSize = isActive ? '16px' : '14px';
+  marker.style.boxShadow = '0 14px 28px rgba(36,36,36,0.24)';
+  marker.style.cursor = 'pointer';
+  marker.style.display = 'flex';
+  marker.style.alignItems = 'center';
+  marker.style.justifyContent = 'center';
+  marker.style.padding = '0';
+  marker.style.transform = 'translateZ(0)';
+  marker.style.transition = 'transform 160ms ease, width 160ms ease, height 160ms ease';
+
+  return marker;
+}
+
+function getMarkerLabel(report?: LocalReport) {
+  const condition = report?.condition ?? '';
+
+  if (condition.includes('천둥') || condition.includes('번개')) return '번';
+  if (condition.includes('소나기')) return '소';
+  if (condition.includes('비')) return '비';
+  if (condition.includes('눈')) return '눈';
+  if (condition.includes('안개')) return '안';
+  if (condition.includes('황사')) return '황';
+  if (condition.includes('미세')) return '미';
+  if (condition.includes('맑')) return '맑';
+  if (condition.includes('흐') || condition.includes('구름')) return '흐';
+
+  return '현';
+}
+
+function getMarkerTone(report: LocalReport) {
+  const condition = report.condition;
+
+  if (condition.includes('비') || condition.includes('소나기')) return '#2f86d9';
+  if (condition.includes('눈')) return '#d8eff8';
+  if (condition.includes('천둥') || condition.includes('번개')) return '#302b3f';
+  if (condition.includes('안개')) return '#d8d0c1';
+  if (condition.includes('황사') || condition.includes('미세')) return '#d7bd7a';
+  if (condition.includes('맑')) return '#fff05a';
+  if (condition.includes('흐') || condition.includes('구름')) return '#bfc9bd';
+
+  return '#242424';
+}
+
+function getMarkerInk(report: LocalReport) {
+  const tone = getMarkerTone(report);
+  return tone === '#302b3f' || tone === '#242424' || tone === '#2f86d9' ? '#ffffff' : '#242424';
 }
 
 function loadKakaoMapScript(appKey: string) {

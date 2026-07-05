@@ -53,7 +53,20 @@ function isTabKey(value: unknown) {
 }
 
 function isWeatherKey(value: unknown) {
-  return value === 'sunny' || value === 'cloudy' || value === 'rain' || value === 'thunder' || value === 'snow' || value === 'fog';
+  return (
+    value === 'sunny' ||
+    value === 'cloudy' ||
+    value === 'rain' ||
+    value === 'thunder' ||
+    value === 'snow' ||
+    value === 'fog' ||
+    value === 'shower' ||
+    value === 'dust' ||
+    value === 'heat' ||
+    value === 'typhoon' ||
+    value === 'night' ||
+    value === 'rainbow'
+  );
 }
 
 function isJudgementSource(value: unknown) {

@@ -1,6 +1,18 @@
 export type TabKey = 'decision' | 'map' | 'report' | 'compare';
 
-export type WeatherKey = 'sunny' | 'cloudy' | 'rain' | 'thunder' | 'snow' | 'fog';
+export type WeatherKey =
+  | 'sunny'
+  | 'cloudy'
+  | 'rain'
+  | 'thunder'
+  | 'snow'
+  | 'fog'
+  | 'shower'
+  | 'dust'
+  | 'heat'
+  | 'typhoon'
+  | 'night'
+  | 'rainbow';
 
 export type ForecastProviderId = 'kma' | 'yr' | 'windy' | 'fmi';
 

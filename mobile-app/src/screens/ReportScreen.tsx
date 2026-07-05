@@ -31,25 +31,25 @@ const reportTabs: { key: ReportTab; label: string }[] = [
 
 const tabTone: Record<ReportTab, { panel: string; inactive: string; ink: string; sub: string; accent: string }> = {
   ask: {
-    panel: '#b8ceda',
-    inactive: '#dedad1',
-    ink: '#22323b',
-    sub: '#5b717b',
-    accent: '#376d8f',
+    panel: '#c8e8f8',
+    inactive: '#e2ded4',
+    ink: '#0a2038',
+    sub: '#3a7098',
+    accent: '#2a6090',
   },
   questions: {
-    panel: '#c7c1d0',
-    inactive: '#dedad1',
-    ink: '#302d39',
-    sub: '#625d72',
-    accent: '#5d5575',
+    panel: '#ffe600',
+    inactive: '#e2ded4',
+    ink: '#2e2000',
+    sub: '#735300',
+    accent: '#8a6400',
   },
   feed: {
-    panel: '#b8c8ae',
-    inactive: '#dedad1',
-    ink: '#24351f',
-    sub: '#516047',
-    accent: '#55784d',
+    panel: '#f1b2aa',
+    inactive: '#e2ded4',
+    ink: '#3b1010',
+    sub: '#7b3d36',
+    accent: '#b64b42',
   },
 };
 
@@ -351,7 +351,7 @@ function QuestionsPanel({
               key={request.id}
               request={request}
               onPress={() => onAnswer(request)}
-              actionLabel="답변하기"
+              actionLabel={request.answers > 0 ? '답변보기' : '답변하기'}
             />
           ))}
         </View>
@@ -494,6 +494,13 @@ function AnswerModal({
         <View style={styles.reportModalCard}>
           <Text style={styles.replyEyebrow}>선택한 질문에 답변하기</Text>
           <Text style={styles.replyQuestion}>{request?.question ?? '질문을 선택해주세요'}</Text>
+          {!!request && request.answers > 0 && (
+            <View style={styles.reportAnswerBubble}>
+              <Text style={styles.reportAnswerText}>
+                {`${request.place} 주변에서 현장답변 ${request.answers}개가 도착했어요.\n- 방금 확인: 비는 약하거나 소강 상태예요.\n- 주변 제보: 바닥은 젖었지만 이동은 가능해요.`}
+              </Text>
+            </View>
+          )}
           <TextInput
             multiline
             value={replyDraft}

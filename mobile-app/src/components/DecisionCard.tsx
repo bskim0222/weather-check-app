@@ -250,7 +250,7 @@ function getForecastStrip(
 ) {
   const fallbackRow = rows[rows.length - 1];
 
-  return Array.from({ length: 7 }, (_, index) => {
+  return Array.from({ length: 10 }, (_, index) => {
     const row = rows[index] ?? fallbackRow;
 
     return {

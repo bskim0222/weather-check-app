@@ -82,7 +82,7 @@ const calmSources: ForecastSource[] = [
   },
 ];
 
-export const weatherPresets: Record<WeatherKey, WeatherPreset> = {
+export const weatherPresets: Record<string, WeatherPreset> = {
   sunny: {
     label: '맑음',
     title: '지금은 비 걱정이 거의 없어요',

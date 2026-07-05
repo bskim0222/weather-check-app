@@ -54,6 +54,13 @@ function getJudgementSources(
 function getWeatherVote(condition: string): WeatherVote {
   const value = condition.toLowerCase();
 
+  if (includesAny(value, ['태풍', 'typhoon', 'cyclone'])) return { key: 'typhoon', label: '태풍' };
+  if (includesAny(value, ['폭염', '무더위', '고온', 'heatwave', 'hot'])) return { key: 'heat', label: '폭염' };
+  if (includesAny(value, ['황사', '미세먼지', '먼지', 'dust', 'air quality'])) return { key: 'dust', label: '황사' };
+  if (includesAny(value, ['무지개', 'rainbow'])) return { key: 'rainbow', label: '무지개' };
+  if (includesAny(value, ['맑은 밤', 'night'])) return { key: 'night', label: '맑은 밤' };
+  if (includesAny(value, ['소나기', 'shower'])) return { key: 'shower', label: '소나기' };
+
   if (includesAny(value, ['비 없음', '비구름 없음', '강수 없음', '비 안', 'no rain', '0mm', '맑', 'clear', 'sunny', '건조', '안정'])) {
     return { key: 'sunny', label: '맑음' };
   }
@@ -93,6 +100,10 @@ function getConsensusVote(votes: WeatherVote[]) {
 }
 
 function getWeatherPriority(key: WeatherKey) {
+  if (key === 'typhoon') return 10;
+  if (key === 'heat') return 9;
+  if (key === 'dust') return 8;
+  if (key === 'shower') return 7;
   if (key === 'thunder') return 6;
   if (key === 'snow') return 5;
   if (key === 'rain') return 4;
@@ -103,7 +114,7 @@ function getWeatherPriority(key: WeatherKey) {
 }
 
 function getJudgementTone(key: WeatherKey, agreeingCount: number, totalCount: number): JudgementTone {
-  if (key === 'thunder' || key === 'snow' || key === 'fog') return 'caution';
+  if (key === 'typhoon' || key === 'heat' || key === 'dust' || key === 'thunder' || key === 'snow' || key === 'fog') return 'caution';
   if (totalCount >= 3 && agreeingCount >= 3) return 'confident';
   if (agreeingCount >= 2) return 'leaning';
 

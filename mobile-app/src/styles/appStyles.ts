@@ -2218,8 +2218,8 @@ export const styles = StyleSheet.create({
     height: 34,
   },
   compareForecastWeatherSvg: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
   },
   miniSunHalo: {
     position: 'absolute',
@@ -4013,7 +4013,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   compareTableServiceColumn: {
-    width: 74,
+    width: 66,
     borderRightWidth: 1,
     borderRightColor: 'transparent',
     backgroundColor: 'rgba(214,210,196,0.46)',
@@ -4031,7 +4031,7 @@ export const styles = StyleSheet.create({
     fontWeight: '900',
   },
   compareTableServiceCell: {
-    height: 68,
+    height: 62,
     paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
@@ -4039,18 +4039,18 @@ export const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   compareTableServiceIconFrame: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     borderRadius: 0,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   compareTableServiceIconFallback: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4072,12 +4072,12 @@ export const styles = StyleSheet.create({
     paddingRight: 8,
   },
   compareForecastColumn: {
-    width: 54,
+    width: 48,
     borderRightWidth: 1,
     borderRightColor: 'transparent',
   },
   compareForecastColumnDaily: {
-    width: 94,
+    width: 82,
   },
   compareForecastColumnHead: {
     height: 40,
@@ -4095,7 +4095,7 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   compareForecastCell: {
-    height: 68,
+    height: 62,
     paddingHorizontal: 3,
     paddingVertical: 5,
     alignItems: 'center',
@@ -4108,8 +4108,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   compareForecastIconFrame: {
-    width: 30,
-    height: 30,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',

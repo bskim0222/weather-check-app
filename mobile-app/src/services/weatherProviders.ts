@@ -83,13 +83,22 @@ export function normalizeProviderSnapshot(
     sources: hasItems(snapshot.sources) ? snapshot.sources : fallbackSnapshot.sources,
     summaries: hasItems(snapshot.summaries) ? snapshot.summaries : fallbackSnapshot.summaries,
     differences: hasItems(snapshot.differences) ? snapshot.differences : fallbackSnapshot.differences,
-    hourlyRows: hasItems(snapshot.hourlyRows) ? snapshot.hourlyRows : fallbackSnapshot.hourlyRows,
-    dailyRows: hasItems(snapshot.dailyRows) ? snapshot.dailyRows : fallbackSnapshot.dailyRows,
+    hourlyRows: extendCompareRows(snapshot.hourlyRows, fallbackSnapshot.hourlyRows),
+    dailyRows: extendCompareRows(snapshot.dailyRows, fallbackSnapshot.dailyRows),
   };
 }
 
 function hasItems<T>(value: T[] | undefined) {
   return Array.isArray(value) && value.length > 0;
+}
+
+function extendCompareRows<T extends { label: string }>(rows: T[] | undefined, fallbackRows: T[]) {
+  if (!Array.isArray(rows) || rows.length === 0) return fallbackRows;
+
+  const labels = new Set(rows.map((row) => row.label));
+  const additions = fallbackRows.filter((row) => !labels.has(row.label));
+
+  return [...rows, ...additions];
 }
 
 function normalizeProviderMeta(

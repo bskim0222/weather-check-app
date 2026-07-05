@@ -46,6 +46,7 @@ export function DecisionScreen({
   const activeWeatherKey = getWeatherKeyFromCondition(current.condition) ?? weatherKey;
   const currentLocationLabel = getFieldReportPlaceDisplay(locationStatus);
   const nearbySectionTitle = getNearbySectionTitle(searchContext);
+  const nearbyReports = getNearbyDecisionReports(reports, currentLocationLabel, searchContext);
 
   return (
     <View>
@@ -101,7 +102,7 @@ export function DecisionScreen({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.localOptions}
         >
-          {['비 안 와요', '비 와요', '소나기', '눈', '천둥', '강풍'].map((option, index) => {
+          {['비 안 와요', '비 와요', '소나기', '눈', '천둥', '강풍', '황사', '미세먼지'].map((option, index) => {
             const isSelected = reportCondition ? reportCondition === option : index === 0;
             return (
               <Pressable
@@ -138,9 +139,9 @@ export function DecisionScreen({
             <Text style={styles.mockSectionButtonText}>제보</Text>
           </Pressable>
         </View>
-        {reports.length > 0 ? (
+        {nearbyReports.length > 0 ? (
           <View style={styles.reportList}>
-            {reports.map((report, index) => (
+            {nearbyReports.map((report, index) => (
               <View key={`${report.place}-${index}`} style={styles.reportItem}>
                 <View style={styles.reportContent}>
                   <Text style={styles.reportMeta}>
@@ -179,6 +180,24 @@ export function DecisionScreen({
 }
 
 function getWeatherKeyFromCondition(condition: string): WeatherKey | null {
+  if (condition.includes('태풍') || condition.includes('강풍')) {
+    return 'typhoon';
+  }
+  if (condition.includes('폭염') || condition.includes('더위') || condition.includes('고온')) {
+    return 'heat';
+  }
+  if (condition.includes('황사') || condition.includes('미세먼지') || condition.includes('먼지')) {
+    return 'dust';
+  }
+  if (condition.includes('무지개')) {
+    return 'rainbow';
+  }
+  if (condition.includes('맑은 밤')) {
+    return 'night';
+  }
+  if (condition.includes('소나기')) {
+    return 'shower';
+  }
   if (condition.includes('천둥') || condition.includes('번개') || condition.includes('소나기')) {
     return 'thunder';
   }
@@ -198,4 +217,37 @@ function getWeatherKeyFromCondition(condition: string): WeatherKey | null {
     return 'cloudy';
   }
   return null;
+}
+
+function getNearbyDecisionReports(
+  reports: LocalReport[],
+  currentLocationLabel: string,
+  searchContext: SearchContext,
+) {
+  const currentPlace = normalizePlace(currentLocationLabel);
+  const contextPlace = normalizePlace(searchContext.place);
+
+  if (!currentPlace || currentPlace === '현재위치') {
+    return reports.filter((report) => report.source === 'local').slice(0, 6);
+  }
+
+  return reports
+    .filter((report) => {
+      const place = normalizePlace(report.place);
+      if (report.source === 'local') return true;
+      if (place.includes(currentPlace) || currentPlace.includes(place)) return true;
+      if (contextPlace && searchContext.target.kind === 'current') {
+        return place.includes(contextPlace) || contextPlace.includes(place);
+      }
+
+      return false;
+    })
+    .slice(0, 6);
+}
+
+function normalizePlace(place: string) {
+  return place
+    .replace(/\s+/g, '')
+    .replace(/현재위치확인됨|현재위치|내위치|주변/g, '')
+    .trim();
 }

@@ -42,9 +42,9 @@ const mockStatus: DataStatus = {
 };
 
 const apiInitialStatus: DataStatus = {
-  phase: 'loading',
-  label: '날씨 확인 중',
-  message: '실제 예보 데이터를 불러오고 있어요.',
+  phase: 'ready',
+  label: '데이터 준비 중',
+  message: '화면을 먼저 보여주고 실제 예보 데이터를 갱신하고 있어요.',
 };
 
 export function useWeatherAppState() {
@@ -188,7 +188,7 @@ export function useWeatherAppState() {
 
     const report: LocalReport = {
       id: createLocalId('report'),
-      place: resolveReportPlace(searchContext.place),
+      place: resolveReportPlace(getCurrentReportPlace(locationStatus, searchContext.place)),
       time: '방금',
       condition: reportCondition,
       body: clean,
@@ -319,16 +319,15 @@ export function useWeatherAppState() {
     setRefreshLabel('확인 중');
     setProviderSnapshot(getMockWeatherProviderSnapshot(nextSearchContext));
     setDataStatus({
-      phase: 'loading',
-      label: '날씨 확인 중',
-      message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 예보와 현장 글을 다시 맞춰보고 있어요.`,
+      phase: 'ready',
+      label: '갱신 중',
+      message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 최신 데이터를 뒤에서 확인하고 있어요.`,
     });
 
     try {
       const [providerSnapshot, fieldSnapshot] = await Promise.all([
         fetchProviderSnapshot(nextSearchContext),
         fetchFieldReportSnapshot(reports, nextSearchContext, reportRequests),
-        waitForMinimumLoadingTime(),
       ] as const);
 
       if (refreshTokenRef.current !== token) return;
@@ -500,12 +499,6 @@ function getProviderDisplayName(providerId: ForecastProviderId) {
   return '';
 }
 
-function waitForMinimumLoadingTime() {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 150);
-  });
-}
-
 function isSameWeatherContext(a: SearchContext, b: SearchContext) {
   return (
     a.place === b.place &&
@@ -525,6 +518,14 @@ function replaceReportById(reports: LocalReport[], localId: string | undefined, 
   if (!localId) return [nextReport, ...reports];
 
   return reports.map((report) => (report.id === localId ? nextReport : report));
+}
+
+function getCurrentReportPlace(locationStatus: LocationStatus, fallbackPlace: string) {
+  if (locationStatus.phase === 'granted' || locationStatus.phase === 'fallback') {
+    return locationStatus.placeName ?? locationStatus.label ?? fallbackPlace;
+  }
+
+  return fallbackPlace;
 }
 
 function createLocalId(prefix: string) {

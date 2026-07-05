@@ -39,6 +39,12 @@ const weatherHintWords = [
 export function inferWeatherFromQuestion(question: string): WeatherKey {
   const clean = question.replace(/\s/g, '');
 
+  if (clean.includes('태풍') || clean.includes('강풍')) return 'typhoon';
+  if (clean.includes('폭염') || clean.includes('무더위') || clean.includes('더워')) return 'heat';
+  if (clean.includes('황사') || clean.includes('미세먼지') || clean.includes('먼지')) return 'dust';
+  if (clean.includes('무지개')) return 'rainbow';
+  if (clean.includes('밤') && (clean.includes('맑') || clean.includes('별'))) return 'night';
+  if (clean.includes('소나기')) return 'shower';
   if (clean.includes('천둥') || clean.includes('번개')) return 'thunder';
   if (clean.includes('눈') || clean.includes('진눈')) return 'snow';
   if (clean.includes('안개') || clean.includes('시야')) return 'fog';
@@ -58,6 +64,12 @@ export function getDetectedWeatherLabel(weatherKey: WeatherKey) {
     thunder: '천둥번개',
     snow: '눈',
     fog: '안개',
+    shower: '소나기',
+    dust: '황사',
+    heat: '폭염',
+    typhoon: '태풍',
+    night: '맑은 밤',
+    rainbow: '무지개',
   };
 
   return labels[weatherKey];

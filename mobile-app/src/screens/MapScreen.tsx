@@ -4,7 +4,6 @@ import { Text, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
 import { FieldReportList } from '../components/FieldReportList';
 import { FieldReportMapCard } from '../components/FieldReportMapCard';
-import { formatRadius } from '../domain/location';
 import { getNearbySectionTitle } from '../domain/locationDisplay';
 import { getMockFieldReportSnapshot } from '../services/fieldReports';
 import { styles } from '../styles/appStyles';
@@ -28,7 +27,6 @@ export function MapScreen({
     [reports, searchContext],
   );
   const orderedReports = fieldSnapshot.reports;
-  const radiusLabel = formatRadius(searchContext.target);
   const visibleClusters = useMemo(
     () => createMapReportClusters(orderedReports, searchContext.place),
     [orderedReports, searchContext.place],
@@ -57,8 +55,6 @@ export function MapScreen({
       </View>
 
       <FieldReportMapCard
-        decisionSummary={`${getMapDecisionLabel(current.condition)} · ${current.temp}°C`}
-        radiusLabel={radiusLabel}
         searchContext={searchContext}
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}

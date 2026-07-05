@@ -99,7 +99,7 @@ export function NativeMapLayer({ searchContext, visibleReports }: NativeMapLayer
                 touchAction: 'pan-x pan-y pinch-zoom',
               },
             })}
-        <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao 로딩중'} />
+        <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao Loading'} />
       </View>
     );
   }
@@ -133,7 +133,7 @@ function OpenStreetMapLayer({
             loading: 'lazy',
             referrerPolicy: 'no-referrer-when-downgrade',
           })}
-      <MapProviderBadge label="기본 지도" />
+      <MapProviderBadge label="Fallback Map" />
     </View>
   );
 }

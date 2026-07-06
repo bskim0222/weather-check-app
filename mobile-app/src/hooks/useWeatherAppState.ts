@@ -367,8 +367,8 @@ export function useWeatherAppState() {
       setProviderSnapshot(providerSnapshot);
 
       if (fieldSnapshot.source === 'api') {
-        setReports(fieldSnapshot.reports);
-        setReportRequests(fieldSnapshot.requests);
+        setReports((prev) => mergeSyncedItems(fieldSnapshot.reports, prev));
+        setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
       }
 
       const isFallback =
@@ -555,13 +555,13 @@ function replaceReportById(reports: LocalReport[], localId: string | undefined, 
 function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItems: T[], localItems: T[]) {
   const localById = new Map(
     localItems
-      .filter((item) => item.source === 'local' && item.id)
+      .filter((item) => item.id)
       .map((item) => [item.id, item]),
   );
   const mergedRemoteItems = remoteItems.map((remoteItem) => {
     const localItem = remoteItem.id ? localById.get(remoteItem.id) : undefined;
 
-    return localItem ? { ...remoteItem, source: 'local' as const } : remoteItem;
+    return localItem ? mergeSyncedItem(remoteItem, localItem) : remoteItem;
   });
   const remoteIds = new Set(remoteItems.map((item) => item.id).filter(Boolean));
   const pendingLocalItems = localItems.filter(
@@ -569,6 +569,42 @@ function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItem
   );
 
   return [...pendingLocalItems, ...mergedRemoteItems];
+}
+
+function mergeSyncedItem<T extends { source?: string }>(remoteItem: T, localItem: T) {
+  const nextItem = { ...remoteItem } as T & {
+    answers?: number;
+    status?: string;
+    hint?: string;
+    lastAnsweredAt?: string;
+  };
+  const localAnswerCount = getAnswerCount(localItem);
+  const remoteAnswerCount = getAnswerCount(remoteItem);
+
+  if (localItem.source === 'local') {
+    nextItem.source = 'local' as T['source'];
+  }
+
+  if (localAnswerCount > remoteAnswerCount) {
+    nextItem.answers = localAnswerCount;
+    const localRequest = localItem as {
+      status?: string;
+      hint?: string;
+      lastAnsweredAt?: string;
+    };
+
+    if (localRequest.status) nextItem.status = localRequest.status;
+    if (localRequest.hint) nextItem.hint = localRequest.hint;
+    if (localRequest.lastAnsweredAt) nextItem.lastAnsweredAt = localRequest.lastAnsweredAt;
+  }
+
+  return nextItem;
+}
+
+function getAnswerCount(item: unknown) {
+  const answers = (item as { answers?: unknown }).answers;
+
+  return typeof answers === 'number' && Number.isFinite(answers) ? answers : 0;
 }
 
 function getCurrentReportPlace(locationStatus: LocationStatus, fallbackPlace: string) {

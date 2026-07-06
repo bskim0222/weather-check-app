@@ -77,6 +77,9 @@ export function ReportScreen({
   const orderedRequests = fieldSnapshot.requests;
   const visibleReports = createNationalReports(orderedReports);
   const myQuestions = orderedRequests.filter((request) => request.source === 'local');
+  const selectedRequestReplies = selectedRequestId
+    ? orderedReports.filter((report) => report.requestId === selectedRequestId)
+    : [];
   const selectedRequest = useMemo(
     () => orderedRequests.find((request) => request.id === selectedRequestId),
     [orderedRequests, selectedRequestId],
@@ -140,6 +143,7 @@ export function ReportScreen({
 
     const replyReport: LocalReport = {
       id: `reply-${selectedRequest.id}-${Date.now()}`,
+      requestId: selectedRequest.id,
       place: selectedRequest.place,
       time: '방금',
       condition: inferConditionFromText(clean),
@@ -157,7 +161,12 @@ export function ReportScreen({
     answerRemoteReportRequest(selectedRequest.id, '답변 있음', '방금 답변됨').then((remoteRequest) => {
       if (!remoteRequest) return;
 
-      onRequestsChange((prev) => replaceRequestById(prev, selectedRequest.id, remoteRequest));
+      onRequestsChange((prev) =>
+        replaceRequestById(prev, selectedRequest.id, {
+          ...remoteRequest,
+          source: selectedRequest.source,
+        }),
+      );
     });
     createRemoteFieldReport(replyReport).then((remoteReport) => {
       if (!remoteReport) return;
@@ -247,6 +256,7 @@ export function ReportScreen({
 
       <AnswerModal
         request={selectedRequest}
+        replies={selectedRequestReplies}
         replyDraft={replyDraft}
         setReplyDraft={setReplyDraft}
         submitReply={submitReply}
@@ -255,6 +265,7 @@ export function ReportScreen({
       />
       <MyQuestionModal
         request={selectedRequest}
+        replies={selectedRequestReplies}
         visible={myQuestionModalVisible}
         onClose={() => setMyQuestionModalVisible(false)}
       />
@@ -437,9 +448,32 @@ function ReportQuestionItem({
   );
 }
 
+function ReplyList({ replies, emptyText }: { replies: LocalReport[]; emptyText: string }) {
+  if (replies.length === 0 && !emptyText) return null;
+
+  if (replies.length === 0) {
+    return (
+      <View style={styles.reportAnswerBubble}>
+        <Text style={styles.reportAnswerText}>{emptyText}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.reportAnswerBubble}>
+      {replies.map((reply, index) => (
+        <Text key={`${reply.id ?? reply.body}-${index}`} style={styles.reportAnswerText}>
+          {`${reply.place} · ${reply.time}\n${reply.body}`}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function AnswerModal({
   onClose,
   replyDraft,
+  replies,
   request,
   setReplyDraft,
   submitReply,
@@ -447,6 +481,7 @@ function AnswerModal({
 }: {
   onClose: () => void;
   replyDraft: string;
+  replies: LocalReport[];
   request?: ReportRequest;
   setReplyDraft: (value: string) => void;
   submitReply: () => void;
@@ -466,6 +501,7 @@ function AnswerModal({
               </Text>
             </View>
           )}
+          <ReplyList replies={replies} emptyText="" />
           <TextInput
             multiline
             value={replyDraft}
@@ -488,10 +524,12 @@ function AnswerModal({
 
 function MyQuestionModal({
   onClose,
+  replies,
   request,
   visible,
 }: {
   onClose: () => void;
+  replies: LocalReport[];
   request?: ReportRequest;
   visible: boolean;
 }) {
@@ -508,6 +546,7 @@ function MyQuestionModal({
                 : '아직 도착한 답변이 없어요.'}
             </Text>
           </View>
+          <ReplyList replies={replies} emptyText="" />
           <Pressable onPress={onClose} style={styles.replySubmitButton}>
             <Text style={styles.replySubmitText}>확인</Text>
           </Pressable>

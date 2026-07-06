@@ -56,6 +56,7 @@ export type WeatherPreset = {
 
 export type LocalReport = {
   id?: string;
+  requestId?: string;
   place: string;
   time: string;
   condition: string;

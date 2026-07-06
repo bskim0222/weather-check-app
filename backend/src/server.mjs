@@ -187,6 +187,7 @@ function createFieldReport(payload) {
 
   return {
     id: typeof payload.id === 'string' ? payload.id : createId('report'),
+    requestId: typeof payload.requestId === 'string' ? payload.requestId : undefined,
     place: textOr(payload.place, '현재 위치 주변'),
     time: textOr(payload.time, '방금'),
     condition: textOr(payload.condition, '날씨 확인'),

@@ -97,8 +97,8 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         contentContainerStyle={styles.figmaWeatherHourlyContent}
       >
         <View style={styles.figmaWeatherHourIntro}>
-          <Text style={[styles.figmaWeatherHourIntroLabel, { color: figma.dim }]}>예보 비교 요약</Text>
-          <Text style={[styles.figmaWeatherHourIntroText, { color: figma.ink }]}>3개 예보 종합 흐름</Text>
+          <Text style={[styles.figmaWeatherHourIntroLabel, { color: figma.dim }]}>종합 예보 흐름</Text>
+          <Text style={[styles.figmaWeatherHourIntroText, { color: figma.ink }]}>3개 예보 대표값</Text>
         </View>
         {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext).map((item, index) => (
           <View key={`${item.label}-${index}`} style={styles.figmaWeatherHour}>
@@ -128,7 +128,7 @@ function normalizeWeatherCondition(condition: string) {
   if (includesAny(value, ['무지개', 'rainbow'])) return '무지개';
   if (includesAny(value, ['맑은 밤', '밤', 'night'])) return '맑은 밤';
 
-  if (includesAny(value, ['비 없음', '강수 없음', 'no rain', '0mm', '맑', 'clear', 'sunny', '건조', '안정'])) {
+  if (includesAny(value, ['비 없음', '강수 없음', 'no rain', '맑', 'clear', 'sunny', '건조', '안정'])) {
     return '맑음';
   }
 
@@ -256,14 +256,21 @@ function getForecastStrip(
   const isCurrentContext = isCurrentForecastContext(searchContext);
 
   return Array.from({ length: 10 }, (_, index) => {
-    const row = rows[index] ?? fallbackRow;
+    if (index === 0) {
+      return {
+        label: isCurrentContext ? '지금' : '기준',
+        temp: `${temp}°`,
+        condition: fallbackCondition,
+        precipitation: null,
+      };
+    }
+
+    const row = rows[index - 1] ?? fallbackRow;
 
     return {
-      label: formatForecastSequenceLabel(index, baseDate, isCurrentContext),
+      label: row?.time ? formatReadableTimeLabel(row.time) : formatForecastSequenceLabel(index, baseDate, isCurrentContext),
       temp: row ? formatForecastTemp(row.temp) : `${temp}°`,
-      condition: row
-        ? getForecastStripCondition(`${row.title} ${row.note} ${row.mark}`, fallbackCondition)
-        : fallbackCondition,
+      condition: row ? getForecastStripCondition(row.title, fallbackCondition) : fallbackCondition,
       precipitation: row ? getForecastPrecipitation(`${row.title} ${row.note} ${row.mark}`) : null,
     };
   });

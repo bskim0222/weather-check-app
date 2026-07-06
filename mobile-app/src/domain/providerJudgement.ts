@@ -73,7 +73,7 @@ function getWeatherVote(condition: string): WeatherVote {
   if (includesAny(value, ['맑은 밤', 'night'])) return { key: 'night', label: '맑은 밤' };
   if (includesAny(value, ['소나기', 'shower'])) return { key: 'shower', label: '소나기' };
 
-  if (includesAny(value, ['비 없음', '비구름 없음', '강수 없음', '비 안', 'no rain', '0mm', '맑', 'clear', 'sunny', '건조', '안정'])) {
+  if (includesAny(value, ['비 없음', '비구름 없음', '강수 없음', '비 안', 'no rain', '맑', 'clear', 'sunny', '건조', '안정'])) {
     return { key: 'sunny', label: '맑음' };
   }
 
@@ -207,7 +207,9 @@ function createForecastRows(
   fallbackRows: ForecastStep[],
   consensus: WeatherVote,
 ) {
-  return Array.from({ length: 7 }, (_, index) => {
+  const rowCount = Math.max(10, Math.min(12, Math.max(rows.length, fallbackRows.length)));
+
+  return Array.from({ length: rowCount }, (_, index) => {
     const row = rows[index];
     const fallbackRow = fallbackRows[index] ?? fallbackRows[fallbackRows.length - 1];
     const cell = row ? pickRepresentativeCell(row, consensus) : null;

@@ -17,6 +17,7 @@ import type {
 type DecisionScreenProps = {
   current: WeatherPreset;
   dataStatus: DataStatus;
+  lastUpdatedAt: Date | null;
   locationStatus: LocationStatus;
   providerSnapshot: WeatherProviderSnapshot;
   reportCondition: string;
@@ -33,6 +34,7 @@ type DecisionScreenProps = {
 export function DecisionScreen({
   current,
   dataStatus,
+  lastUpdatedAt,
   locationStatus,
   providerSnapshot,
   reportCondition,
@@ -54,6 +56,7 @@ export function DecisionScreen({
     <View>
       <DecisionCard
         current={current}
+        lastUpdatedAt={lastUpdatedAt}
         locationStatus={locationStatus}
         providerSnapshot={providerSnapshot}
         searchContext={searchContext}

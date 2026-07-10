@@ -64,6 +64,7 @@ export function useWeatherAppState() {
     appConfig.dataMode === 'api' ? apiInitialStatus : mockStatus,
   );
   const [locationStatus, setLocationStatus] = useState<LocationStatus>(initialLocationStatus);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [isPersistenceReady, setIsPersistenceReady] = useState(false);
   const refreshTokenRef = useRef(0);
   const locationAutoRefreshRequestedRef = useRef(false);
@@ -324,7 +325,6 @@ export function useWeatherAppState() {
 
   const refreshCurrentLocation = async () => {
     const nextJudgement = createDefaultJudgement();
-    setActiveTab('decision');
     setQuestionText('');
     setReportText('');
     setJudgement(nextJudgement);
@@ -386,11 +386,13 @@ export function useWeatherAppState() {
 
       if (appConfig.dataMode !== 'api' && (providerSnapshot.source === 'mock' || fieldSnapshot.source === 'mock')) {
         setRefreshLabel(label);
+        setLastUpdatedAt(new Date());
         setDataStatus(mockStatus);
         return;
       }
 
       setRefreshLabel('방금 갱신');
+      setLastUpdatedAt(new Date());
       setDataStatus({
         phase: 'ready',
         label: '최신 데이터',
@@ -451,6 +453,7 @@ export function useWeatherAppState() {
     isBusy,
     dataStatus,
     locationStatus,
+    lastUpdatedAt,
     questionSuggestions,
     questionText,
     providerSnapshot,

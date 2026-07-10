@@ -49,6 +49,7 @@ export default function App() {
                 current={appState.current}
                 dataStatus={appState.dataStatus}
                 locationStatus={appState.locationStatus}
+                lastUpdatedAt={appState.lastUpdatedAt}
                 providerSnapshot={appState.providerSnapshot}
                 reportCondition={appState.reportCondition}
                 reportText={appState.reportText}

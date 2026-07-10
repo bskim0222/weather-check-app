@@ -5,6 +5,7 @@ import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 
 import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
+import { normalizeHourlyLabels } from '../domain/forecastLabels';
 import { getThirdProviderCell } from '../domain/providerRows';
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
@@ -23,12 +24,13 @@ type SelectedForecastSource = {
 
 type DecisionCardProps = {
   current: WeatherPreset;
+  lastUpdatedAt: Date | null;
   locationStatus: LocationStatus;
   providerSnapshot: WeatherProviderSnapshot;
   searchContext: SearchContext;
 };
 
-export function DecisionCard({ current, locationStatus, providerSnapshot, searchContext }: DecisionCardProps) {
+export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerSnapshot, searchContext }: DecisionCardProps) {
   const [selectedSource, setSelectedSource] = useState<SelectedForecastSource | null>(null);
   const normalizedCondition = normalizeWeatherCondition(current.condition);
   const placeLabel = getDecisionPlaceLabel(searchContext, locationStatus);
@@ -50,7 +52,7 @@ export function DecisionCard({ current, locationStatus, providerSnapshot, search
             {placeLabel}
           </Text>
         </View>
-        <Text style={[styles.figmaWeatherTime, { color: figma.dim }]}>갱신됨</Text>
+        <Text style={[styles.figmaWeatherTime, { color: figma.dim }]}>{formatUpdatedAt(lastUpdatedAt)}</Text>
       </View>
 
       <View style={styles.figmaWeatherScene}>
@@ -76,17 +78,13 @@ export function DecisionCard({ current, locationStatus, providerSnapshot, search
         >
           {title}
         </Text>
-        <Text numberOfLines={2} style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
+        <Text numberOfLines={3} style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
           {current.summary}
         </Text>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}
-        contentContainerStyle={styles.figmaWeatherHourlyContent}
-      >
+      <View style={styles.figmaWeatherHourly}>
+        <View style={styles.figmaWeatherHourlyContent}>
         {forecastSources.map((source, sourceIndex) => (
           <ForecastSourceMiniCard
             key={`${source.name}-${source.mark}`}
@@ -95,7 +93,8 @@ export function DecisionCard({ current, locationStatus, providerSnapshot, search
             onPress={() => setSelectedSource({ source, sourceIndex })}
           />
         ))}
-      </ScrollView>
+        </View>
+      </View>
 
       <ProviderForecastDetailModal
         selected={selectedSource}
@@ -173,7 +172,7 @@ function ProviderForecastDetailModal({
   if (!selected) return null;
 
   const { source, sourceIndex } = selected;
-  const hourlyRows = providerSnapshot.hourlyRows.slice(0, 12);
+  const hourlyRows = normalizeHourlyLabels(providerSnapshot.hourlyRows, searchContext).slice(0, 12);
   const dailyRows = providerSnapshot.dailyRows.slice(0, 7);
 
   return (
@@ -195,16 +194,15 @@ function ProviderForecastDetailModal({
             <View style={styles.providerDetailSummary}>
               <View style={styles.providerDetailSummaryText}>
                 <Text style={styles.providerDetailCondition}>{source.condition}</Text>
-                <Text style={styles.providerDetailNote}>{createProviderDetailNote(source)}</Text>
+                <Text style={styles.providerDetailNote}>서비스가 제공한 현재 시간대 예보</Text>
               </View>
               <Text style={styles.providerDetailTemp}>{source.temp}</Text>
             </View>
 
             <View style={styles.providerDetailRows}>
-              <ProviderDetailRow label="날씨 상태" value={source.condition} />
-              <ProviderDetailRow label="예상 기온" value={source.temp} />
-              <ProviderDetailRow label="강수/세부" value={source.detail || '제공값 없음'} />
-              <ProviderDetailRow label="비교 기준" value="요약탭과 비교탭이 같은 예보값을 사용해요" />
+              {createProviderMetricRows(source).map((row) => (
+                <ProviderDetailRow key={row.label} label={row.label} value={row.value} />
+              ))}
             </View>
 
             <View style={styles.providerDetailSection}>
@@ -248,8 +246,8 @@ function ProviderTimelineCell({ cell, label }: { cell: CompareForecastCell; labe
     <View style={styles.providerDetailTimelineCell}>
       <Text numberOfLines={1} style={styles.providerDetailTimelineLabel}>{formatCompactTimeLabel(label)}</Text>
       <ForecastMiniIcon condition={cell.weather} stroke="#202020" dim="rgba(32,32,32,0.45)" />
-      <Text numberOfLines={1} style={styles.providerDetailTimelineWeather}>{cell.weather}</Text>
-      <Text numberOfLines={1} style={styles.providerDetailTimelineDetail}>{compactDetail(cell.detail)}</Text>
+      <Text numberOfLines={2} style={styles.providerDetailTimelineWeather}>{cell.weather}</Text>
+      <Text numberOfLines={2} style={styles.providerDetailTimelineDetail}>{formatForecastCellDetail(cell.detail)}</Text>
     </View>
   );
 }
@@ -280,8 +278,8 @@ function ProviderDailyPeriod({
     <View style={styles.providerDetailDailyPeriod}>
       <Text style={styles.providerDetailDailyPeriodLabel}>{label}</Text>
       <ForecastMiniIcon condition={period.weather} stroke="#202020" dim="rgba(32,32,32,0.45)" />
-      <Text numberOfLines={1} style={styles.providerDetailDailyWeather}>{period.weather}</Text>
-      <Text numberOfLines={1} style={styles.providerDetailDailyDetail}>{compactDetail(period.detail)}</Text>
+      <Text numberOfLines={2} style={styles.providerDetailDailyWeather}>{period.weather}</Text>
+      <Text numberOfLines={2} style={styles.providerDetailDailyDetail}>{formatForecastCellDetail(period.detail)}</Text>
     </View>
   );
 }
@@ -297,11 +295,6 @@ function ProviderDetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function createProviderDetailNote(source: ForecastSource) {
-  if (source.detail && source.detail !== '-') return `${source.detail} 기준으로 표시 중`;
-  return '서비스가 제공한 현재 시간대 예보 기준';
-}
-
 function getProviderCellByIndex(row: { kma: CompareForecastCell; yr: CompareForecastCell; windy: CompareForecastCell; fmi?: CompareForecastCell }, sourceIndex: number) {
   if (sourceIndex === 0) return row.kma;
   if (sourceIndex === 1) return row.yr;
@@ -314,6 +307,51 @@ function formatCompactTimeLabel(label: string) {
 
 function compactDetail(detail: string) {
   return detail.replace(/\s+/g, ' ').replace(/강수\s*/g, '').trim();
+}
+
+function formatForecastCellDetail(detail: string) {
+  const compact = compactDetail(detail);
+  const temperature = extractForecastTemperature(compact);
+  const rain = extractPrecipitationMetric(compact);
+  const wind = extractWindDetail(compact);
+  const parts = [temperature, rain !== compact ? rain : null, wind].filter(Boolean);
+
+  return parts.length > 0 ? parts.join('\n') : compact;
+}
+
+function createProviderMetricRows(source: ForecastSource) {
+  const detail = source.detail || '';
+
+  return [
+    { label: '강수', value: extractPrecipitationMetric(detail) || '제공값 없음' },
+    { label: '바람', value: extractWindDetail(detail) || '제공값 없음' },
+    { label: '습도', value: extractHumidityDetail(detail) || '제공값 없음' },
+  ];
+}
+
+function extractPrecipitationMetric(detail: string) {
+  const amount = detail.match(/\d+(?:\.\d+)?\s*mm/i);
+  if (amount) return amount[0].replace(/\s+/g, '');
+
+  const probability = detail.match(/\d+\s*%/);
+  if (probability) return probability[0].replace(/\s+/g, '');
+
+  return '';
+}
+
+function extractWindDetail(detail: string) {
+  const match = detail.match(/바람\s*\d+(?:\.\d+)?\s*m\/s/i);
+  if (match) return match[0].replace(/\s+/g, ' ');
+
+  const direction = detail.match(/(?:북동풍|동풍|남동풍|남풍|남서풍|서풍|북서풍|북풍|약풍|강풍)/);
+  if (direction) return direction[0];
+
+  return '';
+}
+
+function extractHumidityDetail(detail: string) {
+  const match = detail.match(/습도\s*\d+\s*%/);
+  return match ? match[0].replace(/\s+/g, ' ') : '';
 }
 
 function getSyncedForecastSources(current: WeatherPreset, providerSnapshot: WeatherProviderSnapshot) {
@@ -368,6 +406,14 @@ function shortForecastSourceName(name: string) {
   if (name.includes('노르웨이')) return '노르웨이';
   if (name.includes('핀란드')) return '핀란드';
   return name.replace('기상청', '').trim() || name;
+}
+
+function formatUpdatedAt(updatedAt: Date | null) {
+  if (!updatedAt) return '갱신됨';
+
+  const hour = String(updatedAt.getHours()).padStart(2, '0');
+  const minute = String(updatedAt.getMinutes()).padStart(2, '0');
+  return `${hour}:${minute} 갱신`;
 }
 
 function normalizeWeatherCondition(condition: string) {

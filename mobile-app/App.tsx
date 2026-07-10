@@ -45,6 +45,8 @@ export default function App() {
               current={appState.current}
               reports={appState.reports}
               searchContext={appState.searchContext}
+              questionText={appState.questionText}
+              onSearchLocation={appState.submitQuestion}
               onUseCurrentLocation={appState.refreshCurrentLocation}
               onReportIssue={appState.reportFieldReport}
             />

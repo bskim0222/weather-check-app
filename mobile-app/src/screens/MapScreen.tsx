@@ -10,7 +10,9 @@ type MapScreenProps = {
   current: WeatherPreset;
   reports: LocalReport[];
   searchContext: SearchContext;
+  questionText: string;
   onUseCurrentLocation: () => void;
+  onSearchLocation: (query?: string, location?: SearchContext['target']) => void;
   onReportIssue: (report: LocalReport) => void;
 };
 
@@ -18,7 +20,9 @@ export function MapScreen({
   current,
   reports,
   searchContext,
+  questionText,
   onUseCurrentLocation,
+  onSearchLocation,
   onReportIssue,
 }: MapScreenProps) {
   const mapReports = useMemo(() => getMapReportsForContext(reports, searchContext), [reports, searchContext]);
@@ -44,6 +48,8 @@ export function MapScreen({
         visibleClusters={visibleClusters}
         onCloseCluster={() => setSelectedIndex(-1)}
         onReportIssue={onReportIssue}
+        questionText={questionText}
+        onSearchLocation={onSearchLocation}
         onSelectCluster={setSelectedIndex}
         onUseCurrentLocation={onUseCurrentLocation}
       />
@@ -95,7 +101,7 @@ function normalizeClusterLabel(place: string) {
 }
 
 function isCurrentLocationContext(searchContext: SearchContext) {
-  return searchContext.target.kind === 'current' || searchContext.place === '?꾩옱 ?꾩튂';
+  return searchContext.target.kind === 'current' || searchContext.place === '현재 위치';
 }
 
 function isRelatedPlace(reportPlace: string, contextPlace: string) {

@@ -129,20 +129,24 @@ function CompareMomentHourlyService({
 
   return (
     <View style={styles.compareMomentServiceRow}>
-      <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareMomentServiceLogo} />
-      <View style={styles.compareMomentServiceNameBox}>
-        <Text numberOfLines={1} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
-        <Text numberOfLines={1} style={styles.compareMomentServiceSub}>{service.subtitle || '공식 예보'}</Text>
+      <View style={styles.compareMomentServiceHead}>
+        <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareMomentServiceLogo} />
+        <View style={styles.compareMomentServiceNameBox}>
+          <Text numberOfLines={2} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
+          <Text numberOfLines={1} style={styles.compareMomentServiceSub}>{service.subtitle || '공식 예보'}</Text>
+        </View>
+        <Text style={styles.compareMomentTemp}>{metrics.temperature}</Text>
       </View>
-      <WeatherMiniIcon condition={cell.weather} />
-      <View style={styles.compareMomentWeatherBox}>
-        <Text numberOfLines={1} style={styles.compareMomentWeather}>{cell.weather}</Text>
+      <View style={styles.compareMomentServiceBody}>
+        <WeatherMiniIcon condition={cell.weather} />
+        <View style={styles.compareMomentWeatherBox}>
+          <Text numberOfLines={1} style={styles.compareMomentWeather}>{cell.weather}</Text>
+        </View>
         <View style={styles.compareMomentMetricRow}>
           <MetricPill label="강수" value={metrics.precipitation} />
           <MetricPill label="바람" value={metrics.wind} />
         </View>
       </View>
-      <Text style={styles.compareMomentTemp}>{metrics.temperature}</Text>
     </View>
   );
 }
@@ -158,7 +162,7 @@ function CompareMomentDailyService({
     <View style={styles.compareMomentDailyService}>
       <View style={styles.compareMomentDailyServiceHead}>
         <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareMomentServiceLogo} />
-        <Text numberOfLines={1} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
+        <Text numberOfLines={2} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
       </View>
       <View style={styles.compareMomentDailyPeriods}>
         <CompareMomentDailyPeriod label="오전" period={cell.morning ?? cell} />
@@ -184,7 +188,7 @@ function CompareMomentDailyPeriod({
       <View style={styles.compareMomentDailyText}>
         <Text numberOfLines={1} style={styles.compareMomentWeather}>{period.weather}</Text>
         <Text numberOfLines={1} style={styles.compareMomentDetail}>{metrics.temperature}</Text>
-        <View style={styles.compareMomentMetricRow}>
+        <View style={styles.compareMomentDailyMetricRow}>
           <MetricPill label="강수" value={metrics.precipitation} />
           <MetricPill label="바람" value={metrics.wind} />
         </View>

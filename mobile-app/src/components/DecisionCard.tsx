@@ -142,7 +142,12 @@ function ForecastSourceMiniCard({
           <Text numberOfLines={1} style={[styles.figmaWeatherSourceWeather, { color: figma.ink }]}>
             {source.condition}
           </Text>
-          <Text numberOfLines={1} style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.68}
+            style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}
+          >
             {source.temp}
           </Text>
         </View>

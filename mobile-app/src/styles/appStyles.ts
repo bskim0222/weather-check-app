@@ -34,6 +34,14 @@ export const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 0,
   },
+  mapTabFrame: {
+    flex: 1,
+    backgroundColor: '#f9faf7',
+    paddingBottom: 0,
+  },
+  mapScreenRoot: {
+    flex: 1,
+  },
   refreshButton: {
     width: 42,
     height: 42,
@@ -223,7 +231,7 @@ export const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 224,
+    paddingBottom: 104,
   },
   searchResultCard: {
     borderRadius: 22,
@@ -3210,10 +3218,11 @@ export const styles = StyleSheet.create({
     marginTop: 9,
   },
   mapCard: {
-    height: 690,
+    flex: 1,
+    minHeight: 0,
     borderRadius: 0,
-    marginHorizontal: -20,
-    marginTop: -16,
+    marginHorizontal: 0,
+    marginTop: 0,
     backgroundColor: '#fbf9f4',
     borderWidth: 1,
     borderColor: 'transparent',
@@ -4434,6 +4443,33 @@ export const styles = StyleSheet.create({
     color: 'rgba(34,33,31,0.48)',
     fontSize: 15,
     lineHeight: 18,
+    fontWeight: '900',
+  },
+  reportItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  reportItemAction: {
+    minHeight: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(36,36,36,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 9,
+  },
+  reportItemActionDanger: {
+    backgroundColor: 'rgba(224,83,72,0.12)',
+  },
+  reportItemActionText: {
+    color: '#242424',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  reportItemActionDangerText: {
+    color: '#b3332c',
+    fontSize: 11,
     fontWeight: '900',
   },
   reportPostTitle: {

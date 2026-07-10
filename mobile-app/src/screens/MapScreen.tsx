@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { FieldReportMapCard } from '../components/FieldReportMapCard';
-import { getMockFieldReportSnapshot } from '../services/fieldReports';
+import { visibleReportsOnly } from '../domain/moderation';
+import { styles } from '../styles/appStyles';
 import type { LocalReport, MapReportCluster, SearchContext, WeatherPreset } from '../types/weather';
 
 type MapScreenProps = {
@@ -20,13 +21,10 @@ export function MapScreen({
   onUseCurrentLocation,
   onReportIssue,
 }: MapScreenProps) {
-  const fieldSnapshot = useMemo(
-    () => getMockFieldReportSnapshot(reports, searchContext),
-    [reports, searchContext],
-  );
+  const mapReports = useMemo(() => getMapReportsForContext(reports, searchContext), [reports, searchContext]);
   const visibleClusters = useMemo(
-    () => createMapReportClusters(fieldSnapshot.reports, searchContext.place),
-    [fieldSnapshot.reports, searchContext.place],
+    () => createMapReportClusters(mapReports, searchContext.place),
+    [mapReports, searchContext.place],
   );
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
@@ -37,7 +35,7 @@ export function MapScreen({
   const selectedCluster = selectedIndex >= 0 ? visibleClusters[selectedIndex] : undefined;
 
   return (
-    <View>
+    <View style={styles.mapScreenRoot}>
       <FieldReportMapCard
         current={current}
         searchContext={searchContext}
@@ -51,6 +49,18 @@ export function MapScreen({
       />
     </View>
   );
+}
+
+function getMapReportsForContext(reports: LocalReport[], searchContext: SearchContext) {
+  const visibleReports = visibleReportsOnly(reports);
+
+  if (isCurrentLocationContext(searchContext)) return visibleReports;
+
+  const relatedReports = visibleReports.filter((report) =>
+    isRelatedPlace(report.place, searchContext.place),
+  );
+
+  return relatedReports;
 }
 
 function createMapReportClusters(reports: LocalReport[], fallbackPlace: string): MapReportCluster[] {
@@ -82,6 +92,27 @@ function normalizeClusterLabel(place: string) {
   if (neighborhood) return neighborhood;
 
   return parts.at(-1) ?? clean;
+}
+
+function isCurrentLocationContext(searchContext: SearchContext) {
+  return searchContext.target.kind === 'current' || searchContext.place === '?꾩옱 ?꾩튂';
+}
+
+function isRelatedPlace(reportPlace: string, contextPlace: string) {
+  const reportTokens = tokenizePlace(reportPlace);
+  const contextTokens = tokenizePlace(contextPlace);
+
+  return contextTokens.some((token) =>
+    reportTokens.some((reportToken) => reportToken.includes(token) || token.includes(reportToken)),
+  );
+}
+
+function tokenizePlace(place: string) {
+  return place
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
 }
 
 function getDominantCondition(reports: LocalReport[]) {

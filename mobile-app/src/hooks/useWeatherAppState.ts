@@ -20,7 +20,15 @@ import {
   readPersistedAppSnapshot,
   writePersistedAppSnapshot,
 } from '../services/appPersistence';
-import { createRemoteFieldReport, fetchFieldReportSnapshot, moderateRemoteFieldReport } from '../services/fieldReports';
+import {
+  createRemoteFieldReport,
+  deleteRemoteFieldReport,
+  deleteRemoteReportRequest,
+  fetchFieldReportSnapshot,
+  moderateRemoteFieldReport,
+  updateRemoteFieldReport,
+  updateRemoteReportRequest,
+} from '../services/fieldReports';
 import { resolveRemoteLocation } from '../services/geocoding';
 import {
   createCheckingLocationStatus,
@@ -215,6 +223,57 @@ export function useWeatherAppState() {
     ]);
   };
 
+  const updateLocalReport = (reportId: string, updates: Partial<Pick<LocalReport, 'body' | 'condition'>>) => {
+    setReports((prev) =>
+      prev.map((report) =>
+        report.id === reportId
+          ? {
+              ...report,
+              ...updates,
+              source: report.source ?? 'local',
+            }
+          : report,
+      ),
+    );
+
+    updateRemoteFieldReport(reportId, updates).then((remoteReport) => {
+      if (!remoteReport) return;
+
+      setReports((prev) => replaceReportById(prev, reportId, { ...remoteReport, source: 'local' }));
+    });
+  };
+
+  const deleteLocalReport = (reportId: string) => {
+    setReports((prev) => prev.filter((report) => report.id !== reportId));
+    deleteRemoteFieldReport(reportId);
+  };
+
+  const updateLocalRequest = (requestId: string, updates: Partial<Pick<ReportRequest, 'question'>>) => {
+    setReportRequests((prev) =>
+      prev.map((request) =>
+        request.id === requestId
+          ? {
+              ...request,
+              ...updates,
+              source: request.source ?? 'local',
+            }
+          : request,
+      ),
+    );
+
+    updateRemoteReportRequest(requestId, updates).then((remoteRequest) => {
+      if (!remoteRequest) return;
+
+      setReportRequests((prev) => replaceRequestById(prev, requestId, { ...remoteRequest, source: 'local' }));
+    });
+  };
+
+  const deleteLocalRequest = (requestId: string) => {
+    setReportRequests((prev) => prev.filter((request) => request.id !== requestId));
+    setReports((prev) => prev.filter((report) => report.requestId !== requestId));
+    deleteRemoteReportRequest(requestId);
+  };
+
   const submitReport = () => {
     const clean = reportText.trim();
     if (!clean) return;
@@ -234,7 +293,7 @@ export function useWeatherAppState() {
     createRemoteFieldReport(report).then((remoteReport) => {
       if (!remoteReport) return;
 
-      setReports((prev) => replaceReportById(prev, report.id, remoteReport));
+      setReports((prev) => replaceReportById(prev, report.id, { ...remoteReport, source: 'local' }));
     });
     setReportText('');
   };
@@ -476,6 +535,10 @@ export function useWeatherAppState() {
     reportFieldReport,
     weatherKey,
     addLocalReport,
+    updateLocalReport,
+    deleteLocalReport,
+    updateLocalRequest,
+    deleteLocalRequest,
   };
 }
 
@@ -552,6 +615,16 @@ function replaceReportById(reports: LocalReport[], localId: string | undefined, 
   if (!localId) return [nextReport, ...reports];
 
   return reports.map((report) => (report.id === localId ? nextReport : report));
+}
+
+function replaceRequestById(
+  requests: ReportRequest[],
+  requestId: string | undefined,
+  nextRequest: ReportRequest,
+) {
+  if (!requestId) return [nextRequest, ...requests];
+
+  return requests.map((request) => (request.id === requestId ? nextRequest : request));
 }
 
 function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItems: T[], localItems: T[]) {

@@ -51,6 +51,16 @@ export type ApiCreateFieldReportRequest = LocalReport;
 
 export type ApiCreateReportRequestRequest = ReportRequest;
 
+export type ApiUpdateFieldReportRequest = Partial<Pick<LocalReport, 'body' | 'condition'>>;
+
+export type ApiUpdateReportRequestRequest = Partial<Pick<ReportRequest, 'question'>>;
+
+export type ApiDeleteResponse = {
+  ok: boolean;
+  reportId?: string;
+  requestId?: string;
+};
+
 export type ApiAnswerReportRequestRequest = {
   status?: string;
   hint?: string;

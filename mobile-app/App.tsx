@@ -21,75 +21,82 @@ export default function App() {
     setReportAskFocusToken((token) => token + 1);
     appState.setActiveTab('report');
   };
+  const isMapTab = appState.activeTab === 'map';
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
       <View style={[styles.app, androidTopInset > 0 && { paddingTop: androidTopInset }]}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          disableScrollViewPanResponder={appState.activeTab === 'map'}
-          showsVerticalScrollIndicator={false}
-        >
-          <AppHeader
-            locationStatus={appState.locationStatus}
-            refreshLabel={appState.refreshLabel}
-            onRefresh={appState.refreshCurrentLocation}
-          />
-          <QuestionSearchBar
-            isBusy={appState.isBusy}
-            value={appState.questionText}
-            onChangeText={appState.setQuestionText}
-            onSubmit={appState.submitQuestion}
-          />
-          <DataStatusBanner status={appState.dataStatus} />
-          <View style={styles.content}>
-            {appState.activeTab === 'decision' && (
-              <DecisionScreen
-                current={appState.current}
-                dataStatus={appState.dataStatus}
-                locationStatus={appState.locationStatus}
-                lastUpdatedAt={appState.lastUpdatedAt}
-                providerSnapshot={appState.providerSnapshot}
-                reportCondition={appState.reportCondition}
-                reportText={appState.reportText}
-                reports={appState.reports}
-                searchContext={appState.searchContext}
-                onReportConditionChange={appState.setReportCondition}
-                onReportTextChange={appState.setReportText}
-                onSubmitReport={appState.submitReport}
-                onReportIssue={appState.reportFieldReport}
-                onAskFieldQuestion={openReportAsk}
-              />
-            )}
-            {appState.activeTab === 'map' && (
-              <MapScreen
-                current={appState.current}
-                reports={appState.reports}
-                searchContext={appState.searchContext}
-                onUseCurrentLocation={appState.refreshCurrentLocation}
-                onReportIssue={appState.reportFieldReport}
-              />
-            )}
-            {appState.activeTab === 'report' && (
-              <ReportScreen
-                requests={appState.reportRequests}
-                reports={appState.reports}
-                askFocusToken={reportAskFocusToken}
-                searchContext={appState.searchContext}
-                onAddReport={appState.addLocalReport}
-                onReportIssue={appState.reportFieldReport}
-                onRequestsChange={appState.setReportRequests}
-              />
-            )}
-            {appState.activeTab === 'compare' && (
-              <CompareScreen
-                providerSnapshot={appState.providerSnapshot}
-                searchContext={appState.searchContext}
-              />
-            )}
+        {isMapTab ? (
+          <View style={styles.mapTabFrame}>
+            <MapScreen
+              current={appState.current}
+              reports={appState.reports}
+              searchContext={appState.searchContext}
+              onUseCurrentLocation={appState.refreshCurrentLocation}
+              onReportIssue={appState.reportFieldReport}
+            />
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <AppHeader
+              locationStatus={appState.locationStatus}
+              refreshLabel={appState.refreshLabel}
+              onRefresh={appState.refreshCurrentLocation}
+            />
+            <QuestionSearchBar
+              isBusy={appState.isBusy}
+              value={appState.questionText}
+              onChangeText={appState.setQuestionText}
+              onSubmit={appState.submitQuestion}
+            />
+            <DataStatusBanner status={appState.dataStatus} />
+            <View style={styles.content}>
+              {appState.activeTab === 'decision' && (
+                <DecisionScreen
+                  current={appState.current}
+                  dataStatus={appState.dataStatus}
+                  locationStatus={appState.locationStatus}
+                  lastUpdatedAt={appState.lastUpdatedAt}
+                  providerSnapshot={appState.providerSnapshot}
+                  reportCondition={appState.reportCondition}
+                  reportText={appState.reportText}
+                  reports={appState.reports}
+                  searchContext={appState.searchContext}
+                  onReportConditionChange={appState.setReportCondition}
+                  onReportTextChange={appState.setReportText}
+                  onSubmitReport={appState.submitReport}
+                  onReportIssue={appState.reportFieldReport}
+                  onAskFieldQuestion={openReportAsk}
+                />
+              )}
+              {appState.activeTab === 'report' && (
+                <ReportScreen
+                  requests={appState.reportRequests}
+                  reports={appState.reports}
+                  askFocusToken={reportAskFocusToken}
+                  searchContext={appState.searchContext}
+                  onAddReport={appState.addLocalReport}
+                  onReportIssue={appState.reportFieldReport}
+                  onRequestsChange={appState.setReportRequests}
+                  onUpdateReport={appState.updateLocalReport}
+                  onDeleteReport={appState.deleteLocalReport}
+                  onUpdateRequest={appState.updateLocalRequest}
+                  onDeleteRequest={appState.deleteLocalRequest}
+                />
+              )}
+              {appState.activeTab === 'compare' && (
+                <CompareScreen
+                  providerSnapshot={appState.providerSnapshot}
+                  searchContext={appState.searchContext}
+                />
+              )}
+            </View>
+          </ScrollView>
+        )}
 
         <BottomTabs activeTab={appState.activeTab} onTabChange={appState.setActiveTab} />
       </View>

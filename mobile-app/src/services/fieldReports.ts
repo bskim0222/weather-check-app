@@ -3,15 +3,18 @@ import { isApiModeEnabled } from '../config/appConfig';
 import { reportRequests } from '../data/mockWeather';
 import { visibleReportsOnly } from '../domain/moderation';
 import { buildMapContextReports, buildReportPromptRows, orderReportsBySearchContext } from '../domain/reports';
-import { writeApiJson } from './apiClient';
+import { sendApiJson, writeApiJson } from './apiClient';
 import type {
   ApiCreateFieldReportRequest,
   ApiCreateReportRequestRequest,
   ApiAnswerReportRequestRequest,
+  ApiDeleteResponse,
   ApiFieldReportSnapshot,
   ApiFieldReportSnapshotRequest,
   ApiModerateReportRequest,
   ApiModerateReportResponse,
+  ApiUpdateFieldReportRequest,
+  ApiUpdateReportRequestRequest,
 } from '../types/api';
 
 export type FieldReportSnapshot = {
@@ -105,12 +108,61 @@ export async function createRemoteFieldReport(report: LocalReport) {
   return response.ok && response.data ? response.data : null;
 }
 
+export async function updateRemoteFieldReport(reportId: string, updates: ApiUpdateFieldReportRequest) {
+  if (!isApiModeEnabled()) return null;
+
+  const response = await sendApiJson<LocalReport, ApiUpdateFieldReportRequest>(
+    `/field-reports/${encodeURIComponent(reportId)}`,
+    'PATCH',
+    updates,
+  );
+
+  return response.ok && response.data ? response.data : null;
+}
+
+export async function deleteRemoteFieldReport(reportId: string) {
+  if (!isApiModeEnabled()) return null;
+
+  const response = await sendApiJson<ApiDeleteResponse>(
+    `/field-reports/${encodeURIComponent(reportId)}`,
+    'DELETE',
+  );
+
+  return response.ok && response.data ? response.data : null;
+}
+
 export async function createRemoteReportRequest(request: ReportRequest) {
   if (!isApiModeEnabled()) return null;
 
   const response = await writeApiJson<ReportRequest, ApiCreateReportRequestRequest>(
     '/report-requests',
     request,
+  );
+
+  return response.ok && response.data ? response.data : null;
+}
+
+export async function updateRemoteReportRequest(
+  requestId: string,
+  updates: ApiUpdateReportRequestRequest,
+) {
+  if (!isApiModeEnabled()) return null;
+
+  const response = await sendApiJson<ReportRequest, ApiUpdateReportRequestRequest>(
+    `/report-requests/${encodeURIComponent(requestId)}`,
+    'PATCH',
+    updates,
+  );
+
+  return response.ok && response.data ? response.data : null;
+}
+
+export async function deleteRemoteReportRequest(requestId: string) {
+  if (!isApiModeEnabled()) return null;
+
+  const response = await sendApiJson<ApiDeleteResponse>(
+    `/report-requests/${encodeURIComponent(requestId)}`,
+    'DELETE',
   );
 
   return response.ok && response.data ? response.data : null;

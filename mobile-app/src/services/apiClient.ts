@@ -47,6 +47,14 @@ export async function writeApiJson<TResponse, TBody>(
   path: string,
   body: TBody,
 ): Promise<ApiClientResult<TResponse>> {
+  return sendApiJson<TResponse, TBody>(path, 'POST', body);
+}
+
+export async function sendApiJson<TResponse, TBody = undefined>(
+  path: string,
+  method: 'POST' | 'PATCH' | 'DELETE',
+  body?: TBody,
+): Promise<ApiClientResult<TResponse>> {
   if (!isBackendConfigured()) {
     return {
       ok: false,
@@ -56,12 +64,12 @@ export async function writeApiJson<TResponse, TBody>(
 
   try {
     const response = await fetch(buildApiUrl(path), {
-      method: 'POST',
+      method,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
 
     if (!response.ok) {

@@ -20,8 +20,12 @@ type ReportScreenProps = {
   requests: ReportRequest[];
   searchContext: SearchContext;
   onAddReport: (report: LocalReport) => void;
+  onDeleteReport: (reportId: string) => void;
+  onDeleteRequest: (requestId: string) => void;
   onReportIssue: (report: LocalReport) => void;
   onRequestsChange: (requests: ReportRequest[] | ((prev: ReportRequest[]) => ReportRequest[])) => void;
+  onUpdateReport: (reportId: string, updates: Partial<Pick<LocalReport, 'body' | 'condition'>>) => void;
+  onUpdateRequest: (requestId: string, updates: Partial<Pick<ReportRequest, 'question'>>) => void;
 };
 
 const reportTabs: { key: ReportTab; label: string }[] = [
@@ -36,8 +40,12 @@ export function ReportScreen({
   requests,
   searchContext,
   onAddReport,
+  onDeleteReport,
+  onDeleteRequest,
   onReportIssue,
   onRequestsChange,
+  onUpdateReport,
+  onUpdateRequest,
 }: ReportScreenProps) {
   const [activeReportTab, setActiveReportTab] = useState<ReportTab>('ask');
   const [requestDraft, setRequestDraft] = useState('');
@@ -46,6 +54,9 @@ export function ReportScreen({
   const [replyNotice, setReplyNotice] = useState('');
   const [answerModalVisible, setAnswerModalVisible] = useState(false);
   const [myQuestionModalVisible, setMyQuestionModalVisible] = useState(false);
+  const [editingReport, setEditingReport] = useState<LocalReport | undefined>();
+  const [editingRequest, setEditingRequest] = useState<ReportRequest | undefined>();
+  const [editDraft, setEditDraft] = useState('');
 
   const fieldSnapshot = useMemo(
     () => getMockFieldReportSnapshot(reports, searchContext, requests),
@@ -149,7 +160,7 @@ export function ReportScreen({
     });
     createRemoteFieldReport(replyReport).then((remoteReport) => {
       if (!remoteReport) return;
-      onAddReport(remoteReport);
+      onAddReport({ ...remoteReport, source: 'local' });
     });
   };
 
@@ -163,6 +174,39 @@ export function ReportScreen({
   const openMyQuestionModal = (request: ReportRequest) => {
     setSelectedRequestId(request.id);
     setMyQuestionModalVisible(true);
+  };
+
+  const openEditRequest = (request: ReportRequest) => {
+    setEditingRequest(request);
+    setEditingReport(undefined);
+    setEditDraft(request.question);
+  };
+
+  const openEditReport = (report: LocalReport) => {
+    setEditingReport(report);
+    setEditingRequest(undefined);
+    setEditDraft(report.body);
+  };
+
+  const closeEditModal = () => {
+    setEditingRequest(undefined);
+    setEditingReport(undefined);
+    setEditDraft('');
+  };
+
+  const submitEdit = () => {
+    const clean = editDraft.trim();
+    if (!clean) return;
+
+    if (editingRequest?.id) {
+      onUpdateRequest(editingRequest.id, { question: clean });
+    }
+
+    if (editingReport?.id) {
+      onUpdateReport(editingReport.id, { body: clean });
+    }
+
+    closeEditModal();
   };
 
   return (
@@ -201,6 +245,8 @@ export function ReportScreen({
             <AskPanel
               myQuestions={myQuestions}
               onAddRequest={addRequest}
+              onDeleteRequest={onDeleteRequest}
+              onEditRequest={openEditRequest}
               onOpenQuestion={openMyQuestionModal}
               requestDraft={requestDraft}
               replyNotice={replyNotice}
@@ -210,11 +256,21 @@ export function ReportScreen({
           )}
 
           {activeReportTab === 'questions' && (
-            <QuestionsPanel requests={orderedRequests} onAnswer={openAnswerModal} />
+            <QuestionsPanel
+              requests={orderedRequests}
+              onAnswer={openAnswerModal}
+              onDeleteRequest={onDeleteRequest}
+              onEditRequest={openEditRequest}
+            />
           )}
 
           {activeReportTab === 'feed' && (
-            <FeedPanel reports={visibleReports} onReportIssue={onReportIssue} />
+            <FeedPanel
+              reports={visibleReports}
+              onDeleteReport={onDeleteReport}
+              onEditReport={openEditReport}
+              onReportIssue={onReportIssue}
+            />
           )}
         </View>
       </View>
@@ -234,6 +290,14 @@ export function ReportScreen({
         visible={myQuestionModalVisible}
         onClose={() => setMyQuestionModalVisible(false)}
       />
+      <EditPostModal
+        draft={editDraft}
+        isReport={Boolean(editingReport)}
+        setDraft={setEditDraft}
+        visible={Boolean(editingReport || editingRequest)}
+        onClose={closeEditModal}
+        onSubmit={submitEdit}
+      />
     </View>
   );
 }
@@ -241,6 +305,8 @@ export function ReportScreen({
 function AskPanel({
   myQuestions,
   onAddRequest,
+  onDeleteRequest,
+  onEditRequest,
   onOpenQuestion,
   requestDraft,
   replyNotice,
@@ -249,6 +315,8 @@ function AskPanel({
 }: {
   myQuestions: ReportRequest[];
   onAddRequest: () => void;
+  onDeleteRequest: (requestId: string) => void;
+  onEditRequest: (request: ReportRequest) => void;
   onOpenQuestion: (request: ReportRequest) => void;
   requestDraft: string;
   replyNotice: string;
@@ -297,6 +365,8 @@ function AskPanel({
           <ReportQuestionItem
             key={request.id}
             request={request}
+            onDelete={onDeleteRequest}
+            onEdit={onEditRequest}
             onPress={() => onOpenQuestion(request)}
             actionLabel={request.answers > 0 ? `답변 ${request.answers}개 보기` : '답변 대기'}
             variant="mine"
@@ -308,11 +378,15 @@ function AskPanel({
 }
 
 function QuestionsPanel({
+  onDeleteRequest,
   requests,
   onAnswer,
+  onEditRequest,
 }: {
+  onDeleteRequest: (requestId: string) => void;
   requests: ReportRequest[];
   onAnswer: (request: ReportRequest) => void;
+  onEditRequest: (request: ReportRequest) => void;
 }) {
   return (
     <>
@@ -329,6 +403,8 @@ function QuestionsPanel({
             <ReportQuestionItem
               key={request.id}
               request={request}
+              onDelete={onDeleteRequest}
+              onEdit={onEditRequest}
               onPress={() => onAnswer(request)}
               actionLabel={request.answers > 0 ? `현장 답변 ${request.answers}개 · 답변쓰기` : '답변쓰기'}
               variant={request.answers > 0 ? 'answered' : 'open'}
@@ -346,9 +422,13 @@ function QuestionsPanel({
 }
 
 function FeedPanel({
+  onDeleteReport,
+  onEditReport,
   reports,
   onReportIssue,
 }: {
+  onDeleteReport: (reportId: string) => void;
+  onEditReport: (report: LocalReport) => void;
   reports: LocalReport[];
   onReportIssue: (report: LocalReport) => void;
 }) {
@@ -365,6 +445,8 @@ function FeedPanel({
               key={`${report.id ?? report.place}-${report.body}-${index}`}
               report={report}
               featured={index === 2}
+              onDeleteReport={onDeleteReport}
+              onEditReport={onEditReport}
               onReportIssue={onReportIssue}
             />
           ))}
@@ -381,15 +463,21 @@ function FeedPanel({
 
 function ReportQuestionItem({
   actionLabel,
+  onDelete,
+  onEdit,
   onPress,
   request,
   variant,
 }: {
   actionLabel: string;
+  onDelete: (requestId: string) => void;
+  onEdit: (request: ReportRequest) => void;
   onPress: () => void;
   request: ReportRequest;
   variant: 'mine' | 'open' | 'answered';
 }) {
+  const canEdit = request.source === 'local' && Boolean(request.id);
+
   return (
     <Pressable onPress={onPress} style={styles.reportPostCard}>
       <View style={styles.reportPostHead}>
@@ -400,7 +488,30 @@ function ReportQuestionItem({
             <Text style={styles.reportMetaSmall}>{request.time} · {request.status}</Text>
           </View>
         </View>
-        <Text style={styles.reportMoreText}>•••</Text>
+        {canEdit ? (
+          <View style={styles.reportItemActions}>
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+                onEdit(request);
+              }}
+              style={styles.reportItemAction}
+            >
+              <Text style={styles.reportItemActionText}>수정</Text>
+            </Pressable>
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+                onDelete(request.id ?? '');
+              }}
+              style={[styles.reportItemAction, styles.reportItemActionDanger]}
+            >
+              <Text style={styles.reportItemActionDangerText}>삭제</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.reportMoreText}>•••</Text>
+        )}
       </View>
       <Text numberOfLines={3} style={styles.reportPostTitle}>
         “{request.question}”
@@ -412,23 +523,28 @@ function ReportQuestionItem({
         </View>
         <Text numberOfLines={2} style={styles.reportReplyPreviewBody}>
           {request.answers > 0
-            ? '달린 답변을 확인하거나 현재 상황을 추가로 남겨주세요.'
+            ? '올린 답변을 확인하거나 현재 상황을 추가로 남겨주세요.'
             : '근처에 있다면 지금 보이는 날씨를 짧게 알려주세요.'}
         </Text>
       </View>
     </Pressable>
   );
 }
-
 function FieldReportPost({
   featured,
+  onDeleteReport,
+  onEditReport,
   onReportIssue,
   report,
 }: {
   featured: boolean;
+  onDeleteReport: (reportId: string) => void;
+  onEditReport: (report: LocalReport) => void;
   onReportIssue: (report: LocalReport) => void;
   report: LocalReport;
 }) {
+  const canEdit = report.source === 'local' && Boolean(report.id);
+
   if (featured) {
     return (
       <View style={styles.reportPhotoPostCard}>
@@ -451,18 +567,32 @@ function FieldReportPost({
             <Text style={styles.reportMetaSmall}>현장 제보 · {report.time}</Text>
           </View>
         </View>
-        <Pressable
-          disabled={report.moderationStatus === 'pending'}
-          onPress={() => onReportIssue(report)}
-          style={[
-            styles.reportIssueButton,
-            report.moderationStatus === 'pending' && styles.reportIssueButtonPending,
-          ]}
-        >
-          <Text style={styles.reportIssueText}>
-            {report.moderationStatus === 'pending' ? '검토중' : '신고'}
-          </Text>
-        </Pressable>
+        {canEdit ? (
+          <View style={styles.reportItemActions}>
+            <Pressable onPress={() => onEditReport(report)} style={styles.reportItemAction}>
+              <Text style={styles.reportItemActionText}>수정</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onDeleteReport(report.id ?? '')}
+              style={[styles.reportItemAction, styles.reportItemActionDanger]}
+            >
+              <Text style={styles.reportItemActionDangerText}>삭제</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            disabled={report.moderationStatus === 'pending'}
+            onPress={() => onReportIssue(report)}
+            style={[
+              styles.reportIssueButton,
+              report.moderationStatus === 'pending' && styles.reportIssueButtonPending,
+            ]}
+          >
+            <Text style={styles.reportIssueText}>
+              {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+            </Text>
+          </Pressable>
+        )}
       </View>
       <Text numberOfLines={3} style={styles.reportPostTitle}>
         “{report.body}”
@@ -473,7 +603,6 @@ function FieldReportPost({
     </View>
   );
 }
-
 function ReplyList({ replies, emptyText }: { replies: LocalReport[]; emptyText: string }) {
   if (replies.length === 0 && !emptyText) return null;
 
@@ -493,6 +622,49 @@ function ReplyList({ replies, emptyText }: { replies: LocalReport[]; emptyText: 
         </Text>
       ))}
     </View>
+  );
+}
+
+function EditPostModal({
+  draft,
+  isReport,
+  onClose,
+  onSubmit,
+  setDraft,
+  visible,
+}: {
+  draft: string;
+  isReport: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+  setDraft: (value: string) => void;
+  visible: boolean;
+}) {
+  return (
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
+      <View style={styles.reportModalBackdrop}>
+        <View style={styles.reportModalCard}>
+          <Text style={styles.replyEyebrow}>{isReport ? '내 제보 수정' : '내 문의 수정'}</Text>
+          <Text style={styles.replyQuestion}>
+            {isReport ? '현장 날씨 내용을 고쳐주세요.' : '궁금한 지역과 내용을 고쳐주세요.'}
+          </Text>
+          <TextInput
+            multiline
+            value={draft}
+            onChangeText={setDraft}
+            placeholder={isReport ? '지금 보이는 날씨를 적어주세요.' : '예: 광화문 지금 비 와요?'}
+            placeholderTextColor="#8f7f87"
+            style={styles.replyInput}
+          />
+          <Pressable onPress={onSubmit} style={styles.replySubmitButton}>
+            <Text style={styles.replySubmitText}>저장</Text>
+          </Pressable>
+          <Pressable onPress={onClose} style={styles.reportModalClose}>
+            <Text style={styles.reportModalCloseText}>닫기</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 

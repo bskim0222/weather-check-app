@@ -11,7 +11,7 @@ export function createBackendServer() {
   return http.createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Access-Control-Allow-Headers', 'content-type');
-    response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
 
     if (request.method === 'OPTIONS') {
       sendJson(response, 204, null);
@@ -46,12 +46,78 @@ async function routeRequest(request, response) {
     return;
   }
 
-  if (request.method !== 'POST') {
+  if (!['POST', 'PATCH', 'DELETE'].includes(request.method)) {
     sendJson(response, 405, { error: 'Method not allowed.' });
     return;
   }
 
-  const payload = await readJsonBody(request);
+  const payload = request.method === 'DELETE' ? {} : await readJsonBody(request);
+
+  const fieldReportMatch = url.pathname.match(/^\/field-reports\/([^/]+)$/);
+
+  if (fieldReportMatch) {
+    const database = await readDatabase();
+    const reportId = decodeURIComponent(fieldReportMatch[1]);
+    const existingReport = database.fieldReports.find((report) => report.id === reportId);
+
+    if (!existingReport) {
+      sendJson(response, 404, { error: 'Field report not found.' });
+      return;
+    }
+
+    if (request.method === 'PATCH') {
+      const updatedReport = {
+        ...existingReport,
+        condition: textOr(payload.condition, existingReport.condition),
+        body: textOr(payload.body, existingReport.body),
+        updatedAt: new Date().toISOString(),
+      };
+      database.fieldReports = upsertById(database.fieldReports, updatedReport);
+      await writeDatabase(database);
+      sendJson(response, 200, updatedReport);
+      return;
+    }
+
+    if (request.method === 'DELETE') {
+      database.fieldReports = database.fieldReports.filter((report) => report.id !== reportId);
+      await writeDatabase(database);
+      sendJson(response, 200, { ok: true, reportId });
+      return;
+    }
+  }
+
+  const reportRequestMatch = url.pathname.match(/^\/report-requests\/([^/]+)$/);
+
+  if (reportRequestMatch) {
+    const database = await readDatabase();
+    const requestId = decodeURIComponent(reportRequestMatch[1]);
+    const existingRequest = database.reportRequests.find((requestItem) => requestItem.id === requestId);
+
+    if (!existingRequest) {
+      sendJson(response, 404, { error: 'Report request not found.' });
+      return;
+    }
+
+    if (request.method === 'PATCH') {
+      const updatedRequest = {
+        ...existingRequest,
+        question: textOr(payload.question, existingRequest.question),
+        updatedAt: new Date().toISOString(),
+      };
+      database.reportRequests = upsertById(database.reportRequests, updatedRequest);
+      await writeDatabase(database);
+      sendJson(response, 200, updatedRequest);
+      return;
+    }
+
+    if (request.method === 'DELETE') {
+      database.reportRequests = database.reportRequests.filter((requestItem) => requestItem.id !== requestId);
+      database.fieldReports = database.fieldReports.filter((report) => report.requestId !== requestId);
+      await writeDatabase(database);
+      sendJson(response, 200, { ok: true, requestId });
+      return;
+    }
+  }
 
   if (url.pathname === '/weather/provider-snapshot') {
     sendJson(response, 200, await createWeatherProviderSnapshot(payload.context ?? createFallbackContext()));
@@ -220,45 +286,12 @@ function createReportRequest(payload) {
 function selectVisibleReports(reports, context) {
   const visibleReports = reports.filter((report) => report.moderationStatus !== 'hidden');
 
-  if (visibleReports.length > 0) return visibleReports.slice(0, 20);
-
-  return [
-    {
-      id: createId('seed-report'),
-      place: `${context.place ?? '현재 위치'} 주변`,
-      time: '방금',
-      condition: context.detectedWeather ?? '날씨 확인',
-      body: '아직 현장 제보가 없어 예시 제보를 보여주고 있어요.',
-      createdAt: new Date().toISOString(),
-      moderationStatus: 'visible',
-      source: 'api',
-    },
-  ];
+  return visibleReports.slice(0, 20);
 }
 
 function selectReportRequests(requests, context) {
-  if (requests.length > 0) return requests.slice(0, 20);
-
-  const place = context.place ?? '현재 위치';
-
-  return [
-    {
-      id: createId('seed-request'),
-      question: `${place} 지금 날씨 어때요?`,
-      hint: '근처 사용자에게 현장 제보를 요청합니다.',
-      place,
-      distance: '근처',
-      answers: 0,
-      time: '방금',
-      status: '답변 대기',
-      mark: '요',
-      accent: '#d6d2c4',
-      createdAt: new Date().toISOString(),
-      source: 'api',
-    },
-  ];
+  return requests.slice(0, 20);
 }
-
 async function readJsonBody(request) {
   const raw = await new Promise((resolve, reject) => {
     let body = '';

@@ -13,9 +13,11 @@ type AppHeaderProps = {
 export function AppHeader({ locationStatus, onRefresh, refreshLabel }: AppHeaderProps) {
   return (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.brand}>웨더체크</Text>
-        <Text style={styles.headerSub}>현재위치 · {getCurrentLocationDisplay(locationStatus)}</Text>
+      <View style={styles.headerLocationBlock}>
+        <Text style={styles.headerLocationLabel}>현재위치</Text>
+        <Text numberOfLines={1} style={styles.headerLocationName}>
+          {getCurrentLocationDisplay(locationStatus)}
+        </Text>
       </View>
       <Pressable
         accessibilityHint={refreshLabel}

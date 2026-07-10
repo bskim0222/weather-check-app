@@ -90,6 +90,10 @@ export function useWeatherAppState() {
   const searchContext = judgement.searchContext;
   const weatherKey = judgement.weatherKey;
   const isBusy = dataStatus.phase === 'loading';
+  const isInitialLoading =
+    !isPersistenceReady ||
+    locationStatus.phase === 'checking' ||
+    (appConfig.dataMode === 'api' && dataStatus.phase === 'loading' && !lastUpdatedAt);
 
   const questionSuggestions = useMemo(
     () => [...recentQuestions, ...defaultQuestionSuggestions.filter((item) => !recentQuestions.includes(item))].slice(0, 4),
@@ -510,6 +514,7 @@ export function useWeatherAppState() {
     changeWeather,
     current,
     isBusy,
+    isInitialLoading,
     dataStatus,
     locationStatus,
     lastUpdatedAt,

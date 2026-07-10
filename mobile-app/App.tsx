@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, View } from 'react-native';
 
 import { AppHeader } from './src/components/AppHeader';
+import { AppLoadingScreen } from './src/components/AppLoadingScreen';
 import { BottomTabs } from './src/components/BottomTabs';
 import { DataStatusBanner } from './src/components/DataStatusBanner';
 import { QuestionSearchBar } from './src/components/QuestionSearchBar';
@@ -15,6 +16,7 @@ import { styles } from './src/styles/appStyles';
 export default function App() {
   const appState = useWeatherAppState();
   const [reportAskFocusToken, setReportAskFocusToken] = useState(0);
+  const [showBootLoading, setShowBootLoading] = useState(true);
   const androidTopInset =
     Platform.OS === 'android' ? Math.max(38, (NativeStatusBar.currentHeight ?? 24) + 14) : 0;
   const openReportAsk = () => {
@@ -22,6 +24,16 @@ export default function App() {
     appState.setActiveTab('report');
   };
   const isMapTab = appState.activeTab === 'map';
+
+  useEffect(() => {
+    if (appState.isInitialLoading) return;
+
+    const timeoutId = setTimeout(() => {
+      setShowBootLoading(false);
+    }, 520);
+
+    return () => clearTimeout(timeoutId);
+  }, [appState.isInitialLoading]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -99,6 +111,7 @@ export default function App() {
         )}
 
         <BottomTabs activeTab={appState.activeTab} onTabChange={appState.setActiveTab} />
+        {showBootLoading && <AppLoadingScreen />}
       </View>
     </SafeAreaView>
   );

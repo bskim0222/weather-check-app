@@ -1,16 +1,9 @@
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
-
-type NativeMapLayerProps = {
-  searchContext: SearchContext;
-  selectedIndex: number;
-  visibleClusters: MapReportCluster[];
-  onSelectCluster: (index: number) => void;
-};
 
 type KakaoWindow = Window & {
   kakao?: {
@@ -31,6 +24,13 @@ type KakaoWindow = Window & {
       };
     };
   };
+};
+
+type NativeMapLayerProps = {
+  searchContext: SearchContext;
+  selectedIndex: number;
+  visibleClusters: MapReportCluster[];
+  onSelectCluster: (index: number) => void;
 };
 
 const KAKAO_SCRIPT_ID = 'weather-check-kakao-map-sdk';
@@ -73,6 +73,12 @@ export function NativeMapLayer({
       if (!containerRef.current || isDisposed) return;
 
       const mapCenter = new kakao.LatLng(center.latitude, center.longitude);
+
+      if (mapRef.current && 'setCenter' in (mapRef.current as Record<string, unknown>)) {
+        (mapRef.current as { setCenter?: (nextCenter: unknown) => void }).setCenter?.(mapCenter);
+        return;
+      }
+
       const map = new kakao.Map(containerRef.current, {
         center: mapCenter,
         level: 4,
@@ -96,7 +102,7 @@ export function NativeMapLayer({
 
     const kakao = (window as KakaoWindow).kakao?.maps;
     const CustomOverlay = kakao?.CustomOverlay;
-    if (!CustomOverlay) return;
+    if (!kakao || !CustomOverlay) return;
 
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
     overlaysRef.current = [];
@@ -106,16 +112,14 @@ export function NativeMapLayer({
       const coordinate = new kakao.LatLng(center.latitude + offset.latitude, center.longitude + offset.longitude);
       const element = createClusterElement(cluster, index === selectedIndex);
 
-      element.addEventListener('click', (event) => {
+      const openSheet = (event: Event) => {
         event.preventDefault();
         event.stopPropagation();
         onSelectCluster(index);
-      });
-      element.addEventListener('touchend', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onSelectCluster(index);
-      });
+      };
+
+      element.addEventListener('click', openSheet);
+      element.addEventListener('touchend', openSheet);
 
       const overlay = new CustomOverlay({
         clickable: true,
@@ -159,7 +163,7 @@ export function NativeMapLayer({
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                touchAction: 'none',
+                touchAction: 'auto',
               },
             })}
         <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao Loading'} />
@@ -167,15 +171,29 @@ export function NativeMapLayer({
     );
   }
 
-  return <OpenStreetMapLayer center={center} place={searchContext.place} />;
+  return (
+    <OpenStreetMapLayer
+      center={center}
+      place={searchContext.place}
+      selectedIndex={selectedIndex}
+      visibleClusters={visibleClusters}
+      onSelectCluster={onSelectCluster}
+    />
+  );
 }
 
 function OpenStreetMapLayer({
   center,
+  onSelectCluster,
   place,
+  selectedIndex,
+  visibleClusters,
 }: {
   center: { latitude: number; longitude: number };
+  onSelectCluster: (index: number) => void;
   place: string;
+  selectedIndex: number;
+  visibleClusters: MapReportCluster[];
 }) {
   const mapEmbedUrl = createOpenStreetMapEmbedUrl(center.latitude, center.longitude);
 
@@ -188,14 +206,47 @@ function OpenStreetMapLayer({
             src: mapEmbedUrl,
             style: {
               border: 0,
-              height: '100%',
-              width: '100%',
               filter: 'saturate(0.78) contrast(0.94) brightness(1.03)',
-              touchAction: 'none',
+              height: '100%',
+              touchAction: 'auto',
+              width: '100%',
             },
             loading: 'lazy',
             referrerPolicy: 'no-referrer-when-downgrade',
           })}
+      {visibleClusters.slice(0, fallbackClusterPositions.length).map((cluster, index) => {
+        const isActive = index === selectedIndex;
+        const isDark = isDarkCluster(cluster);
+
+        return (
+          <Pressable
+            accessibilityLabel={`${cluster.label} 현장 제보 ${cluster.count}개 보기`}
+            accessibilityRole="button"
+            key={cluster.id}
+            onPress={() => onSelectCluster(index)}
+            style={[
+              styles.mapFallbackClusterBubble,
+              fallbackClusterPositions[index],
+              isActive && styles.mapFallbackClusterBubbleActive,
+            ]}
+          >
+            <View
+              style={[
+                styles.mapFallbackClusterIconBadge,
+                { backgroundColor: getClusterTone(cluster) },
+                isActive && styles.mapFallbackClusterIconBadgeActive,
+              ]}
+            >
+              <Text style={[styles.mapFallbackClusterIcon, isDark && styles.mapFallbackClusterTextDark]}>
+                {getClusterWeatherSymbol(cluster.dominantCondition)}
+              </Text>
+            </View>
+            <Text style={styles.mapFallbackClusterCountLabel}>
+              {cluster.count}
+            </Text>
+          </Pressable>
+        );
+      })}
       <MapProviderBadge label="Fallback Map" />
     </View>
   );
@@ -210,56 +261,194 @@ const clusterCoordinateOffsets = [
   { latitude: 0.0052, longitude: 0.0016 },
 ] as const;
 
+const fallbackClusterPositions = [
+  { top: '39%', left: '56%' },
+  { top: '31%', left: '27%' },
+  { top: '53%', left: '42%' },
+  { top: '47%', left: '74%' },
+  { top: '62%', left: '18%' },
+  { top: '24%', left: '66%' },
+] as const;
+
 function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
+  ensureClusterAnimationStyle();
+
   const element = document.createElement('button');
+  const icon = document.createElement('span');
+  const count = document.createElement('span');
   const isDark = isDarkCluster(cluster);
 
+  icon.className = 'weather-check-cluster-icon';
+  icon.textContent = getClusterWeatherSymbol(cluster.dominantCondition);
+  count.className = 'weather-check-cluster-count';
+  count.textContent = String(cluster.count);
+
   element.type = 'button';
-  element.textContent = String(cluster.count);
-  element.setAttribute('aria-label', `${cluster.label} 현장 글 ${cluster.count}개 보기`);
-  element.style.minWidth = isActive ? '64px' : '54px';
-  element.style.height = isActive ? '64px' : '54px';
-  element.style.borderRadius = isActive ? '32px' : '27px';
-  element.style.border = isActive ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.72)';
-  element.style.background = getClusterTone(cluster);
-  element.style.color = isDark ? '#ffffff' : '#242424';
+  element.className = isActive
+    ? 'weather-check-cluster-marker weather-check-cluster-marker-active'
+    : 'weather-check-cluster-marker';
+  element.setAttribute('aria-label', `${cluster.label} 현장 제보 ${cluster.count}개 보기`);
+  element.append(icon, count);
+  element.style.background = 'transparent';
+  element.style.border = '0';
+  element.style.color = '#242424';
   element.style.cursor = 'pointer';
-  element.style.fontSize = '18px';
-  element.style.fontWeight = '900';
-  element.style.lineHeight = '22px';
-  element.style.padding = '0 14px';
-  element.style.boxShadow = '0 14px 22px rgba(36,36,36,0.20)';
-  element.style.backdropFilter = 'blur(8px)';
-  element.style.setProperty('-webkit-backdrop-filter', 'blur(8px)');
-  element.style.transform = isActive ? 'scale(1.06)' : 'scale(1)';
+  element.style.overflow = 'visible';
+  element.style.padding = '0';
   element.style.touchAction = 'manipulation';
   element.style.userSelect = 'none';
+
+  icon.style.background = getClusterTone(cluster);
+  icon.style.color = isDark ? '#ffffff' : '#242424';
+  icon.style.border = isActive ? '4px solid #ffffff' : '2px solid rgba(255,255,255,0.78)';
+  icon.style.boxShadow = '0 14px 22px rgba(36,36,36,0.20)';
+  icon.style.backdropFilter = 'blur(8px)';
+  icon.style.setProperty('-webkit-backdrop-filter', 'blur(8px)');
 
   return element;
 }
 
-function getClusterTone(cluster: MapReportCluster) {
-  const condition = cluster.dominantCondition;
+function ensureClusterAnimationStyle() {
+  const existingStyle = document.getElementById('weather-check-cluster-animation-style');
+  const style = existingStyle ?? document.createElement('style');
+  style.id = 'weather-check-cluster-animation-style';
+  style.textContent = `
+    @keyframes weatherCheckClusterBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      42% { transform: translateY(-9px) scale(1.06); }
+      58% { transform: translateY(-5px) scale(1.03); }
+    }
+    @keyframes weatherCheckClusterPop {
+      0%, 100% { transform: translateY(0) scale(1.08); }
+      50% { transform: translateY(-9px) scale(1.15); }
+    }
+    @keyframes weatherCheckBadgeBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      38% { transform: translateY(-13px) scale(1.12); }
+      55% { transform: translateY(-8px) scale(1.06); }
+      72% { transform: translateY(-2px) scale(1.02); }
+    }
+    @keyframes weatherCheckBadgePulse {
+      0% { opacity: 0.44; transform: translate(-50%, -50%) scale(0.82); }
+      70% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
+    }
+    .weather-check-cluster-marker {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      justify-content: center;
+      min-height: 76px;
+      min-width: 68px;
+      pointer-events: auto;
+      position: relative;
+      transform-origin: center bottom;
+      animation: weatherCheckClusterBounce 1.4s ease-in-out infinite;
+      will-change: transform;
+    }
+    .weather-check-cluster-marker-active {
+      animation: weatherCheckClusterPop 0.95s ease-in-out infinite;
+    }
+    .weather-check-cluster-icon {
+      align-items: center;
+      border-radius: 999px;
+      box-sizing: border-box;
+      display: block;
+      font-size: 24px;
+      font-weight: 900;
+      height: 56px;
+      line-height: 50px;
+      pointer-events: none;
+      position: relative;
+      text-align: center;
+      transform-origin: center bottom;
+      animation: weatherCheckBadgeBounce 1.38s cubic-bezier(.28,.84,.42,1) infinite;
+      will-change: transform;
+      width: 56px;
+      z-index: 2;
+    }
+    .weather-check-cluster-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.22;
+      transform: translate(-50%, -50%);
+      animation: weatherCheckBadgePulse 1.38s ease-out infinite;
+      z-index: -1;
+    }
+    .weather-check-cluster-count {
+      display: block;
+      min-width: 25px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.86);
+      box-shadow: 0 8px 15px rgba(36,36,36,0.14);
+      color: #242424;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 17px;
+      padding: 1px 7px;
+      pointer-events: none;
+      text-align: center;
+    }
+  `;
+  if (!existingStyle) document.head.appendChild(style);
+}
 
-  if (condition.includes('비') || condition.includes('소나기')) return 'rgba(47, 134, 217, 0.76)';
-  if (condition.includes('눈')) return 'rgba(216, 239, 248, 0.82)';
-  if (condition.includes('천둥') || condition.includes('번개')) return 'rgba(48, 43, 63, 0.78)';
-  if (condition.includes('안개')) return 'rgba(216, 208, 193, 0.80)';
-  if (condition.includes('황사') || condition.includes('미세')) return 'rgba(215, 189, 122, 0.82)';
-  if (condition.includes('맑')) return 'rgba(255, 240, 90, 0.80)';
-  if (condition.includes('흐') || condition.includes('구름')) return 'rgba(191, 201, 189, 0.82)';
+function getClusterTone(cluster: MapReportCluster) {
+  const kind = getClusterWeatherKind(cluster.dominantCondition);
+
+  if (kind === 'rain') return 'rgba(109, 178, 222, 0.74)';
+  if (kind === 'snow') return 'rgba(238, 246, 247, 0.90)';
+  if (kind === 'storm') return 'rgba(55, 48, 76, 0.80)';
+  if (kind === 'fog') return 'rgba(216, 208, 193, 0.82)';
+  if (kind === 'dust') return 'rgba(215, 189, 122, 0.82)';
+  if (kind === 'clear') return 'rgba(244, 225, 91, 0.82)';
+  if (kind === 'cloud') return 'rgba(191, 201, 189, 0.82)';
 
   return 'rgba(36, 36, 36, 0.72)';
 }
 
 function isDarkCluster(cluster: MapReportCluster) {
-  const condition = cluster.dominantCondition;
-  return (
-    condition.includes('비')
-    || condition.includes('소나기')
-    || condition.includes('천둥')
-    || condition.includes('번개')
-  );
+  const kind = getClusterWeatherKind(cluster.dominantCondition);
+  return kind === 'rain' || kind === 'storm';
+}
+
+function getClusterWeatherSymbol(condition: string) {
+  const kind = getClusterWeatherKind(condition);
+
+  if (kind === 'clear') return '\u2600';
+  if (kind === 'cloud') return '\u2601';
+  if (kind === 'rain') return '\u2614';
+  if (kind === 'storm') return '\u26A1';
+  if (kind === 'snow') return '\u2744';
+  if (kind === 'fog') return '≋';
+  if (kind === 'dust') return '•';
+
+  return '●';
+}
+
+function getClusterWeatherKind(condition: string) {
+  const value = condition.toLowerCase();
+
+  if (value.includes('천둥') || value.includes('번개') || value.includes('storm') || value.includes('thunder')) {
+    return 'storm';
+  }
+  if (value.includes('비') || value.includes('소나기') || value.includes('rain')) return 'rain';
+  if (value.includes('눈') || value.includes('snow')) return 'snow';
+  if (value.includes('안개') || value.includes('fog')) return 'fog';
+  if (value.includes('황사') || value.includes('미세') || value.includes('dust')) return 'dust';
+  if (value.includes('맑') || value.includes('clear') || value.includes('sun')) return 'clear';
+  if (value.includes('흐림') || value.includes('구름') || value.includes('cloud') || value.includes('overcast')) {
+    return 'cloud';
+  }
+
+  return 'field';
 }
 
 function MapProviderBadge({ label }: { label: string }) {

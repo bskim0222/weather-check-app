@@ -33,7 +33,9 @@ export function createFmiForecastModel(xml, context = null) {
   const rows = mergeFmiRows(series);
   const targetMs = getTargetTimestampMs(context);
   const hourlyRows = getForecastWindow(rows, getRowTimeMs, targetMs, 18);
-  const current = pickTargetItem(rows, getRowTimeMs, targetMs) ?? {};
+  const current = Number.isFinite(targetMs)
+    ? pickTargetItem(rows, getRowTimeMs, targetMs) ?? {}
+    : rows[0] ?? {};
   const condition = conditionFromFmiValues(current);
 
   return {

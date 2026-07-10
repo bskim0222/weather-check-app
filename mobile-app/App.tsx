@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, View } from 'react-native';
 
 import { AppHeader } from './src/components/AppHeader';
@@ -13,8 +14,13 @@ import { styles } from './src/styles/appStyles';
 
 export default function App() {
   const appState = useWeatherAppState();
+  const [reportAskFocusToken, setReportAskFocusToken] = useState(0);
   const androidTopInset =
     Platform.OS === 'android' ? Math.max(38, (NativeStatusBar.currentHeight ?? 24) + 14) : 0;
+  const openReportAsk = () => {
+    setReportAskFocusToken((token) => token + 1);
+    appState.setActiveTab('report');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,7 +47,9 @@ export default function App() {
             {appState.activeTab === 'decision' && (
               <DecisionScreen
                 current={appState.current}
+                dataStatus={appState.dataStatus}
                 locationStatus={appState.locationStatus}
+                providerSnapshot={appState.providerSnapshot}
                 reportCondition={appState.reportCondition}
                 reportText={appState.reportText}
                 reports={appState.reports}
@@ -50,6 +58,7 @@ export default function App() {
                 onReportTextChange={appState.setReportText}
                 onSubmitReport={appState.submitReport}
                 onReportIssue={appState.reportFieldReport}
+                onAskFieldQuestion={openReportAsk}
               />
             )}
             {appState.activeTab === 'map' && (
@@ -65,6 +74,7 @@ export default function App() {
               <ReportScreen
                 requests={appState.reportRequests}
                 reports={appState.reports}
+                askFocusToken={reportAskFocusToken}
                 searchContext={appState.searchContext}
                 onAddReport={appState.addLocalReport}
                 onReportIssue={appState.reportFieldReport}

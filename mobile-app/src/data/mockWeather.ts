@@ -376,7 +376,7 @@ export const weatherPresets: Record<WeatherKey, WeatherPreset> = {
 };
 
 export const tabs: { key: TabKey; label: string }[] = [
-  { key: 'decision', label: '판정' },
+  { key: 'decision', label: '요약' },
   { key: 'compare', label: '비교' },
   { key: 'report', label: '제보' },
   { key: 'map', label: '지도' },

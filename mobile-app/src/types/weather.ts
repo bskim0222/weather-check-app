@@ -96,6 +96,7 @@ export type CompareRow = {
   kma: CompareForecastCell;
   yr: CompareForecastCell;
   windy: CompareForecastCell;
+  fmi?: CompareForecastCell;
 };
 
 export type ReportRequest = {

@@ -1,6 +1,7 @@
 import { isApiModeEnabled } from '../config/appConfig';
 import { compareDifferences, compareServiceSummaries, weatherPresets } from '../data/mockWeather';
 import { getContextualCompareRows, type CompareMode } from '../domain/compare';
+import { normalizeProviderRows } from '../domain/providerRows';
 import { writeApiJson } from './apiClient';
 import type {
   ApiWeatherProviderSnapshot,
@@ -43,8 +44,8 @@ export function getMockWeatherProviderSnapshot(searchContext: SearchContext): We
     sources: preset?.sources ?? weatherPresets.rain.sources,
     summaries: compareServiceSummaries,
     differences: compareDifferences,
-    hourlyRows: getContextualCompareRows(searchContext.detectedWeather, 'hourly'),
-    dailyRows: getContextualCompareRows(searchContext.detectedWeather, 'daily'),
+    hourlyRows: normalizeProviderRows(getContextualCompareRows(searchContext.detectedWeather, 'hourly')),
+    dailyRows: normalizeProviderRows(getContextualCompareRows(searchContext.detectedWeather, 'daily')),
   };
 }
 
@@ -83,8 +84,8 @@ export function normalizeProviderSnapshot(
     sources: hasItems(snapshot.sources) ? snapshot.sources : fallbackSnapshot.sources,
     summaries: hasItems(snapshot.summaries) ? snapshot.summaries : fallbackSnapshot.summaries,
     differences: hasItems(snapshot.differences) ? snapshot.differences : fallbackSnapshot.differences,
-    hourlyRows: extendCompareRows(snapshot.hourlyRows, fallbackSnapshot.hourlyRows),
-    dailyRows: extendCompareRows(snapshot.dailyRows, fallbackSnapshot.dailyRows),
+    hourlyRows: normalizeApiRows(snapshot.hourlyRows, fallbackSnapshot.hourlyRows),
+    dailyRows: normalizeApiRows(snapshot.dailyRows, fallbackSnapshot.dailyRows),
   };
 }
 
@@ -92,13 +93,12 @@ function hasItems<T>(value: T[] | undefined) {
   return Array.isArray(value) && value.length > 0;
 }
 
-function extendCompareRows<T extends { label: string }>(rows: T[] | undefined, fallbackRows: T[]) {
-  if (!Array.isArray(rows) || rows.length === 0) return fallbackRows;
+function normalizeApiRows(rows: CompareRow[] | undefined, fallbackRows: CompareRow[]) {
+  const normalized = normalizeProviderRows(rows);
 
-  const labels = new Set(rows.map((row) => row.label));
-  const additions = fallbackRows.filter((row) => !labels.has(row.label));
+  if (normalized.length === 0) return fallbackRows;
 
-  return [...rows, ...additions];
+  return normalized;
 }
 
 function normalizeProviderMeta(

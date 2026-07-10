@@ -22,8 +22,8 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
   const focusText = getCompareFocusText(searchContext);
   const compareCaption =
     mode === 'hourly'
-      ? `${searchContext.timeLabel} · ${searchContext.place} 시간대별`
-      : `${searchContext.place} 날짜별 흐름`;
+      ? `${searchContext.place} · ${searchContext.timeLabel} 기준 시간별 흐름`
+      : `${searchContext.place} 기준 날짜별 흐름`;
 
   return (
     <View>

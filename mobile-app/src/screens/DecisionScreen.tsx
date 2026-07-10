@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { EmptyState } from '../components/EmptyState';
 import { DecisionCard } from '../components/DecisionCard';
+import { EmptyState } from '../components/EmptyState';
 import { getFieldReportPlaceDisplay, getNearbySectionTitle } from '../domain/locationDisplay';
+import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
-import type { LocationStatus } from '../types/appState';
+import type { DataStatus, LocationStatus } from '../types/appState';
 import type {
   LocalReport,
   SearchContext,
@@ -14,7 +16,9 @@ import type {
 
 type DecisionScreenProps = {
   current: WeatherPreset;
+  dataStatus: DataStatus;
   locationStatus: LocationStatus;
+  providerSnapshot: WeatherProviderSnapshot;
   reportCondition: string;
   reportText: string;
   reports: LocalReport[];
@@ -23,11 +27,14 @@ type DecisionScreenProps = {
   onReportTextChange: (value: string) => void;
   onSubmitReport: () => void;
   onReportIssue: (report: LocalReport) => void;
+  onAskFieldQuestion: () => void;
 };
 
 export function DecisionScreen({
   current,
+  dataStatus,
   locationStatus,
+  providerSnapshot,
   reportCondition,
   reportText,
   reports,
@@ -36,27 +43,50 @@ export function DecisionScreen({
   onReportTextChange,
   onSubmitReport,
   onReportIssue,
+  onAskFieldQuestion,
 }: DecisionScreenProps) {
+  const [isReportComposerOpen, setIsReportComposerOpen] = useState(false);
   const currentLocationLabel = getFieldReportPlaceDisplay(locationStatus);
   const nearbySectionTitle = getNearbySectionTitle(searchContext);
   const nearbyReports = getNearbyDecisionReports(reports, currentLocationLabel, searchContext);
 
   return (
     <View>
-      <DecisionCard current={current} locationStatus={locationStatus} searchContext={searchContext} />
+      <DecisionCard
+        current={current}
+        locationStatus={locationStatus}
+        providerSnapshot={providerSnapshot}
+        searchContext={searchContext}
+      />
 
-      <View style={styles.localReportCard}>
-        <View style={styles.localReportHead}>
-          <View style={styles.localReportTitleBlock}>
-            <View style={styles.localReportTitleRow}>
-              <Text style={styles.localReportTitle}>현재 위치의 날씨상황을 알려주세요</Text>
-              <Text style={styles.localReportPlace}>{currentLocationLabel}</Text>
-            </View>
-            <Text style={styles.localReportCaption}>
-              지금 보이는 날씨를 한 줄로 남기면 생생날씨특파원에 반영돼요.
-            </Text>
+      <View style={styles.summaryActionGrid}>
+        <Pressable onPress={onAskFieldQuestion} style={[styles.summaryActionCard, styles.summaryAskCard]}>
+          <Text style={styles.summaryActionKicker}>궁금한 지역</Text>
+          <Text style={styles.summaryActionTitle}>현장에{'\n'}물어보기</Text>
+          <View style={styles.summaryActionCircle}>
+            <Text style={styles.summaryActionCircleText}>↗</Text>
           </View>
+        </Pressable>
+        <Pressable
+          onPress={() => setIsReportComposerOpen((open) => !open)}
+          style={[styles.summaryActionCard, styles.summaryPostCard, isReportComposerOpen && styles.summaryActionCardActive]}
+        >
+          <Text style={styles.summaryActionKicker}>내 현재위치</Text>
+          <Text style={styles.summaryActionTitle}>지금 날씨{'\n'}남기기</Text>
+          <View style={styles.summaryActionCircle}>
+            <Text style={styles.summaryActionCircleText}>{isReportComposerOpen ? '×' : '+'}</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {isReportComposerOpen && <View style={styles.localReportCard}>
+        <View style={styles.localReportTitleRow}>
+          <Text style={styles.localReportTitle}>현재 위치 날씨 남기기</Text>
+          <Text style={styles.localReportPlace}>{currentLocationLabel}</Text>
         </View>
+        <Text style={styles.localReportCaption}>
+          지금 보이는 날씨를 한 줄로 남기면 생생날씨특파원에 반영돼요.
+        </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -89,15 +119,13 @@ export function DecisionScreen({
             <Text style={styles.primaryButtonText}>올리기</Text>
           </Pressable>
         </View>
-        <Text style={styles.localReportStatus}>최근 30분 제보와 함께 판정 근거에 반영됩니다.</Text>
-      </View>
+        <Text style={styles.localReportStatus}>최근 현장 제보와 함께 요약 화면에 참고돼요.</Text>
+      </View>}
 
-      <View style={styles.mockSection}>
+      <View style={styles.nearbyFieldCard}>
         <View style={styles.mockSectionHead}>
           <Text style={styles.mockSectionTitle}>{nearbySectionTitle}</Text>
-          <Pressable style={styles.mockSectionButton}>
-            <Text style={styles.mockSectionButtonText}>제보</Text>
-          </Pressable>
+          <Text style={styles.nearbyFieldMeta}>{searchContext.place} 기준</Text>
         </View>
         {nearbyReports.length > 0 ? (
           <View style={styles.reportList}>
@@ -130,7 +158,7 @@ export function DecisionScreen({
         ) : (
           <EmptyState
             title="아직 근처 제보가 없어요"
-            body={`${nearbySectionTitle} 글이 올라오면 판정 근거에 함께 반영됩니다.`}
+            body={`${nearbySectionTitle} 글이 올라오면 요약 화면에 함께 참고돼요.`}
             action="첫 제보를 한 줄로 남겨주세요"
           />
         )}

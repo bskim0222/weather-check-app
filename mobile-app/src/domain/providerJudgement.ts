@@ -1,5 +1,6 @@
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { weatherPresets } from '../data/mockWeather';
+import { getThirdProviderCell } from './providerRows';
 import type { CompareForecastCell, ForecastSource, ForecastStep, WeatherKey, WeatherPreset } from '../types/weather';
 
 type WeatherVote = {
@@ -228,12 +229,13 @@ function pickRepresentativeCell(
   row: WeatherProviderSnapshot['hourlyRows'][number],
   consensus: WeatherVote,
 ): CompareForecastCell {
-  const cells = [row.kma, row.yr, row.windy];
+  const thirdCell = getThirdProviderCell(row);
+  const cells = [row.kma, row.yr, thirdCell];
   const rowConsensus = getRowWeatherConsensus(cells) ?? consensus;
   const consensusCell = cells.find((cell) => getWeatherVote(cell.weather).key === rowConsensus.key);
   const cautionCell = cells.find((cell) => ['rain', 'thunder', 'snow'].includes(getWeatherVote(cell.weather).key));
 
-  return consensusCell ?? cautionCell ?? row.kma ?? row.yr ?? row.windy;
+  return consensusCell ?? cautionCell ?? row.kma ?? row.yr ?? thirdCell;
 }
 
 function getRowWeatherConsensus(cells: CompareForecastCell[]) {

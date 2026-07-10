@@ -88,7 +88,7 @@ export function useWeatherAppState() {
   );
 
   const screenTitle = useMemo(() => {
-    if (activeTab === 'decision') return '현재 위치 기준 판정';
+    if (activeTab === 'decision') return '요약';
     if (activeTab === 'map') return '주변 현장 지도';
     if (activeTab === 'report') return '현장 제보';
 
@@ -349,11 +349,10 @@ export function useWeatherAppState() {
     const token = refreshTokenRef.current + 1;
     refreshTokenRef.current = token;
     setRefreshLabel('확인 중');
-    setProviderSnapshot(getMockWeatherProviderSnapshot(nextSearchContext));
     setDataStatus({
-      phase: 'ready',
-      label: '갱신 중',
-      message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 최신 데이터를 뒤에서 확인하고 있어요.`,
+      phase: 'loading',
+      label: '날씨 신호 확인 중',
+      message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 세 기상청 예보를 불러오고 있어요.`,
     });
 
     try {

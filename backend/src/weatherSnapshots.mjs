@@ -33,6 +33,7 @@ export async function createWeatherProviderSnapshot(context) {
     ...(kmaForecast ? { kma: kmaForecast.current } : {}),
     ...(yrForecast ? { yr: yrForecast.current } : {}),
     ...(thirdForecast ? { windy: thirdForecast.current } : {}),
+    ...(thirdForecast && thirdProvider.providerId === 'fmi' ? { fmi: thirdForecast.current } : {}),
   };
 
   const snapshot = {
@@ -50,7 +51,7 @@ export async function createWeatherProviderSnapshot(context) {
         'yr',
         yrForecast?.hourlyRows,
       ),
-      'windy',
+      thirdProvider.providerId,
       thirdForecast?.hourlyRows,
     ),
     dailyRows: mergeProviderRows(
@@ -59,7 +60,7 @@ export async function createWeatherProviderSnapshot(context) {
         'yr',
         yrForecast?.dailyRows,
       ),
-      'windy',
+      thirdProvider.providerId,
       thirdForecast?.dailyRows,
     ),
   };
@@ -193,17 +194,20 @@ function mergeProviderRows(baseRows, providerId, providerRows) {
 
     if (!providerRow) return row;
 
+    const providerCell = {
+      mark: providerRow.mark,
+      weather: providerRow.weather,
+      detail: providerRow.detail,
+      tone: providerRow.tone,
+      morning: providerRow.morning,
+      afternoon: providerRow.afternoon,
+    };
+
     return {
       ...row,
       label: providerRow.label,
-      [providerId]: {
-        mark: providerRow.mark,
-        weather: providerRow.weather,
-        detail: providerRow.detail,
-        tone: providerRow.tone,
-        morning: providerRow.morning,
-        afternoon: providerRow.afternoon,
-      },
+      [providerId]: providerCell,
+      ...(providerId === 'fmi' ? { windy: providerCell } : {}),
     };
   });
 }
@@ -291,6 +295,7 @@ function createCompareRows(weather, mode) {
     kma: createCell(weather.kma, index),
     yr: createCell(weather.yr, index),
     windy: createCell(weather.windy, index),
+    fmi: createCell(weather.fmi ?? weather.windy, index),
   }));
 }
 

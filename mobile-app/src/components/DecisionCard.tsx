@@ -1,9 +1,14 @@
 ﻿import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Animated, Easing, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 
+import { ProviderServiceIcon } from './ProviderServiceIcon';
+import { WeatherIcon } from './WeatherIcon';
+import { getThirdProviderCell } from '../domain/providerRows';
+import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
-import type { SearchContext, WeatherPreset } from '../types/weather';
+import type { CompareForecastCell, CompareServiceSummary, ForecastSource, SearchContext, WeatherPreset } from '../types/weather';
 import type { LocationStatus } from '../types/appState';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle as any);
@@ -11,19 +16,26 @@ const AnimatedG = Animated.createAnimatedComponent(G as any);
 const AnimatedLine = Animated.createAnimatedComponent(Line as any);
 const AnimatedPath = Animated.createAnimatedComponent(Path as any);
 
+type SelectedForecastSource = {
+  source: ForecastSource;
+  sourceIndex: number;
+};
+
 type DecisionCardProps = {
   current: WeatherPreset;
   locationStatus: LocationStatus;
+  providerSnapshot: WeatherProviderSnapshot;
   searchContext: SearchContext;
 };
 
-export function DecisionCard({ current, locationStatus, searchContext }: DecisionCardProps) {
+export function DecisionCard({ current, locationStatus, providerSnapshot, searchContext }: DecisionCardProps) {
+  const [selectedSource, setSelectedSource] = useState<SelectedForecastSource | null>(null);
   const normalizedCondition = normalizeWeatherCondition(current.condition);
-  const compactSignal = getCompactSignal(normalizedCondition, current.signal);
   const placeLabel = getDecisionPlaceLabel(searchContext, locationStatus);
   const title = getDisplayTitle(current.title);
   const artworkCaption = getArtworkCaption(normalizedCondition);
   const figma = getFigmaPreset(normalizedCondition);
+  const forecastSources = getSyncedForecastSources(current, providerSnapshot);
 
   return (
     <View style={[styles.decisionCard, styles.figmaWeatherCard, { backgroundColor: figma.bg }]}>
@@ -64,30 +76,9 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         >
           {title}
         </Text>
-        <Text style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
+        <Text numberOfLines={2} style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
           {current.summary}
         </Text>
-      </View>
-
-      <View style={styles.figmaWeatherStats}>
-        <View style={styles.figmaWeatherStat}>
-          <Text style={[styles.figmaWeatherStatLabel, { color: figma.dim }]}>판정</Text>
-          <Text numberOfLines={2} style={[styles.figmaWeatherStatValue, { color: figma.ink }]}>
-            {getDecisionSignalValue(normalizedCondition)}
-          </Text>
-        </View>
-        <View style={styles.figmaWeatherStat}>
-          <Text style={[styles.figmaWeatherStatLabel, { color: figma.dim }]}>현장</Text>
-          <Text numberOfLines={2} style={[styles.figmaWeatherStatValue, { color: figma.ink }]}>
-            제보 확인
-          </Text>
-        </View>
-        <View style={styles.figmaWeatherStat}>
-          <Text style={[styles.figmaWeatherStatLabel, { color: figma.dim }]}>신호</Text>
-          <Text numberOfLines={2} style={[styles.figmaWeatherStatValue, { color: figma.ink }]}>
-            {compactSignal}
-          </Text>
-        </View>
       </View>
 
       <ScrollView
@@ -96,23 +87,287 @@ export function DecisionCard({ current, locationStatus, searchContext }: Decisio
         style={[styles.figmaWeatherHourly, { borderColor: figma.line, backgroundColor: figma.surface }]}
         contentContainerStyle={styles.figmaWeatherHourlyContent}
       >
-        <View style={styles.figmaWeatherHourIntro}>
-          <Text style={[styles.figmaWeatherHourIntroLabel, { color: figma.dim }]}>종합 예보 흐름</Text>
-          <Text style={[styles.figmaWeatherHourIntroText, { color: figma.ink }]}>3개 예보 대표값</Text>
-        </View>
-        {getForecastStrip(current.temp, current.forecastRows, normalizedCondition, searchContext).map((item, index) => (
-          <View key={`${item.label}-${index}`} style={styles.figmaWeatherHour}>
-            <Text style={[styles.figmaWeatherHourLabel, { color: figma.dim }]}>{item.label}</Text>
-            <ForecastMiniIcon condition={item.condition} stroke={figma.ink} dim={figma.dim} />
-            <Text style={[styles.figmaWeatherHourTemp, { color: figma.ink }]}>{item.temp}</Text>
-            {item.precipitation ? (
-              <Text style={[styles.figmaWeatherHourRain, { color: figma.dim }]}>{item.precipitation}</Text>
-            ) : null}
-          </View>
+        {forecastSources.map((source, sourceIndex) => (
+          <ForecastSourceMiniCard
+            key={`${source.name}-${source.mark}`}
+            source={source}
+            figma={figma}
+            onPress={() => setSelectedSource({ source, sourceIndex })}
+          />
         ))}
       </ScrollView>
+
+      <ProviderForecastDetailModal
+        selected={selectedSource}
+        visible={selectedSource !== null}
+        placeLabel={placeLabel}
+        providerSnapshot={providerSnapshot}
+        searchContext={searchContext}
+        onClose={() => setSelectedSource(null)}
+      />
     </View>
   );
+}
+
+function ForecastSourceMiniCard({
+  figma,
+  onPress,
+  source,
+}: {
+  figma: ReturnType<typeof createFigmaPreset>;
+  onPress: () => void;
+  source: ForecastSource;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.figmaWeatherSourceCard,
+        { backgroundColor: figma.sourceSurface },
+        pressed && styles.figmaWeatherSourceCardPressed,
+      ]}
+    >
+      <View style={styles.figmaWeatherSourceTop}>
+        <ProviderServiceIcon
+          name={source.name}
+          mark={source.mark}
+          style={styles.figmaWeatherSourceLogo}
+        />
+        <Text numberOfLines={1} style={[styles.figmaWeatherSourceName, { color: figma.dim }]}>
+          {shortForecastSourceName(source.name)}
+        </Text>
+      </View>
+      <View style={styles.figmaWeatherSourceBody}>
+        <ForecastMiniIcon condition={source.condition} stroke={figma.ink} dim={figma.dim} />
+        <View style={styles.figmaWeatherSourceTextBlock}>
+          <Text numberOfLines={1} style={[styles.figmaWeatherSourceWeather, { color: figma.ink }]}>
+            {source.condition}
+          </Text>
+          <Text numberOfLines={1} style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}>
+            {source.temp}
+          </Text>
+        </View>
+      </View>
+      <Text numberOfLines={1} style={[styles.figmaWeatherSourceDetail, { color: figma.dim }]}>
+        {source.detail}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ProviderForecastDetailModal({
+  onClose,
+  placeLabel,
+  providerSnapshot,
+  searchContext,
+  selected,
+  visible,
+}: {
+  onClose: () => void;
+  placeLabel: string;
+  providerSnapshot: WeatherProviderSnapshot;
+  searchContext: SearchContext;
+  selected: SelectedForecastSource | null;
+  visible: boolean;
+}) {
+  if (!selected) return null;
+
+  const { source, sourceIndex } = selected;
+  const hourlyRows = providerSnapshot.hourlyRows.slice(0, 12);
+  const dailyRows = providerSnapshot.dailyRows.slice(0, 7);
+
+  return (
+    <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
+      <Pressable style={styles.providerDetailBackdrop} onPress={onClose}>
+        <Pressable style={styles.providerDetailSheet} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.providerDetailGrabber} />
+          <View style={styles.providerDetailHeader}>
+            <ProviderServiceIcon name={source.name} mark={source.mark} style={styles.providerDetailLogo} />
+            <View style={styles.providerDetailTitleBlock}>
+              <Text style={styles.providerDetailName}>{source.name}</Text>
+              <Text numberOfLines={1} style={styles.providerDetailMeta}>
+                {placeLabel} · {searchContext.timeLabel}
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView style={styles.providerDetailContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.providerDetailSummary}>
+              <View style={styles.providerDetailSummaryText}>
+                <Text style={styles.providerDetailCondition}>{source.condition}</Text>
+                <Text style={styles.providerDetailNote}>{createProviderDetailNote(source)}</Text>
+              </View>
+              <Text style={styles.providerDetailTemp}>{source.temp}</Text>
+            </View>
+
+            <View style={styles.providerDetailRows}>
+              <ProviderDetailRow label="날씨 상태" value={source.condition} />
+              <ProviderDetailRow label="예상 기온" value={source.temp} />
+              <ProviderDetailRow label="강수/세부" value={source.detail || '제공값 없음'} />
+              <ProviderDetailRow label="비교 기준" value="요약탭과 비교탭이 같은 예보값을 사용해요" />
+            </View>
+
+            <View style={styles.providerDetailSection}>
+              <Text style={styles.providerDetailSectionTitle}>시간별 예보</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.providerDetailTimeline}>
+                {hourlyRows.map((row) => (
+                  <ProviderTimelineCell
+                    key={`hourly-${row.label}`}
+                    label={row.label}
+                    cell={getProviderCellByIndex(row, sourceIndex)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.providerDetailSection}>
+              <Text style={styles.providerDetailSectionTitle}>일자별 예보</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.providerDetailDailyList}>
+                {dailyRows.map((row) => (
+                  <ProviderDailyCell
+                    key={`daily-${row.label}`}
+                    label={row.label}
+                    cell={getProviderCellByIndex(row, sourceIndex)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          </ScrollView>
+
+          <Pressable style={styles.providerDetailClose} onPress={onClose}>
+            <Text style={styles.providerDetailCloseText}>닫기</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function ProviderTimelineCell({ cell, label }: { cell: CompareForecastCell; label: string }) {
+  return (
+    <View style={styles.providerDetailTimelineCell}>
+      <Text numberOfLines={1} style={styles.providerDetailTimelineLabel}>{formatCompactTimeLabel(label)}</Text>
+      <ForecastMiniIcon condition={cell.weather} stroke="#202020" dim="rgba(32,32,32,0.45)" />
+      <Text numberOfLines={1} style={styles.providerDetailTimelineWeather}>{cell.weather}</Text>
+      <Text numberOfLines={1} style={styles.providerDetailTimelineDetail}>{compactDetail(cell.detail)}</Text>
+    </View>
+  );
+}
+
+function ProviderDailyCell({ cell, label }: { cell: CompareForecastCell; label: string }) {
+  const morning = cell.morning ?? cell;
+  const afternoon = cell.afternoon ?? cell;
+
+  return (
+    <View style={styles.providerDetailDailyCell}>
+      <Text numberOfLines={1} style={styles.providerDetailDailyLabel}>{label}</Text>
+      <View style={styles.providerDetailDailyPeriods}>
+        <ProviderDailyPeriod label="오전" period={morning} />
+        <ProviderDailyPeriod label="오후" period={afternoon} />
+      </View>
+    </View>
+  );
+}
+
+function ProviderDailyPeriod({
+  label,
+  period,
+}: {
+  label: string;
+  period: Pick<CompareForecastCell, 'detail' | 'weather'>;
+}) {
+  return (
+    <View style={styles.providerDetailDailyPeriod}>
+      <Text style={styles.providerDetailDailyPeriodLabel}>{label}</Text>
+      <ForecastMiniIcon condition={period.weather} stroke="#202020" dim="rgba(32,32,32,0.45)" />
+      <Text numberOfLines={1} style={styles.providerDetailDailyWeather}>{period.weather}</Text>
+      <Text numberOfLines={1} style={styles.providerDetailDailyDetail}>{compactDetail(period.detail)}</Text>
+    </View>
+  );
+}
+
+function ProviderDetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.providerDetailRow}>
+      <Text style={styles.providerDetailRowLabel}>{label}</Text>
+      <Text numberOfLines={2} style={styles.providerDetailRowValue}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function createProviderDetailNote(source: ForecastSource) {
+  if (source.detail && source.detail !== '-') return `${source.detail} 기준으로 표시 중`;
+  return '서비스가 제공한 현재 시간대 예보 기준';
+}
+
+function getProviderCellByIndex(row: { kma: CompareForecastCell; yr: CompareForecastCell; windy: CompareForecastCell; fmi?: CompareForecastCell }, sourceIndex: number) {
+  if (sourceIndex === 0) return row.kma;
+  if (sourceIndex === 1) return row.yr;
+  return row.fmi ?? row.windy;
+}
+
+function formatCompactTimeLabel(label: string) {
+  return label.replace(/\s+/g, '').replace('오늘', '').replace('내일', '내일 ');
+}
+
+function compactDetail(detail: string) {
+  return detail.replace(/\s+/g, ' ').replace(/강수\s*/g, '').trim();
+}
+
+function getSyncedForecastSources(current: WeatherPreset, providerSnapshot: WeatherProviderSnapshot) {
+  const firstCompareRow = providerSnapshot.hourlyRows[0];
+
+  if (!firstCompareRow) return current.sources.slice(0, 3);
+
+  const summaries = providerSnapshot.summaries;
+  const cells = [firstCompareRow.kma, firstCompareRow.yr, getThirdProviderCell(firstCompareRow)];
+
+  return cells.map((cell, index) => createForecastSourceFromCompareCell(cell, summaries[index], current.sources[index]));
+}
+
+function createForecastSourceFromCompareCell(
+  cell: CompareForecastCell,
+  summary: CompareServiceSummary | undefined,
+  fallback: ForecastSource | undefined,
+): ForecastSource {
+  return {
+    providerId: fallback?.providerId,
+    iconUri: fallback?.iconUri,
+    name: summary?.name ?? fallback?.name ?? 'Weather',
+    mark: summary?.mark ?? fallback?.mark ?? cell.mark,
+    condition: cell.weather,
+    temp: extractForecastTemperature(cell.detail) ?? fallback?.temp ?? '-',
+    detail: extractForecastDetail(cell.detail),
+    badge: fallback?.badge ?? '',
+    color: summary?.color ?? fallback?.color ?? '#222222',
+  };
+}
+
+function extractForecastTemperature(detail: string) {
+  const match = detail.match(/-?\d+(?:\.\d+)?\s*(?:°C|℃|도|°)/i);
+
+  if (!match) return null;
+
+  return match[0].replace(/\s+/g, '').replace(/℃|도/i, '°C').replace(/°$/, '°C');
+}
+
+function extractForecastDetail(detail: string) {
+  const amount = detail.match(/\d+(?:\.\d+)?\s*mm/i);
+  if (amount) return amount[0].replace(/\s+/g, '');
+
+  const probability = detail.match(/\d+\s*%/);
+  if (probability) return probability[0].replace(/\s+/g, '');
+
+  return detail.replace(/\s+/g, ' ').trim();
+}
+
+function shortForecastSourceName(name: string) {
+  if (name.includes('대한민국')) return '기상청';
+  if (name.includes('노르웨이')) return '노르웨이';
+  if (name.includes('핀란드')) return '핀란드';
+  return name.replace('기상청', '').trim() || name;
 }
 
 function normalizeWeatherCondition(condition: string) {
@@ -217,11 +472,11 @@ function getFigmaPreset(condition: string) {
   const presets: Record<string, ReturnType<typeof createFigmaPreset>> = {
     맑음: createFigmaPreset('#ffe600', '#8a6400', '#2e2000', '#735300', 0.2),
     흐림: createFigmaPreset('#b0b8c1', '#3a4550', '#1a2028', '#4a5560', 0.18),
-    비: createFigmaPreset('#1a6fd4', '#b9ddff', '#eef7ff', '#a7cdef', 0.08, true),
-    소나기: createFigmaPreset('#5ba8d8', '#0a3860', '#eef7ff', '#b8d9f1', 0.09, true),
+    비: createFigmaPreset('#cfe8f6', '#34708c', '#172933', '#5d7e8b', 0.32),
+    소나기: createFigmaPreset('#bfe0f3', '#2f6f8e', '#172933', '#557c8d', 0.28),
     천둥번개: createFigmaPreset('#111111', '#e6e6e6', '#f2f2f2', '#969696', 0.06, true),
     폭풍우: createFigmaPreset('#111111', '#e6e6e6', '#f2f2f2', '#969696', 0.06, true),
-    눈: createFigmaPreset('#c8e8f8', '#2a6090', '#0a2038', '#3a7098', 0.3),
+    눈: createFigmaPreset('#f5f2e9', '#7d9aac', '#222621', '#7d7b72', 0.42),
     '맑은 밤': createFigmaPreset('#0d0b20', '#c4a8ff', '#ede8ff', '#9f89d8', 0.08, true),
     안개: createFigmaPreset('#d8d8d8', '#606060', '#1a1a1a', '#707070', 0.18),
     황사: createFigmaPreset('#d4a844', '#6a4400', '#2a1800', '#885a10', 0.16),
@@ -237,6 +492,7 @@ function createFigmaPreset(bg: string, stroke: string, ink: string, dim: string,
   return {
     bg,
     surface: dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.24)',
+    sourceSurface: dark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.34)',
     stroke,
     ink,
     dim,
@@ -415,13 +671,7 @@ function getForecastStripCondition(text: string, fallbackCondition: string) {
 }
 
 function ForecastMiniIcon({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {
-  const normalizedCondition = normalizeWeatherCondition(condition);
-
-  return (
-    <Svg width={40} height={40} viewBox="0 0 100 100" fill="none" style={styles.figmaWeatherHourIcon}>
-      <WeatherMiniSvgIcon condition={normalizedCondition} stroke={stroke} dim={dim} />
-    </Svg>
-  );
+  return <WeatherIcon condition={condition} style={styles.figmaWeatherHourIcon} />;
 }
 
 function WeatherMiniSvgIcon({ condition, stroke, dim }: { condition: string; stroke: string; dim: string }) {

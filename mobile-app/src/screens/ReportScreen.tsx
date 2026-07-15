@@ -64,7 +64,7 @@ export function ReportScreen({
     [reports, requests, searchContext],
   );
   const orderedReports = fieldSnapshot.reports;
-  const orderedRequests = fieldSnapshot.requests;
+  const orderedRequests = fieldSnapshot.requests.filter((request) => request.source !== 'mock');
   const visibleReports = createNationalReports(orderedReports);
   const myQuestions = orderedRequests.filter((request) => request.source === 'local');
   const selectedRequest = useMemo(

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { appConfig } from '../config/appConfig';
-import { initialReports, reportRequests as initialReportRequests } from '../data/mockWeather';
+import { initialReports } from '../data/mockWeather';
 import {
   createDefaultJudgement,
   createQuestionJudgement,
@@ -64,7 +64,7 @@ export function useWeatherAppState() {
   const [recentQuestions, setRecentQuestions] = useState<string[]>([]);
   const [refreshLabel, setRefreshLabel] = useState(appConfig.dataMode === 'api' ? '확인 중' : '미리보기 데이터');
   const [reports, setReports] = useState<LocalReport[]>(initialReports);
-  const [reportRequests, setReportRequests] = useState<ReportRequest[]>(initialReportRequests);
+  const [reportRequests, setReportRequests] = useState<ReportRequest[]>([]);
   const [providerSnapshot, setProviderSnapshot] = useState<WeatherProviderSnapshot>(() =>
     getMockWeatherProviderSnapshot(createDefaultJudgement().searchContext),
   );
@@ -152,7 +152,7 @@ export function useWeatherAppState() {
         setRecentQuestions(snapshot.recentQuestions);
         setReportText(snapshot.reportText);
         setReports(snapshot.reports.length > 0 ? snapshot.reports : initialReports);
-        setReportRequests(snapshot.reportRequests.length > 0 ? snapshot.reportRequests : initialReportRequests);
+        setReportRequests(snapshot.reportRequests);
         if (snapshot.locationStatus) {
           setLocationStatus(snapshot.locationStatus);
         }

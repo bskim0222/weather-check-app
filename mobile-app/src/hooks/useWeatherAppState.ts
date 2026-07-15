@@ -14,7 +14,7 @@ import {
   resolveReportPlace,
 } from '../domain/search';
 import { createProviderAdjustedPreset } from '../domain/providerJudgement';
-import { markReportPending } from '../domain/moderation';
+import { markReportPending, removeMockOrSeedReports } from '../domain/moderation';
 import {
   readPersistedAppSnapshot,
   writePersistedAppSnapshot,
@@ -117,7 +117,7 @@ export function useWeatherAppState() {
 
       if (isCancelled || fieldSnapshot.source !== 'api') return;
 
-      setReports((prev) => mergeSyncedItems(fieldSnapshot.reports, prev));
+      setReports((prev) => mergeSyncedItems(removeMockOrSeedReports(fieldSnapshot.reports), removeMockOrSeedReports(prev)));
       setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
     };
 
@@ -150,7 +150,7 @@ export function useWeatherAppState() {
         setQuestionText(snapshot.questionText);
         setRecentQuestions(snapshot.recentQuestions);
         setReportText(snapshot.reportText);
-        setReports(snapshot.reports.filter((report) => report.source !== 'mock'));
+        setReports(removeMockOrSeedReports(snapshot.reports));
         setReportRequests(snapshot.reportRequests);
         if (snapshot.locationStatus) {
           setLocationStatus(snapshot.locationStatus);
@@ -428,7 +428,7 @@ export function useWeatherAppState() {
       setProviderSnapshot(providerSnapshot);
 
       if (fieldSnapshot.source === 'api') {
-        setReports((prev) => mergeSyncedItems(fieldSnapshot.reports, prev));
+        setReports((prev) => mergeSyncedItems(removeMockOrSeedReports(fieldSnapshot.reports), removeMockOrSeedReports(prev)));
         setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
       }
 

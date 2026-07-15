@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
+import { visibleReportsOnly } from '../domain/moderation';
 import { inferConditionFromText } from '../domain/reports';
 import { formatPostTime } from '../domain/timeDisplay';
 import {
@@ -768,7 +769,7 @@ function getRequestMark(question: string) {
 }
 
 function orderLiveReports(reports: LocalReport[]) {
-  return reports.filter((report) => report.source !== 'mock').sort((a, b) => {
+  return visibleReportsOnly(reports).sort((a, b) => {
     const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 

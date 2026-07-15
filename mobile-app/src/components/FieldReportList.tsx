@@ -38,7 +38,7 @@ export function FieldReportList({ reports, selectedIndex, onSelectReport, onRepo
               ]}
             >
               <Text style={styles.reportIssueText}>
-                {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+                {report.moderationStatus === 'pending' ? '신고됨' : '신고'}
               </Text>
             </Pressable>
           </View>

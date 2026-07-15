@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
 import { inferConditionFromText } from '../domain/reports';
+import { formatPostTime } from '../domain/timeDisplay';
 import {
   answerRemoteReportRequest,
   createRemoteFieldReport,
@@ -323,7 +324,7 @@ function AskPanel({
   searchContext: SearchContext;
   setRequestDraft: (value: string) => void;
 }) {
-  const rows = myQuestions.length > 0 ? myQuestions : getDefaultAskRows(searchContext.place);
+  const rows = myQuestions;
 
   return (
     <>
@@ -485,7 +486,7 @@ function ReportQuestionItem({
           <View style={[styles.reportAvatar, variant === 'answered' && styles.reportAvatarAnswer]} />
           <View>
             <Text style={styles.reportAuthorName}>{request.place}</Text>
-            <Text style={styles.reportMetaSmall}>{request.time} · {request.status}</Text>
+            <Text style={styles.reportMetaSmall}>{formatPostTime(request.createdAt)} · {request.status}</Text>
           </View>
         </View>
         {canEdit ? (
@@ -551,7 +552,7 @@ function FieldReportPost({
         <View style={styles.reportPhotoOverlay}>
           <Text style={styles.reportPhotoTag}>{report.place}</Text>
           <Text numberOfLines={3} style={styles.reportPhotoTitle}>{report.body}</Text>
-          <Text style={styles.reportPhotoMeta}>현장 제보 · {report.time}</Text>
+          <Text style={styles.reportPhotoMeta}>현장 제보 · {formatPostTime(report.createdAt)}</Text>
         </View>
       </View>
     );
@@ -564,7 +565,7 @@ function FieldReportPost({
           <View style={styles.reportAvatar} />
           <View>
             <Text style={styles.reportAuthorName}>{report.place}</Text>
-            <Text style={styles.reportMetaSmall}>현장 제보 · {report.time}</Text>
+            <Text style={styles.reportMetaSmall}>현장 제보 · {formatPostTime(report.createdAt)}</Text>
           </View>
         </View>
         {canEdit ? (
@@ -589,7 +590,7 @@ function FieldReportPost({
             ]}
           >
             <Text style={styles.reportIssueText}>
-              {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+              {report.moderationStatus === 'pending' ? '신고됨' : '신고'}
             </Text>
           </Pressable>
         )}
@@ -618,7 +619,7 @@ function ReplyList({ replies, emptyText }: { replies: LocalReport[]; emptyText: 
     <View style={styles.reportAnswerBubble}>
       {replies.map((reply, index) => (
         <Text key={`${reply.id ?? reply.body}-${index}`} style={styles.reportAnswerText}>
-          {`${reply.place} · ${reply.time}\n${reply.body}`}
+          {`${reply.place} · ${formatPostTime(reply.createdAt)}\n${reply.body}`}
         </Text>
       ))}
     </View>
@@ -859,7 +860,7 @@ function createNationalReports(reports: LocalReport[]) {
     },
   ];
 
-  return [...reports, ...nationalReports].sort((a, b) => {
+  return reports.sort((a, b) => {
     const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 

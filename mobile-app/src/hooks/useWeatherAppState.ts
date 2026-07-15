@@ -181,7 +181,7 @@ export function useWeatherAppState() {
     if (locationStatus.phase === 'checking') return;
 
     locationAutoRefreshRequestedRef.current = true;
-    refreshLocationStatus();
+    refreshCurrentLocation();
   }, [isPersistenceReady, locationStatus.phase]);
 
   useEffect(() => {

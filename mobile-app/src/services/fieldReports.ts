@@ -200,14 +200,12 @@ export function normalizeFieldReportSnapshot(
   snapshot: ApiFieldReportSnapshot,
   fallbackContext: SearchContext,
 ): FieldReportSnapshot {
-  const fallbackSnapshot = getMockFieldReportSnapshot([], fallbackContext);
-
   return {
     context: snapshot.context ?? fallbackContext,
     generatedAt: snapshot.generatedAt ?? new Date().toISOString(),
     source: snapshot.source ?? 'api',
-    reports: hasItems(snapshot.reports) ? snapshot.reports : fallbackSnapshot.reports,
-    requests: hasItems(snapshot.requests) ? snapshot.requests : fallbackSnapshot.requests,
+    reports: Array.isArray(snapshot.reports) ? snapshot.reports : [],
+    requests: Array.isArray(snapshot.requests) ? snapshot.requests : [],
   };
 }
 

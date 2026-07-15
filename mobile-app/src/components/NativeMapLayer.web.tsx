@@ -43,6 +43,7 @@ export function NativeMapLayer({
 }: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<unknown | null>(null);
+  const centerOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
   const overlaysRef = useRef<Array<{ setMap: (map: unknown | null) => void }>>([]);
   const [kakaoReady, setKakaoReady] = useState(false);
   const [kakaoFailed, setKakaoFailed] = useState(false);
@@ -96,6 +97,37 @@ export function NativeMapLayer({
       isDisposed = true;
     };
   }, [center.latitude, center.longitude, kakaoReady, shouldUseKakao]);
+
+  useEffect(() => {
+    if (!shouldUseKakao || !kakaoReady || !mapRef.current) return;
+
+    const kakao = (window as KakaoWindow).kakao?.maps;
+    const CustomOverlay = kakao?.CustomOverlay;
+    if (!kakao || !CustomOverlay) return;
+
+    centerOverlayRef.current?.setMap(null);
+    const centerOverlay = new CustomOverlay({
+      clickable: false,
+      content: createCenterPinElement(searchContext.place),
+      position: new kakao.LatLng(center.latitude, center.longitude),
+      xAnchor: 0.5,
+      yAnchor: 1,
+      zIndex: 35,
+    });
+    centerOverlay.setMap(mapRef.current);
+    centerOverlayRef.current = centerOverlay;
+
+    return () => {
+      centerOverlay.setMap(null);
+      if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
+    };
+  }, [
+    center.latitude,
+    center.longitude,
+    kakaoReady,
+    searchContext.place,
+    shouldUseKakao,
+  ]);
 
   useEffect(() => {
     if (!shouldUseKakao || !kakaoReady || !mapRef.current) return;
@@ -308,6 +340,22 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   return element;
 }
 
+function createCenterPinElement(place: string) {
+  ensureClusterAnimationStyle();
+
+  const element = document.createElement('div');
+  const pin = document.createElement('span');
+  const label = document.createElement('span');
+
+  element.className = 'weather-check-center-pin';
+  pin.className = 'weather-check-center-pin-dot';
+  label.className = 'weather-check-center-pin-label';
+  label.textContent = place;
+  element.append(pin, label);
+
+  return element;
+}
+
 function ensureClusterAnimationStyle() {
   const existingStyle = document.getElementById('weather-check-cluster-animation-style');
   const style = existingStyle ?? document.createElement('style');
@@ -395,6 +443,40 @@ function ensureClusterAnimationStyle() {
       padding: 1px 7px;
       pointer-events: none;
       text-align: center;
+    }
+    .weather-check-center-pin {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      pointer-events: none;
+      transform: translateY(-4px);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .weather-check-center-pin-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: #242424;
+      border: 5px solid rgba(255,255,255,0.92);
+      box-shadow: 0 14px 24px rgba(36,36,36,0.24);
+      box-sizing: border-box;
+      display: block;
+    }
+    .weather-check-center-pin-label {
+      max-width: 132px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      box-shadow: 0 8px 18px rgba(36,36,36,0.14);
+      color: #242424;
+      display: block;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 16px;
+      padding: 3px 8px;
     }
   `;
   if (!existingStyle) document.head.appendChild(style);

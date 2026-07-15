@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DecisionCard } from '../components/DecisionCard';
 import { EmptyState } from '../components/EmptyState';
 import { getFieldReportPlaceDisplay, getNearbySectionTitle } from '../domain/locationDisplay';
+import { formatPostTime } from '../domain/timeDisplay';
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
 import type { DataStatus, LocationStatus } from '../types/appState';
@@ -136,7 +137,7 @@ export function DecisionScreen({
               <View key={`${report.place}-${index}`} style={styles.reportItem}>
                 <View style={styles.reportContent}>
                   <Text style={styles.reportMeta}>
-                    {report.place} · {report.time}
+                    {report.place} · {formatPostTime(report.createdAt)}
                   </Text>
                   <Text style={styles.reportBody}>{report.body}</Text>
                 </View>
@@ -151,7 +152,7 @@ export function DecisionScreen({
                     ]}
                   >
                     <Text style={styles.reportIssueText}>
-                      {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+                      {report.moderationStatus === 'pending' ? '신고됨' : '신고'}
                     </Text>
                   </Pressable>
                 </View>

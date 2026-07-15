@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { NativeMapLayer } from './NativeMapLayer';
+import { formatPostTime } from '../domain/timeDisplay';
 import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
 import type { LocalReport, LocationReference, MapReportCluster, SearchContext, WeatherPreset } from '../types/weather';
@@ -168,7 +169,7 @@ export function FieldReportMapCard({
                 <View key={`${report.id ?? report.body}-${index}`} style={styles.mapSheetReportItem}>
                   <View style={styles.mapSheetReportMain}>
                     <Text numberOfLines={1} style={styles.mapSheetReportMeta}>
-                      {report.time} · {report.place}
+                      {formatPostTime(report.createdAt)} · {report.place}
                     </Text>
                     <Text numberOfLines={2} style={styles.mapSheetReportBody}>
                       {report.body}
@@ -185,7 +186,7 @@ export function FieldReportMapCard({
                       ]}
                     >
                       <Text style={styles.mapSheetIssueText}>
-                        {report.moderationStatus === 'pending' ? '검토중' : '신고'}
+                        {report.moderationStatus === 'pending' ? '신고됨' : '신고'}
                       </Text>
                     </Pressable>
                   </View>

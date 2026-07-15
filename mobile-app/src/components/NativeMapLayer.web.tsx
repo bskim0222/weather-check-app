@@ -350,6 +350,7 @@ function createCenterPinElement(place: string) {
   element.className = 'weather-check-center-pin';
   pin.className = 'weather-check-center-pin-dot';
   label.className = 'weather-check-center-pin-label';
+  pin.textContent = '⌖';
   label.textContent = place;
   element.append(pin, label);
 
@@ -380,6 +381,11 @@ function ensureClusterAnimationStyle() {
       0% { opacity: 0.44; transform: translate(-50%, -50%) scale(0.82); }
       70% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
       100% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
+    }
+    @keyframes weatherCheckCenterPinPulse {
+      0% { opacity: 0.34; transform: translate(-50%, -50%) scale(0.84); }
+      76% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
     }
     .weather-check-cluster-marker {
       align-items: center;
@@ -448,35 +454,55 @@ function ensureClusterAnimationStyle() {
       align-items: center;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 7px;
       pointer-events: none;
-      transform: translateY(-4px);
+      transform: translateY(-7px);
       user-select: none;
       white-space: nowrap;
     }
     .weather-check-center-pin-dot {
-      width: 22px;
-      height: 22px;
+      align-items: center;
+      width: 42px;
+      height: 42px;
       border-radius: 999px;
       background: #242424;
-      border: 5px solid rgba(255,255,255,0.92);
-      box-shadow: 0 14px 24px rgba(36,36,36,0.24);
+      border: 4px solid rgba(255,255,255,0.96);
+      box-shadow: 0 16px 28px rgba(36,36,36,0.32);
       box-sizing: border-box;
-      display: block;
+      color: #ffffff;
+      display: flex;
+      font-size: 25px;
+      font-weight: 900;
+      justify-content: center;
+      line-height: 1;
+      position: relative;
+    }
+    .weather-check-center-pin-dot::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      background: #242424;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      animation: weatherCheckCenterPinPulse 1.65s ease-out infinite;
     }
     .weather-check-center-pin-label {
-      max-width: 132px;
+      max-width: 156px;
       overflow: hidden;
       text-overflow: ellipsis;
       border-radius: 999px;
-      background: rgba(255,255,255,0.88);
-      box-shadow: 0 8px 18px rgba(36,36,36,0.14);
-      color: #242424;
+      background: rgba(36,36,36,0.88);
+      box-shadow: 0 10px 20px rgba(36,36,36,0.18);
+      color: #ffffff;
       display: block;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 900;
-      line-height: 16px;
-      padding: 3px 8px;
+      line-height: 18px;
+      padding: 4px 10px;
     }
   `;
   if (!existingStyle) document.head.appendChild(style);

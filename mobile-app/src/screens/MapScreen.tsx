@@ -58,15 +58,15 @@ export function MapScreen({
 }
 
 function getMapReportsForContext(reports: LocalReport[], searchContext: SearchContext) {
-  const visibleReports = visibleReportsOnly(reports);
+  const contextPlaces = [
+    searchContext.place,
+    searchContext.target.label,
+    searchContext.locationQuery ?? '',
+  ].filter(Boolean);
 
-  if (isCurrentLocationContext(searchContext)) return visibleReports;
-
-  const relatedReports = visibleReports.filter((report) =>
-    isRelatedPlace(report.place, searchContext.place),
-  );
-
-  return relatedReports;
+  return visibleReportsOnly(reports)
+    .filter((report) => report.source !== 'mock')
+    .filter((report) => contextPlaces.some((contextPlace) => isRelatedPlace(report.place, contextPlace)));
 }
 
 function createMapReportClusters(reports: LocalReport[], fallbackPlace: string): MapReportCluster[] {
@@ -81,44 +81,103 @@ function createMapReportClusters(reports: LocalReport[], fallbackPlace: string):
 
   return Array.from(groups.entries()).map(([label, group], index) => ({
     id: `cluster-${index}-${label}`,
-    label: label.includes('주변') ? label : `${label} 주변`,
+    label: `${label} 주변`,
     count: group.length,
     dominantCondition: getDominantCondition(group),
-    privacyRadiusLabel: '약 700m 묶음',
+    privacyRadiusLabel: '약 1.5km 묶음',
     reports: group,
   }));
 }
 
 function normalizeClusterLabel(place: string) {
-  const clean = place.trim();
-  if (!clean) return '내 주변';
+  const clean = normalizePlaceText(place);
+  if (!clean) return '현재 위치';
 
   const parts = clean.split(/\s+/).filter(Boolean);
   const neighborhood = parts.find((part) => /(동|읍|면|리|가)$/.test(part));
-  if (neighborhood) return neighborhood;
+  if (neighborhood) return neighborhood.replace(/[0-9-]/g, '');
+
+  const district = parts.find((part) => /(구|군|시)$/.test(part) && !isBroadPlaceToken(part));
+  if (district) return district;
 
   return parts.at(-1) ?? clean;
-}
-
-function isCurrentLocationContext(searchContext: SearchContext) {
-  return searchContext.target.kind === 'current' || searchContext.place === '현재 위치';
 }
 
 function isRelatedPlace(reportPlace: string, contextPlace: string) {
   const reportTokens = tokenizePlace(reportPlace);
   const contextTokens = tokenizePlace(contextPlace);
 
-  return contextTokens.some((token) =>
-    reportTokens.some((reportToken) => reportToken.includes(token) || token.includes(reportToken)),
-  );
+  if (reportTokens.length === 0 || contextTokens.length === 0) return false;
+
+  return contextTokens.some((token) => {
+    if (isBroadPlaceToken(token)) return false;
+
+    return reportTokens.some((reportToken) => {
+      if (isBroadPlaceToken(reportToken)) return false;
+      return reportToken.includes(token) || token.includes(reportToken);
+    });
+  });
 }
 
 function tokenizePlace(place: string) {
-  return place
+  return normalizePlaceText(place)
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .split(/\s+/)
     .map((token) => token.trim())
-    .filter((token) => token.length >= 2);
+    .filter((token) => token.length >= 2)
+    .filter((token) => !/^\d+$/.test(token));
+}
+
+function normalizePlaceText(place: string) {
+  return place
+    .replace(/대한민국/g, ' ')
+    .replace(/현재\s*위치/g, ' ')
+    .replace(/[()·,]/g, ' ')
+    .replace(/\d+(?:-\d+)?/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isBroadPlaceToken(token: string) {
+  return [
+    '서울',
+    '서울시',
+    '서울특별시',
+    '부산',
+    '부산시',
+    '부산광역시',
+    '대구',
+    '대구시',
+    '인천',
+    '인천시',
+    '광주',
+    '광주시',
+    '대전',
+    '대전시',
+    '울산',
+    '울산시',
+    '세종',
+    '세종시',
+    '경기',
+    '경기도',
+    '강원',
+    '강원도',
+    '충북',
+    '충청북도',
+    '충남',
+    '충청남도',
+    '전북',
+    '전라북도',
+    '전남',
+    '전라남도',
+    '경북',
+    '경상북도',
+    '경남',
+    '경상남도',
+    '제주',
+    '제주도',
+    '제주특별자치도',
+  ].includes(token);
 }
 
 function getDominantCondition(reports: LocalReport[]) {

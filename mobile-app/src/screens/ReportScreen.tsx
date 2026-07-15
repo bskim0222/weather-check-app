@@ -65,7 +65,7 @@ export function ReportScreen({
   );
   const orderedReports = fieldSnapshot.reports;
   const orderedRequests = fieldSnapshot.requests.filter((request) => request.source !== 'mock');
-  const visibleReports = createNationalReports(orderedReports);
+  const visibleReports = orderLiveReports(orderedReports);
   const myQuestions = orderedRequests.filter((request) => request.source === 'local');
   const selectedRequest = useMemo(
     () => orderedRequests.find((request) => request.id === selectedRequestId),
@@ -445,7 +445,6 @@ function FeedPanel({
             <FieldReportPost
               key={`${report.id ?? report.place}-${report.body}-${index}`}
               report={report}
-              featured={index === 2}
               onDeleteReport={onDeleteReport}
               onEditReport={onEditReport}
               onReportIssue={onReportIssue}
@@ -532,31 +531,17 @@ function ReportQuestionItem({
   );
 }
 function FieldReportPost({
-  featured,
   onDeleteReport,
   onEditReport,
   onReportIssue,
   report,
 }: {
-  featured: boolean;
   onDeleteReport: (reportId: string) => void;
   onEditReport: (report: LocalReport) => void;
   onReportIssue: (report: LocalReport) => void;
   report: LocalReport;
 }) {
   const canEdit = report.source === 'local' && Boolean(report.id);
-
-  if (featured) {
-    return (
-      <View style={styles.reportPhotoPostCard}>
-        <View style={styles.reportPhotoOverlay}>
-          <Text style={styles.reportPhotoTag}>{report.place}</Text>
-          <Text numberOfLines={3} style={styles.reportPhotoTitle}>{report.body}</Text>
-          <Text style={styles.reportPhotoMeta}>현장 제보 · {formatPostTime(report.createdAt)}</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.reportPostCard}>
@@ -782,85 +767,8 @@ function getRequestMark(question: string) {
   return place.slice(0, 1) || '?';
 }
 
-function getDefaultAskRows(place: string): ReportRequest[] {
-  return [
-    {
-      id: 'sample-question-gwangalli',
-      question: '광안리 바람 많이 부나요?',
-      hint: '현장 답변을 기다리는 중',
-      place: '광안리',
-      distance: '질문 지역',
-      answers: 0,
-      time: '1분 전',
-      status: '답변 대기',
-      mark: '광',
-      accent: '#8fb9c8',
-      source: 'mock',
-    },
-    {
-      id: 'sample-question-hongdae',
-      question: '홍대 앞 우산 필요할까요?',
-      hint: '현장 답변 1개',
-      place: '홍대 앞',
-      distance: '질문 지역',
-      answers: 1,
-      time: '9분 전',
-      status: '답변 있음',
-      mark: '홍',
-      accent: '#f4d5d0',
-      source: 'mock',
-    },
-    {
-      id: 'sample-question-context',
-      question: `${place} 지금 걸어다니기 괜찮나요?`,
-      hint: '현장 답변을 기다리는 중',
-      place,
-      distance: '검색 지역',
-      answers: 0,
-      time: '방금',
-      status: '답변 대기',
-      mark: place.slice(0, 1) || '?',
-      accent: '#f4f5f2',
-      source: 'mock',
-    },
-  ];
-}
-
-function createNationalReports(reports: LocalReport[]) {
-  const nationalReports: LocalReport[] = [
-    {
-      id: 'national-report-seoul-cloud',
-      place: '광화문',
-      time: '3분 전',
-      condition: '흐림',
-      body: '하늘은 많이 어둡지만 아직 비는 안 와요. 바람은 약한 편이에요.',
-      createdAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      moderationStatus: 'visible',
-      source: 'mock',
-    },
-    {
-      id: 'national-report-busan-wind',
-      place: '광안리',
-      time: '8분 전',
-      condition: '바람',
-      body: '바닷가 쪽은 바람이 꽤 있어요. 우산 쓰기는 조금 불편할 것 같아요.',
-      createdAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-      moderationStatus: 'visible',
-      source: 'mock',
-    },
-    {
-      id: 'national-report-jeju-clear',
-      place: '제주공항',
-      time: '15분 전',
-      condition: '맑음',
-      body: '구름은 있지만 시야가 좋아요. 비 느낌은 거의 없습니다.',
-      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      moderationStatus: 'visible',
-      source: 'mock',
-    },
-  ];
-
-  return reports.sort((a, b) => {
+function orderLiveReports(reports: LocalReport[]) {
+  return reports.filter((report) => report.source !== 'mock').sort((a, b) => {
     const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 

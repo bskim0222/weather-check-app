@@ -4,9 +4,13 @@ import { createFmiForecastModel } from '../src/providers/fmiEcmwfForecast.mjs';
 import { convertLatLonToKmaGrid, createKmaForecastModel } from '../src/providers/kmaShortForecast.mjs';
 import { createWindyForecastModel } from '../src/providers/windyPointForecast.mjs';
 import { createYrForecastModel } from '../src/providers/yrLocationforecast.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const port = Number(process.env.BACKEND_VERIFY_PORT ?? 8797);
 const baseUrl = `http://127.0.0.1:${port}`;
+const backendRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const server = createBackendServer();
 
 await new Promise((resolve) => {
@@ -21,6 +25,11 @@ try {
   expectEqual(providerStatus.ok, true, 'provider status ok');
   expectEqual(providerStatus.recommendedMode, 'kma,yr,fmi', 'provider recommended mode');
   expectTruthy(providerStatus.providers.length >= 3, 'provider status providers');
+
+  expectTruthy(existsSync(join(backendRoot, 'db', 'schema.sql')), 'postgres schema exists');
+  const envExample = readFileSync(join(backendRoot, '.env.example'), 'utf8');
+  expectTruthy(envExample.includes('REPORT_STORAGE_MODE='), 'storage mode env example');
+  expectTruthy(envExample.includes('DATABASE_URL='), 'database url env example');
 
   const compacted = compactDatabase(createLargeDatabaseFixture());
   expectEqual(compacted.fieldReports.length, storageLimits.maxFieldReports, 'compacted field reports');

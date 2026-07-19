@@ -55,7 +55,7 @@ async function routeRequest(request, response) {
 
   const fieldReportMatch = url.pathname.match(/^\/field-reports\/([^/]+)$/);
 
-  if (fieldReportMatch) {
+  if (fieldReportMatch && fieldReportMatch[1] !== 'snapshot') {
     const database = await readDatabase();
     const reportId = decodeURIComponent(fieldReportMatch[1]);
     const existingReport = database.fieldReports.find((report) => report.id === reportId);
@@ -169,7 +169,7 @@ async function routeRequest(request, response) {
       source: 'api',
       context,
       reports: selectVisibleReports(database.fieldReports, context),
-      requests: selectReportRequests(database.reportRequests, context),
+      requests: selectReportRequests(database.reportRequests, context, database.fieldReports),
     });
     return;
   }
@@ -289,8 +289,45 @@ function selectVisibleReports(reports, context) {
   return visibleReports.slice(0, 20);
 }
 
-function selectReportRequests(requests, context) {
-  return requests.slice(0, 20);
+function selectReportRequests(requests, context, reports = []) {
+  const visibleAnswers = reports.filter(
+    (report) =>
+      report.requestId &&
+      report.moderationStatus !== 'hidden' &&
+      !report.deletedAt,
+  );
+  const answerStatsByRequestId = new Map();
+
+  visibleAnswers.forEach((report) => {
+    const current = answerStatsByRequestId.get(report.requestId) ?? {
+      answers: 0,
+      lastAnsweredAt: '',
+    };
+    const createdAt = typeof report.createdAt === 'string' ? report.createdAt : '';
+
+    answerStatsByRequestId.set(report.requestId, {
+      answers: current.answers + 1,
+      lastAnsweredAt: getTime(createdAt) > getTime(current.lastAnsweredAt) ? createdAt : current.lastAnsweredAt,
+    });
+  });
+
+  return requests
+    .filter((requestItem) => !requestItem.deletedAt)
+    .map((requestItem) => {
+      const stats = answerStatsByRequestId.get(requestItem.id);
+      const storedAnswers = Number.isFinite(requestItem.answers) ? requestItem.answers : 0;
+      const answers = Math.max(storedAnswers, stats?.answers ?? 0);
+
+      return {
+        ...requestItem,
+        answers,
+        status: answers > 0 ? '답변 있음' : requestItem.status,
+        hint: answers > 0 ? `${answers}개의 현장 답변이 있어요.` : requestItem.hint,
+        lastAnsweredAt: stats?.lastAnsweredAt ?? requestItem.lastAnsweredAt,
+      };
+    })
+    .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
+    .slice(0, 20);
 }
 async function readJsonBody(request) {
   const raw = await new Promise((resolve, reject) => {
@@ -396,6 +433,12 @@ function createId(prefix) {
 
 function textOr(value, fallback) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+}
+
+function getTime(value) {
+  const time = Date.parse(value);
+
+  return Number.isFinite(time) ? time : 0;
 }
 
 function upsertById(items, nextItem) {

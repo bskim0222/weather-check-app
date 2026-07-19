@@ -106,3 +106,5 @@ DB 안정화 후 진행.
 - 백엔드가 `REPORT_STORAGE_MODE=postgres` 또는 `DATABASE_URL` 설정 시 Postgres 저장소를 사용할 수 있게 준비
 - `/field-reports/snapshot` 요청이 `/field-reports/:id` 라우트에 잘못 걸릴 수 있는 문제 수정
 - 질문 답변 수를 실제 답변 글 기준으로 보정하도록 백엔드 스냅샷 로직 보강
+- 제보/문의 작성, 수정, 삭제, 신고 라우트가 저장소 전용 함수로 동작하도록 분리
+- Postgres 모드에서 전체 데이터를 덮어쓰지 않고 개별 글 단위로 저장되도록 보강

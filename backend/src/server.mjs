@@ -1,7 +1,19 @@
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 
-import { readDatabase, writeDatabase } from './storage.mjs';
+import {
+  deleteFieldReportById,
+  deleteReportRequestById,
+  findFieldReportById,
+  findReportRequestById,
+  moderateFieldReportById,
+  readDatabase,
+  saveFieldReport,
+  saveReportRequest,
+  updateFieldReportById,
+  updateReportRequestAnswerStatus,
+  updateReportRequestById,
+} from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
 import { diagnoseKakaoLocal, geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
 
@@ -56,9 +68,8 @@ async function routeRequest(request, response) {
   const fieldReportMatch = url.pathname.match(/^\/field-reports\/([^/]+)$/);
 
   if (fieldReportMatch && fieldReportMatch[1] !== 'snapshot') {
-    const database = await readDatabase();
     const reportId = decodeURIComponent(fieldReportMatch[1]);
-    const existingReport = database.fieldReports.find((report) => report.id === reportId);
+    const existingReport = await findFieldReportById(reportId);
 
     if (!existingReport) {
       sendJson(response, 404, { error: 'Field report not found.' });
@@ -66,21 +77,13 @@ async function routeRequest(request, response) {
     }
 
     if (request.method === 'PATCH') {
-      const updatedReport = {
-        ...existingReport,
-        condition: textOr(payload.condition, existingReport.condition),
-        body: textOr(payload.body, existingReport.body),
-        updatedAt: new Date().toISOString(),
-      };
-      database.fieldReports = upsertById(database.fieldReports, updatedReport);
-      await writeDatabase(database);
+      const updatedReport = await updateFieldReportById(reportId, payload);
       sendJson(response, 200, updatedReport);
       return;
     }
 
     if (request.method === 'DELETE') {
-      database.fieldReports = database.fieldReports.filter((report) => report.id !== reportId);
-      await writeDatabase(database);
+      await deleteFieldReportById(reportId);
       sendJson(response, 200, { ok: true, reportId });
       return;
     }
@@ -89,9 +92,8 @@ async function routeRequest(request, response) {
   const reportRequestMatch = url.pathname.match(/^\/report-requests\/([^/]+)$/);
 
   if (reportRequestMatch) {
-    const database = await readDatabase();
     const requestId = decodeURIComponent(reportRequestMatch[1]);
-    const existingRequest = database.reportRequests.find((requestItem) => requestItem.id === requestId);
+    const existingRequest = await findReportRequestById(requestId);
 
     if (!existingRequest) {
       sendJson(response, 404, { error: 'Report request not found.' });
@@ -99,21 +101,13 @@ async function routeRequest(request, response) {
     }
 
     if (request.method === 'PATCH') {
-      const updatedRequest = {
-        ...existingRequest,
-        question: textOr(payload.question, existingRequest.question),
-        updatedAt: new Date().toISOString(),
-      };
-      database.reportRequests = upsertById(database.reportRequests, updatedRequest);
-      await writeDatabase(database);
+      const updatedRequest = await updateReportRequestById(requestId, payload);
       sendJson(response, 200, updatedRequest);
       return;
     }
 
     if (request.method === 'DELETE') {
-      database.reportRequests = database.reportRequests.filter((requestItem) => requestItem.id !== requestId);
-      database.fieldReports = database.fieldReports.filter((report) => report.requestId !== requestId);
-      await writeDatabase(database);
+      await deleteReportRequestById(requestId);
       sendJson(response, 200, { ok: true, requestId });
       return;
     }
@@ -175,45 +169,29 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/field-reports') {
-    const database = await readDatabase();
     const report = createFieldReport(payload);
-    database.fieldReports = upsertById(database.fieldReports, report);
-    await writeDatabase(database);
-    sendJson(response, 201, report);
+    sendJson(response, 201, await saveFieldReport(report));
     return;
   }
 
   if (url.pathname === '/report-requests') {
-    const database = await readDatabase();
     const reportRequest = createReportRequest(payload);
-    database.reportRequests = upsertById(database.reportRequests, reportRequest);
-    await writeDatabase(database);
-    sendJson(response, 201, reportRequest);
+    sendJson(response, 201, await saveReportRequest(reportRequest));
     return;
   }
 
   const requestAnswerMatch = url.pathname.match(/^\/report-requests\/([^/]+)\/answer$/);
 
   if (requestAnswerMatch) {
-    const database = await readDatabase();
     const requestId = decodeURIComponent(requestAnswerMatch[1]);
-    const existingRequest = database.reportRequests.find((requestItem) => requestItem.id === requestId);
+    const existingRequest = await findReportRequestById(requestId);
 
     if (!existingRequest) {
       sendJson(response, 404, { error: 'Report request not found.' });
       return;
     }
 
-    const updatedRequest = {
-      ...existingRequest,
-      answers: Number.isFinite(existingRequest.answers) ? existingRequest.answers + 1 : 1,
-      status: textOr(payload.status, '답변 받는 중'),
-      hint: textOr(payload.hint, '방금 답변이 추가됐어요.'),
-      lastAnsweredAt: new Date().toISOString(),
-    };
-
-    database.reportRequests = upsertById(database.reportRequests, updatedRequest);
-    await writeDatabase(database);
+    const updatedRequest = await updateReportRequestAnswerStatus(requestId, payload);
     sendJson(response, 200, updatedRequest);
     return;
   }
@@ -221,27 +199,10 @@ async function routeRequest(request, response) {
   const moderationMatch = url.pathname.match(/^\/reports\/([^/]+)\/moderation$/);
 
   if (moderationMatch) {
-    const database = await readDatabase();
     const reportId = decodeURIComponent(moderationMatch[1]);
     const moderationStatus = payload.moderationStatus === 'hidden' ? 'hidden' : 'pending';
 
-    database.fieldReports = database.fieldReports.map((report) =>
-      report.id === reportId
-        ? {
-            ...report,
-            moderationStatus,
-          }
-        : report,
-    );
-    database.moderationEvents.unshift({
-      id: createId('moderation'),
-      reportId,
-      moderationStatus,
-      reason: typeof payload.reason === 'string' ? payload.reason : '',
-      createdAt: new Date().toISOString(),
-    });
-    await writeDatabase(database);
-    sendJson(response, 200, { ok: true, reportId, moderationStatus });
+    sendJson(response, 200, await moderateFieldReportById(reportId, moderationStatus, payload.reason));
     return;
   }
 
@@ -439,10 +400,6 @@ function getTime(value) {
   const time = Date.parse(value);
 
   return Number.isFinite(time) ? time : 0;
-}
-
-function upsertById(items, nextItem) {
-  return [nextItem, ...items.filter((item) => item.id !== nextItem.id)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

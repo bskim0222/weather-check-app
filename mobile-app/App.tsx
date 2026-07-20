@@ -43,6 +43,7 @@ export default function App() {
           <View style={styles.mapTabFrame}>
             <MapScreen
               current={appState.current}
+              requests={appState.reportRequests}
               reports={appState.reports}
               searchContext={appState.searchContext}
               questionText={appState.questionText}

@@ -48,7 +48,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
           <Text numberOfLines={1} style={[styles.figmaWeatherEyebrow, { color: figma.dim }]}>
             {searchContext.timeLabel}
           </Text>
-          <Text numberOfLines={1} style={[styles.figmaWeatherCity, { color: figma.ink }]}>
+          <Text style={[styles.figmaWeatherCity, { color: figma.ink }]}>
             {placeLabel}
           </Text>
         </View>
@@ -78,7 +78,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
         >
           {title}
         </Text>
-        <Text numberOfLines={3} style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
+        <Text style={[styles.figmaWeatherSummary, { color: figma.dim }]}>
           {current.summary}
         </Text>
       </View>
@@ -139,20 +139,15 @@ function ForecastSourceMiniCard({
       <View style={styles.figmaWeatherSourceBody}>
         <ForecastMiniIcon condition={source.condition} stroke={figma.ink} dim={figma.dim} />
         <View style={styles.figmaWeatherSourceTextBlock}>
-          <Text numberOfLines={1} style={[styles.figmaWeatherSourceWeather, { color: figma.ink }]}>
+          <Text style={[styles.figmaWeatherSourceWeather, { color: figma.ink }]}>
             {source.condition}
           </Text>
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.68}
-            style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}
-          >
+          <Text style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}>
             {source.temp}
           </Text>
         </View>
       </View>
-      <Text numberOfLines={1} style={[styles.figmaWeatherSourceDetail, { color: figma.dim }]}>
+      <Text style={[styles.figmaWeatherSourceDetail, { color: figma.dim }]}>
         {source.detail}
       </Text>
     </Pressable>

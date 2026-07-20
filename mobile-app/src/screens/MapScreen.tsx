@@ -4,10 +4,11 @@ import { View } from 'react-native';
 import { FieldReportMapCard } from '../components/FieldReportMapCard';
 import { visibleReportsOnly } from '../domain/moderation';
 import { styles } from '../styles/appStyles';
-import type { LocalReport, MapReportCluster, SearchContext, WeatherPreset } from '../types/weather';
+import type { LocalReport, MapReportCluster, ReportRequest, SearchContext, WeatherPreset } from '../types/weather';
 
 type MapScreenProps = {
   current: WeatherPreset;
+  requests: ReportRequest[];
   reports: LocalReport[];
   searchContext: SearchContext;
   questionText: string;
@@ -18,6 +19,7 @@ type MapScreenProps = {
 
 export function MapScreen({
   current,
+  requests,
   reports,
   searchContext,
   questionText,
@@ -25,7 +27,10 @@ export function MapScreen({
   onSearchLocation,
   onReportIssue,
 }: MapScreenProps) {
-  const mapReports = useMemo(() => getMapReportsForContext(reports, searchContext), [reports, searchContext]);
+  const mapReports = useMemo(
+    () => getMapReportsForContext([...reports, ...requests.map(requestToMapReport)], searchContext),
+    [reports, requests, searchContext],
+  );
   const visibleClusters = useMemo(
     () => createMapReportClusters(mapReports, searchContext.place),
     [mapReports, searchContext.place],
@@ -55,6 +60,20 @@ export function MapScreen({
       />
     </View>
   );
+}
+
+function requestToMapReport(request: ReportRequest): LocalReport {
+  return {
+    id: `map-request-${request.id}`,
+    requestId: request.id,
+    place: request.place,
+    time: request.time,
+    condition: request.mark || 'question',
+    body: request.question,
+    createdAt: request.createdAt,
+    moderationStatus: 'visible',
+    source: request.source,
+  };
 }
 
 function getMapReportsForContext(reports: LocalReport[], searchContext: SearchContext) {

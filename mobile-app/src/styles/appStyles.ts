@@ -818,6 +818,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   figmaWeatherCity: {
+    flexShrink: 1,
     fontSize: 20,
     lineHeight: 24,
     fontWeight: '900',
@@ -1290,7 +1291,7 @@ export const styles = StyleSheet.create({
   figmaWeatherSourceCard: {
     flex: 1,
     minWidth: 0,
-    minHeight: 82,
+    minHeight: 94,
     borderRadius: 17,
     paddingHorizontal: 7,
     paddingVertical: 9,
@@ -1319,28 +1320,31 @@ export const styles = StyleSheet.create({
   figmaWeatherSourceBody: {
     marginTop: 5,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+    alignItems: 'flex-start',
+    gap: 3,
   },
   figmaWeatherSourceTextBlock: {
     flex: 1,
     minWidth: 0,
   },
   figmaWeatherSourceWeather: {
-    fontSize: 12,
-    lineHeight: 15,
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: '900',
   },
   figmaWeatherSourceTemp: {
     marginTop: 1,
-    fontSize: 14,
-    lineHeight: 18,
+    flexShrink: 0,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: '900',
   },
   figmaWeatherSourceDetail: {
     marginTop: 4,
-    fontSize: 10,
-    lineHeight: 12,
+    flexShrink: 1,
+    fontSize: 9,
+    lineHeight: 11,
     fontWeight: '900',
   },
   providerDetailBackdrop: {

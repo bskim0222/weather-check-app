@@ -177,7 +177,6 @@ export function useWeatherAppState() {
     if (!isPersistenceReady) return;
 
     if (locationAutoRefreshRequestedRef.current) return;
-    if (locationStatus.phase === 'checking') return;
 
     locationAutoRefreshRequestedRef.current = true;
     refreshCurrentLocation();
@@ -194,7 +193,10 @@ export function useWeatherAppState() {
       reportText,
       reports,
       reportRequests,
-      locationStatus,
+      locationStatus:
+        locationStatus.phase === 'checking'
+          ? initialLocationStatus
+          : locationStatus,
       judgement: {
         weatherKey,
         searchContext,

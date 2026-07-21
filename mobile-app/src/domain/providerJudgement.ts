@@ -57,7 +57,12 @@ export function createProviderAdjustedPreset(
   };
   const visualPreset = weatherPresets[voteStats.consensus.key] ?? weatherPresets.cloudy;
   const temp = getAverageTemperatureFromCells(currentCells) ?? basePreset.temp;
-  const sources = createSyncedSources(currentEntries, providerSnapshot.sources, providerSnapshot.summaries);
+  const sources = createSyncedSources(
+    currentEntries,
+    providerSnapshot.sources,
+    providerSnapshot.summaries,
+    providerSnapshot.source === 'api',
+  );
   const copy = createSummaryCopy(sources.filter(isUsableForecastSource), voteStats);
 
   return {
@@ -95,6 +100,7 @@ function createSyncedSources(
   entries: ProviderCellEntry[],
   fallbackSources: ForecastSource[],
   summaries: WeatherProviderSnapshot['summaries'],
+  isLiveSnapshot: boolean,
 ): ForecastSource[] {
   return entries.map(({ cell, index }) => {
     const summary = summaries[index];
@@ -106,9 +112,9 @@ function createSyncedSources(
       name: summary?.name ?? fallback?.name ?? getFallbackProviderName(index),
       mark: summary?.mark ?? fallback?.mark ?? cell.mark,
       condition: cell.weather,
-      temp: getTemperatureFromDetail(cell.detail) ?? summary?.value ?? fallback?.temp ?? '--',
+      temp: getTemperatureFromDetail(cell.detail) ?? (isLiveSnapshot ? '--' : fallback?.temp ?? '--'),
       detail: cell.detail,
-      badge: summary?.summary ?? fallback?.badge ?? cell.weather,
+      badge: fallback?.badge ?? summary?.summary ?? cell.weather,
       color: summary?.color ?? fallback?.color ?? '#222222',
     };
   });
@@ -432,11 +438,11 @@ function getPrecipitationFromDetail(detail: string | undefined) {
 }
 
 function normalizeProviderName(name: string) {
-  if (name.includes('대한민국') || name.includes('기상청') || name.includes('KMA')) return '대한민국 기상청';
   if (name.includes('노르웨이') || name.includes('Yr') || name.includes('MET Norway')) return '노르웨이 기상청';
   if (name.includes('핀란드') || name.includes('FMI') || name.includes('ECMWF') || name.toLowerCase().includes('windy')) {
     return '핀란드 기상청';
   }
+  if (name.includes('대한민국') || name.includes('기상청') || name.includes('KMA')) return '대한민국 기상청';
 
   return name;
 }

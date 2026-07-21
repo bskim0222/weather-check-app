@@ -35,7 +35,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
   const normalizedCondition = normalizeWeatherCondition(current.condition);
   const placeLabel = getDecisionPlaceLabel(searchContext, locationStatus);
   const title = getDisplayTitle(current.title);
-  const artworkCaption = getArtworkCaption(normalizedCondition);
+  const artworkCaption = getArtworkCaption(normalizedCondition, current.level);
   const figma = getFigmaPreset(normalizedCondition);
   const forecastSources = getSyncedForecastSources(current);
 
@@ -64,7 +64,9 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
           <Text style={[styles.figmaWeatherTemp, { color: figma.ink }]}>{current.temp}</Text>
           <Text style={[styles.figmaWeatherDegree, { color: figma.dim }]}>°C</Text>
         </View>
-        <Text style={[styles.figmaWeatherCondition, { color: figma.ink }]}>{getDecisionSignalValue(normalizedCondition)}</Text>
+        <Text style={[styles.figmaWeatherCondition, { color: figma.ink }]}>
+          {getDecisionSignalValue(normalizedCondition, current.level)}
+        </Text>
         <Text numberOfLines={2} style={[styles.figmaWeatherSub, { color: figma.dim }]}>
           {artworkCaption}
         </Text>
@@ -437,7 +439,9 @@ function getCompactSignal(condition: string, signal: string) {
   return signal;
 }
 
-function getDecisionSignalValue(condition: string) {
+function getDecisionSignalValue(condition: string, level: string) {
+  if (level === '갈림') return '예보 갈림';
+  if (level === '확인 중') return '예보 확인 중';
   if (condition === '맑음') return '맑음 우세';
   if (condition === '비') return '비 우세';
   if (condition === '소나기') return '소나기 가능';
@@ -453,7 +457,9 @@ function getDecisionSignalValue(condition: string) {
   return '흐림 우세';
 }
 
-function getArtworkCaption(condition: string) {
+function getArtworkCaption(condition: string, level: string) {
+  if (level === '갈림') return '같은 시간 예보가 서로 달라요';
+  if (level === '확인 중') return '제공값을 다시 확인하고 있어요';
   if (condition === '맑음') return '비 신호는 거의 없어요';
   if (condition === '비') return '세 기상청 예보가 비 쪽으로 모여 있어요';
   if (condition === '소나기') return '짧고 강한 비 신호가 보여요';

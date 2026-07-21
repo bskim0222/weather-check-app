@@ -139,7 +139,26 @@ expectEqual(alignedPreset.temp, 29, 'representative temperature uses aligned usa
 expectEqual(alignedPreset.sources[0].condition, '비', 'summary first source uses aligned row');
 expectEqual(alignedPreset.sources[1].condition, '자료 없음', 'summary second source remains explicit');
 expectEqual(alignedPreset.sources[2].condition, '자료 없음', 'summary missing source remains explicit');
+expectEqual(alignedPreset.sources[1].temp, '--', 'live missing temperature never falls back to an unrelated value');
 expectEqual(alignedPreset.forecastRows.length, 1, 'live forecast rows never append mock hours');
 expectTruthy(!alignedPreset.summary.includes('자료 없음'), 'missing provider excluded from summary sentence');
+
+const threeProviderSnapshot: WeatherProviderSnapshot = {
+  ...alignedSnapshot,
+  hourlyRows: [
+    {
+      label: '지금',
+      forecastKey: '2026-07-21T15',
+      kma: { mark: 'K', weather: '흐림', detail: '29°C · 강수 0mm', tone: '#aaa' },
+      yr: { mark: 'Yr', weather: '흐림', detail: '28°C · 강수 0mm', tone: '#aaa' },
+      windy: { mark: 'FMI', weather: '비', detail: '27°C · 강수 0.2mm', tone: '#aaa' },
+      fmi: { mark: 'FMI', weather: '비', detail: '27°C · 강수 0.2mm', tone: '#aaa' },
+    },
+  ],
+};
+const threeProviderPreset = createProviderAdjustedPreset(weatherPresets.rain, threeProviderSnapshot);
+expectTruthy(threeProviderPreset.summary.includes('대한민국 기상청 흐림 29°C'), 'summary names KMA correctly');
+expectTruthy(threeProviderPreset.summary.includes('노르웨이 기상청 흐림 28°C'), 'summary names Norway correctly');
+expectTruthy(threeProviderPreset.summary.includes('핀란드 기상청 비 27°C'), 'summary names Finland correctly');
 
 console.log('Domain smoke checks passed.');

@@ -1,6 +1,5 @@
 import { createQuestionJudgement } from '../src/domain/judgement';
 import {
-  answerRemoteReportRequest,
   createRemoteFieldReport,
   createRemoteReportRequest,
   fetchFieldReportSnapshot,
@@ -39,8 +38,9 @@ export async function runApiModeSmokeCheck() {
   expectEqual(apiClientResponse.ok, true, `api client provider response ${apiClientResponse.error ?? ''}`);
 
   const providerSnapshot = await fetchProviderSnapshot(judgement.searchContext);
+  const stamp = Date.now();
   const createdReport = await createRemoteFieldReport({
-    id: 'api-mode-report',
+    id: `api-mode-report-${stamp}`,
     place: judgement.searchContext.place,
     time: '방금',
     condition: '비 안 옴',
@@ -50,7 +50,7 @@ export async function runApiModeSmokeCheck() {
     source: 'local',
   });
   const createdRequest = await createRemoteReportRequest({
-    id: 'api-mode-request',
+    id: `api-mode-request-${stamp}`,
     question: 'API mode smoke request',
     hint: 'smoke',
     place: judgement.searchContext.place,
@@ -63,9 +63,20 @@ export async function runApiModeSmokeCheck() {
     createdAt: new Date().toISOString(),
     source: 'local',
   });
-  const answeredRequest = await answerRemoteReportRequest(String(createdRequest?.id), '답변 있음', '방금 답변됨');
+  const answerReport = await createRemoteFieldReport({
+    id: `api-mode-answer-${stamp}`,
+    requestId: createdRequest?.id,
+    place: judgement.searchContext.place,
+    time: '방금',
+    condition: '비 없음',
+    body: 'API mode linked answer',
+    createdAt: new Date().toISOString(),
+    moderationStatus: 'visible',
+    source: 'local',
+  });
   const moderation = await moderateRemoteFieldReport(String(createdReport?.id), 'api mode smoke moderation');
   const fieldSnapshot = await fetchFieldReportSnapshot([], judgement.searchContext, []);
+  const answeredRequest = fieldSnapshot.requests.find((request) => request.id === createdRequest?.id);
 
   expectEqual(providerSnapshot.source, 'api', 'provider source');
   expectEqual(fieldSnapshot.source, 'api', 'field source');
@@ -78,6 +89,7 @@ export async function runApiModeSmokeCheck() {
   expectTruthy(fieldSnapshot.requests.length > 0, 'field requests');
   expectTruthy(createdReport?.id, 'created API-mode report');
   expectTruthy(createdRequest?.id, 'created API-mode request');
+  expectTruthy(answerReport?.id, 'created API-mode answer');
   expectEqual(answeredRequest?.answers, 1, 'answered API-mode request count');
   expectEqual(moderation?.ok, true, 'API-mode moderation ok');
 }

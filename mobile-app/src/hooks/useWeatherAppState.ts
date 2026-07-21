@@ -14,6 +14,7 @@ import {
   resolveReportPlace,
 } from '../domain/search';
 import { createProviderAdjustedPreset } from '../domain/providerJudgement';
+import { getFieldReportPlaceDisplay } from '../domain/locationDisplay';
 import { markReportPending, removeMockOrSeedReports } from '../domain/moderation';
 import {
   readPersistedAppSnapshot,
@@ -228,6 +229,10 @@ export function useWeatherAppState() {
     ]);
   };
 
+  const removePendingLocalReport = (reportId: string) => {
+    setReports((prev) => prev.filter((report) => report.id !== reportId));
+  };
+
   const updateLocalReport = (reportId: string, updates: Partial<Pick<LocalReport, 'body' | 'condition'>>) => {
     setReports((prev) =>
       prev.map((report) =>
@@ -285,20 +290,35 @@ export function useWeatherAppState() {
 
     const report: LocalReport = {
       id: createLocalId('report'),
-      place: resolveReportPlace(getCurrentReportPlace(locationStatus, searchContext.place)),
+      place: resolveReportPlace(getFieldReportPlaceDisplay(locationStatus)),
       time: '방금',
       condition: reportCondition,
       body: clean,
       createdAt: new Date().toISOString(),
       moderationStatus: 'visible',
       source: 'local',
+      syncState: 'pending',
+      latitude: locationStatus.latitude,
+      longitude: locationStatus.longitude,
     };
 
     addLocalReport(report);
     createRemoteFieldReport(report).then((remoteReport) => {
-      if (!remoteReport) return;
+      if (!remoteReport) {
+        removePendingLocalReport(report.id!);
+        setDataStatus({
+          phase: 'error',
+          label: '제보 저장 실패',
+          message: '현장 제보가 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 남겨주세요.',
+        });
+        return;
+      }
 
-      setReports((prev) => replaceReportById(prev, report.id, { ...remoteReport, source: 'local' }));
+      setReports((prev) => replaceReportById(prev, report.id, {
+        ...remoteReport,
+        source: 'local',
+        syncState: 'synced',
+      }));
     });
     setReportText('');
   };
@@ -541,6 +561,7 @@ export function useWeatherAppState() {
     reportFieldReport,
     weatherKey,
     addLocalReport,
+    removePendingLocalReport,
     updateLocalReport,
     deleteLocalReport,
     updateLocalRequest,
@@ -633,7 +654,12 @@ function replaceRequestById(
   return requests.map((request) => (request.id === requestId ? nextRequest : request));
 }
 
-function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItems: T[], localItems: T[]) {
+function mergeSyncedItems<T extends {
+  id?: string;
+  source?: string;
+  syncState?: string;
+  createdAt?: string;
+}>(remoteItems: T[], localItems: T[]) {
   const localById = new Map(
     localItems
       .filter((item) => item.id)
@@ -646,54 +672,32 @@ function mergeSyncedItems<T extends { id?: string; source?: string }>(remoteItem
   });
   const remoteIds = new Set(remoteItems.map((item) => item.id).filter(Boolean));
   const pendingLocalItems = localItems.filter(
-    (item) => item.source === 'local' && item.id && !remoteIds.has(item.id),
+    (item) =>
+      item.syncState === 'pending' &&
+      item.id &&
+      !remoteIds.has(item.id) &&
+      isRecentPendingItem(item.createdAt),
   );
 
   return [...pendingLocalItems, ...mergedRemoteItems];
 }
 
-function mergeSyncedItem<T extends { source?: string }>(remoteItem: T, localItem: T) {
-  const nextItem = { ...remoteItem } as T & {
-    answers?: number;
-    status?: string;
-    hint?: string;
-    lastAnsweredAt?: string;
-  };
-  const localAnswerCount = getAnswerCount(localItem);
-  const remoteAnswerCount = getAnswerCount(remoteItem);
+function mergeSyncedItem<T extends { source?: string; syncState?: string }>(remoteItem: T, localItem: T) {
+  const nextItem = { ...remoteItem } as T;
 
   if (localItem.source === 'local') {
     nextItem.source = 'local' as T['source'];
   }
-
-  if (localAnswerCount > remoteAnswerCount) {
-    nextItem.answers = localAnswerCount;
-    const localRequest = localItem as {
-      status?: string;
-      hint?: string;
-      lastAnsweredAt?: string;
-    };
-
-    if (localRequest.status) nextItem.status = localRequest.status;
-    if (localRequest.hint) nextItem.hint = localRequest.hint;
-    if (localRequest.lastAnsweredAt) nextItem.lastAnsweredAt = localRequest.lastAnsweredAt;
-  }
+  nextItem.syncState = 'synced' as T['syncState'];
 
   return nextItem;
 }
 
-function getAnswerCount(item: unknown) {
-  const answers = (item as { answers?: unknown }).answers;
+function isRecentPendingItem(createdAt?: string) {
+  if (!createdAt) return false;
+  const createdTime = Date.parse(createdAt);
 
-  return typeof answers === 'number' && Number.isFinite(answers) ? answers : 0;
-}
-
-function getCurrentReportPlace(locationStatus: LocationStatus, fallbackPlace: string) {
-  if (locationStatus.phase === 'granted' || locationStatus.phase === 'fallback') {
-    return locationStatus.placeName ?? locationStatus.label ?? fallbackPlace;
-  }
-
-  return fallbackPlace;
+  return Number.isFinite(createdTime) && Date.now() - createdTime < 2 * 60 * 1000;
 }
 
 function createLocalId(prefix: string) {

@@ -1,4 +1,5 @@
 import { getForecastWindow, getTargetTimestampMs, getSeoulParts, pickTargetItem } from '../timeIntent.mjs';
+import { getKmaDailyForecastKey, getKmaHourlyForecastAt } from '../forecastKeys.mjs';
 
 const kmaBaseUrl = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0';
 
@@ -71,6 +72,7 @@ export function createKmaForecastModel(currentPayload, forecastPayload = current
       tone: conditionToTone(condition),
     },
     hourlyRows: forecastRows.map((row, index) => ({
+      forecastAt: getKmaHourlyForecastAt(row.date, row.time),
       label: formatKmaRowLabel(row, index, targetMs),
       weather: conditionFromKmaValues(row),
       detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
@@ -258,6 +260,7 @@ function createDailyRows(hourlyRows) {
     const representative = afternoon ?? morning ?? createKmaDailyPeriod(rows[0]);
 
     return {
+      periodKey: getKmaDailyForecastKey(date),
       label: createDailyLabel(date, index),
       weather: representative.weather,
       detail: representative.detail,

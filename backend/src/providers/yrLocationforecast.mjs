@@ -1,4 +1,5 @@
-import { formatSeoulDateHour, getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { formatSeoulDateHour, getForecastWindow, getSeoulParts, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { getDailyForecastKey } from '../forecastKeys.mjs';
 
 const yrEndpoint = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 
@@ -70,6 +71,7 @@ function createRows(items, mode, targetMs = null) {
     const precipitation = getPrecipitationAmount(item);
 
     return {
+      forecastAt: typeof item?.time === 'string' ? item.time : '',
       label: mode === 'hourly' ? formatHourLabel(item?.time, index, targetMs) : formatDayLabel(item?.time, index),
       weather: symbolToCondition(symbol),
       detail: `${formatTemperature(numberOrNull(details.air_temperature))} · ${formatPrecipitation(precipitation)}`,
@@ -83,7 +85,7 @@ function createDailyRows(timeseries) {
   const byDate = new Map();
 
   timeseries.forEach((item) => {
-    const date = typeof item?.time === 'string' ? item.time.slice(0, 10) : '';
+    const date = getDailyForecastKey(item?.time);
 
     if (!date) return;
     const rows = byDate.get(date) ?? [];
@@ -97,6 +99,7 @@ function createDailyRows(timeseries) {
     const representative = afternoon ?? morning ?? createYrDailyPeriod(rows[0]);
 
     return {
+      periodKey: date,
       label: index === 0 ? '오늘' : index === 1 ? '내일' : index === 2 ? '모레' : date.slice(5, 10).replace('-', '/'),
       weather: representative.weather,
       detail: representative.detail,
@@ -110,14 +113,20 @@ function createDailyRows(timeseries) {
 
 function pickClosestIsoHour(rows, targetHour) {
   return rows.reduce((best, row) => {
-    const hour = Number(typeof row?.time === 'string' ? row.time.slice(11, 13) : NaN);
+    const hour = getSeoulHour(row?.time);
     if (!Number.isFinite(hour)) return best;
     if (!best) return row;
 
-    const bestHour = Number(typeof best?.time === 'string' ? best.time.slice(11, 13) : NaN);
+    const bestHour = getSeoulHour(best?.time);
 
     return Math.abs(hour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
   }, null);
+}
+
+function getSeoulHour(value) {
+  if (typeof value !== 'string') return NaN;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? NaN : getSeoulParts(date).hour;
 }
 
 function createYrDailyPeriod(item) {

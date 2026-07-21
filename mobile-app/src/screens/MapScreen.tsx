@@ -45,7 +45,14 @@ export function MapScreen({
 
   useEffect(() => {
     let cancelled = false;
-    const places = Array.from(new Set(mapReports.map((report) => report.place.trim()).filter(Boolean)));
+    const places = Array.from(
+      new Set(
+        mapReports
+          .filter((report) => !hasStoredClusterCoordinate(report))
+          .map((report) => report.place.trim())
+          .filter(Boolean),
+      ),
+    );
     const unresolvedPlaces = places.filter((place) => !(place in coordinatesByPlace));
 
     if (unresolvedPlaces.length === 0) return;
@@ -115,6 +122,9 @@ function requestToMapReport(request: ReportRequest): LocalReport {
     createdAt: request.createdAt,
     moderationStatus: 'visible',
     source: request.source,
+    clusterLatitude: request.clusterLatitude,
+    clusterLongitude: request.clusterLongitude,
+    privacyRadiusMeters: request.privacyRadiusMeters,
   };
 }
 
@@ -136,7 +146,12 @@ function createMapReportClusters(
 
   reports.forEach((report) => {
     const sourcePlace = report.place.trim();
-    const coordinate = coordinatesByPlace[sourcePlace];
+    const coordinate = hasStoredClusterCoordinate(report)
+      ? {
+          latitude: report.clusterLatitude,
+          longitude: report.clusterLongitude,
+        }
+      : coordinatesByPlace[sourcePlace];
     if (!sourcePlace || !coordinate) return;
     const key = `${coordinate.latitude.toFixed(4)}:${coordinate.longitude.toFixed(4)}`;
     const group = groups.get(key) ?? { coordinate, reports: [] };
@@ -159,6 +174,12 @@ function createMapReportClusters(
       longitude: group.coordinate.longitude,
     };
   });
+}
+
+function hasStoredClusterCoordinate(
+  report: LocalReport,
+): report is LocalReport & { clusterLatitude: number; clusterLongitude: number } {
+  return Number.isFinite(report.clusterLatitude) && Number.isFinite(report.clusterLongitude);
 }
 
 function roundToPrivacyGrid(value: number) {

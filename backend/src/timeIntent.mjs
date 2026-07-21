@@ -22,8 +22,9 @@ export function getForecastWindow(items, getTimeMs, targetMs, limit = 8) {
 
   if (normalized.length === 0) return items.slice(0, limit);
 
-  const effectiveTargetMs = Number.isFinite(targetMs) ? targetMs : Date.now();
-  const startIndex = findForecastStartIndex(normalized, effectiveTargetMs);
+  const hasExplicitTarget = Number.isFinite(targetMs);
+  const effectiveTargetMs = hasExplicitTarget ? targetMs : Date.now();
+  const startIndex = findForecastStartIndex(normalized, effectiveTargetMs, hasExplicitTarget);
 
   return normalized.slice(startIndex, startIndex + limit).map((row) => row.item);
 }
@@ -115,8 +116,8 @@ function getWeekendOffset(now) {
   return 6 - dayIndex;
 }
 
-function findForecastStartIndex(rows, targetMs) {
-  const thresholdMs = targetMs - oneHourMs;
+function findForecastStartIndex(rows, targetMs, hasExplicitTarget) {
+  const thresholdMs = targetMs - (hasExplicitTarget ? 5 * 60 * 1000 : oneHourMs);
   const futureIndex = rows.findIndex((row) => row.timeMs >= thresholdMs);
 
   if (futureIndex >= 0) return futureIndex;

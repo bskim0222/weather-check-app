@@ -6,8 +6,30 @@ export function normalizeHourlyLabels(rows: CompareRow[], searchContext: SearchC
 
   return rows.map((row, index) => ({
     ...row,
-    label: formatForecastHourLabel(index, baseDate, isCurrentContext),
+    label: row.forecastKey
+      ? formatForecastKeyLabel(row.forecastKey, index, isCurrentContext)
+      : formatForecastHourLabel(index, baseDate, isCurrentContext),
   }));
+}
+
+function formatForecastKeyLabel(key: string, index: number, isCurrentContext: boolean) {
+  const match = key.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})$/);
+  if (!match) return key;
+  if (index === 0) return isCurrentContext ? '지금' : '기준';
+
+  const [, , month, day, hour] = match;
+  const today = getLocalDateKey(new Date());
+  const rowDate = `${match[1]}-${month}-${day}`;
+  if (rowDate === today) return `${hour}시`;
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayLabel = rowDate === getLocalDateKey(tomorrow) ? '내일' : `${Number(month)}/${Number(day)}`;
+  return `${dayLabel} ${hour}시`;
+}
+
+function getLocalDateKey(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
 function formatForecastHourLabel(index: number, baseDate: Date, isCurrentContext: boolean) {

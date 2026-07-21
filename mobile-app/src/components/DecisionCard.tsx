@@ -7,10 +7,9 @@ import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
 import { normalizeHourlyLabels } from '../domain/forecastLabels';
 import { getCurrentLocationDisplay } from '../domain/locationDisplay';
-import { getThirdProviderCell } from '../domain/providerRows';
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
-import type { CompareForecastCell, CompareServiceSummary, ForecastSource, SearchContext, WeatherPreset } from '../types/weather';
+import type { CompareForecastCell, ForecastSource, SearchContext, WeatherPreset } from '../types/weather';
 import type { LocationStatus } from '../types/appState';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle as any);
@@ -356,32 +355,13 @@ function extractHumidityDetail(detail: string) {
 }
 
 function getSyncedForecastSources(current: WeatherPreset, providerSnapshot: WeatherProviderSnapshot) {
-  const firstCompareRow = providerSnapshot.hourlyRows[0];
+  if (providerSnapshot.sources.length < 3) return current.sources.slice(0, 3);
 
-  if (!firstCompareRow) return current.sources.slice(0, 3);
-
-  const summaries = providerSnapshot.summaries;
-  const cells = [firstCompareRow.kma, firstCompareRow.yr, getThirdProviderCell(firstCompareRow)];
-
-  return cells.map((cell, index) => createForecastSourceFromCompareCell(cell, summaries[index], current.sources[index]));
-}
-
-function createForecastSourceFromCompareCell(
-  cell: CompareForecastCell,
-  summary: CompareServiceSummary | undefined,
-  fallback: ForecastSource | undefined,
-): ForecastSource {
-  return {
-    providerId: fallback?.providerId,
-    iconUri: fallback?.iconUri,
-    name: summary?.name ?? fallback?.name ?? 'Weather',
-    mark: summary?.mark ?? fallback?.mark ?? cell.mark,
-    condition: cell.weather,
-    temp: extractForecastTemperature(cell.detail) ?? fallback?.temp ?? '-',
-    detail: extractForecastDetail(cell.detail),
-    badge: fallback?.badge ?? '',
-    color: summary?.color ?? fallback?.color ?? '#222222',
-  };
+  return providerSnapshot.sources.slice(0, 3).map((source, index) => ({
+    ...current.sources[index],
+    ...source,
+    iconUri: source.iconUri ?? current.sources[index]?.iconUri,
+  }));
 }
 
 function extractForecastTemperature(detail: string) {
@@ -390,16 +370,6 @@ function extractForecastTemperature(detail: string) {
   if (!match) return null;
 
   return match[0].replace(/\s+/g, '').replace(/℃|도/i, '°C').replace(/°$/, '°C');
-}
-
-function extractForecastDetail(detail: string) {
-  const amount = detail.match(/\d+(?:\.\d+)?\s*mm/i);
-  if (amount) return amount[0].replace(/\s+/g, '');
-
-  const probability = detail.match(/\d+\s*%/);
-  if (probability) return probability[0].replace(/\s+/g, '');
-
-  return detail.replace(/\s+/g, ' ').trim();
 }
 
 function shortForecastSourceName(name: string) {

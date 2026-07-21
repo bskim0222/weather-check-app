@@ -36,5 +36,9 @@ services:
         sync: false
       - key: KAKAO_REST_API_KEY
         sync: false
+      - key: REPORT_STORAGE_MODE
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_VERSION
         value: 24

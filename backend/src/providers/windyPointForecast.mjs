@@ -1,3 +1,6 @@
+import { getDailyForecastKey } from '../forecastKeys.mjs';
+import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+
 const windyEndpoint = 'https://api.windy.com/api/point-forecast/v2';
 
 export async function fetchWindyPointForecast(context) {
@@ -28,17 +31,18 @@ export async function fetchWindyPointForecast(context) {
     throw new Error(`Windy request failed with ${response.status}.`);
   }
 
-  return createWindyForecastModel(await response.json());
+  return createWindyForecastModel(await response.json(), context);
 }
 
-export function createWindyForecastModel(payload) {
+export function createWindyForecastModel(payload, context = null) {
   const timestamps = Array.isArray(payload?.ts) ? payload.ts : [];
-  const rows = timestamps.slice(0, 18).map((timestamp, index) => {
+  const allRows = timestamps.map((timestamp, index) => {
     const values = getWindyValues(payload, index);
     const condition = conditionFromWindyValues(values);
 
     return {
       timestamp,
+      forecastAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '',
       label: index === 0 ? '지금' : formatHourLabel(timestamp),
       weather: condition,
       detail: `${formatTemperature(values.temp)} · ${formatPrecipitation(values.precip)}`,
@@ -50,7 +54,9 @@ export function createWindyForecastModel(payload) {
       wind: values.wind,
     };
   });
-  const current = rows[0] ?? {
+  const targetMs = getTargetTimestampMs(context);
+  const rows = getForecastWindow(allRows, getWindyRowTimeMs, targetMs, 18);
+  const current = pickTargetItem(allRows, getWindyRowTimeMs, targetMs) ?? {
     condition: '흐림',
     temp: null,
     precip: null,
@@ -130,9 +136,7 @@ function createDailyRows(rows) {
   const byDate = new Map();
 
   rows.forEach((row) => {
-    const date = typeof row.timestamp === 'number'
-      ? new Date(row.timestamp).toISOString().slice(0, 10)
-      : row.label;
+    const date = Number.isFinite(row.timestamp) ? getDailyForecastKey(row.timestamp) : '';
 
     const items = byDate.get(date) ?? [];
     items.push(row);
@@ -145,6 +149,7 @@ function createDailyRows(rows) {
     const representative = afternoon ?? morning ?? createWindyDailyPeriod(rows[0]);
 
     return {
+      periodKey: date,
       label: index === 0 ? '오늘' : index === 1 ? '내일' : String(date).slice(5).replace('-', '/'),
       weather: representative.weather,
       detail: representative.detail,
@@ -178,12 +183,17 @@ function createWindyDailyPeriod(row) {
 
 function stripInternalRowFields(row) {
   return {
+    forecastAt: row.forecastAt,
     label: row.label,
     weather: row.weather,
     detail: row.detail,
     mark: row.mark,
     tone: row.tone,
   };
+}
+
+function getWindyRowTimeMs(row) {
+  return Number.isFinite(row?.timestamp) ? row.timestamp : NaN;
 }
 
 function createDetail(precip, wind) {

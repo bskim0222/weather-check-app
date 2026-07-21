@@ -18,6 +18,28 @@ export const storageLimits = {
   maxModerationEvents,
 };
 
+export async function getStorageStatus() {
+  const mode = shouldUsePostgresStorage() ? 'postgres' : 'json';
+
+  try {
+    if (mode === 'postgres') {
+      const pool = await getPostgresPool();
+      await ensurePostgresSchema(pool);
+      await pool.query('select 1 as ok');
+    } else {
+      await readDatabase();
+    }
+
+    return { ok: true, mode };
+  } catch (error) {
+    return {
+      ok: false,
+      mode,
+      error: error instanceof Error ? error.message : 'Storage check failed.',
+    };
+  }
+}
+
 export async function readDatabase() {
   if (shouldUsePostgresStorage()) {
     return readPostgresDatabase();
@@ -72,13 +94,26 @@ export async function saveFieldReport(report) {
   if (shouldUsePostgresStorage()) {
     const pool = await getPostgresPool();
     await ensurePostgresSchema(pool);
-    await upsertFieldReportQuery(pool, report);
+    const client = await pool.connect();
+
+    try {
+      await client.query('begin');
+      await upsertFieldReportQuery(client, report);
+      if (report.requestId) await refreshReportRequestAnswerStats(client, report.requestId);
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback');
+      throw error;
+    } finally {
+      client.release();
+    }
 
     return findFieldReportById(report.id);
   }
 
   const database = await readDatabase();
   database.fieldReports = upsertById(database.fieldReports, report);
+  if (report.requestId) refreshJsonRequestAnswerStats(database, report.requestId);
   await writeDatabase(database);
 
   return report;
@@ -103,17 +138,37 @@ export async function deleteFieldReportById(reportId) {
   if (shouldUsePostgresStorage()) {
     const pool = await getPostgresPool();
     await ensurePostgresSchema(pool);
-    const result = await pool.query(
-      'update field_reports set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null',
-      [reportId],
-    );
+    const client = await pool.connect();
 
-    return result.rowCount > 0;
+    try {
+      await client.query('begin');
+      const result = await client.query(
+        `
+          update field_reports
+          set deleted_at = now(), updated_at = now()
+          where id = $1 and deleted_at is null
+          returning request_id
+        `,
+        [reportId],
+      );
+      const requestId = result.rows[0]?.request_id;
+      if (requestId) await refreshReportRequestAnswerStats(client, requestId);
+      await client.query('commit');
+
+      return result.rowCount > 0;
+    } catch (error) {
+      await client.query('rollback');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   const database = await readDatabase();
+  const deletedReport = database.fieldReports.find((report) => report.id === reportId);
   const beforeCount = database.fieldReports.length;
   database.fieldReports = database.fieldReports.filter((report) => report.id !== reportId);
+  if (deletedReport?.requestId) refreshJsonRequestAnswerStats(database, deletedReport.requestId);
   await writeDatabase(database);
 
   return database.fieldReports.length !== beforeCount;
@@ -213,34 +268,12 @@ export async function updateReportRequestAnswerStatus(requestId, updates) {
   if (shouldUsePostgresStorage()) {
     const pool = await getPostgresPool();
     await ensurePostgresSchema(pool);
-    const result = await pool.query(
-      `
-        update report_requests
-        set
-          status = $2,
-          hint = $3,
-          answers = greatest(
-            report_requests.answers + 1,
-            (
-              select count(*)::int
-              from field_reports
-              where request_id = $1
-                and deleted_at is null
-                and moderation_status <> 'hidden'
-            )
-          ),
-          last_answered_at = now(),
-          updated_at = now()
-        where id = $1 and deleted_at is null
-      `,
-      [
-        requestId,
-        textOr(updates.status, '답변 있음'),
-        textOr(updates.hint, '방금 답변이 추가됐어요.'),
-      ],
+    await refreshReportRequestAnswerStats(
+      pool,
+      requestId,
+      textOr(updates.status, '답변 있음'),
+      textOr(updates.hint, '방금 답변이 추가됐어요.'),
     );
-
-    if (result.rowCount === 0) return null;
 
     return findReportRequestById(requestId);
   }
@@ -250,19 +283,15 @@ export async function updateReportRequestAnswerStatus(requestId, updates) {
 
   if (!existingRequest) return null;
 
-  const updatedRequest = {
-    ...existingRequest,
-    answers: Number.isFinite(existingRequest.answers) ? existingRequest.answers + 1 : 1,
-    status: textOr(updates.status, '답변 있음'),
-    hint: textOr(updates.hint, '방금 답변이 추가됐어요.'),
-    lastAnsweredAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  database.reportRequests = upsertById(database.reportRequests, updatedRequest);
+  refreshJsonRequestAnswerStats(
+    database,
+    requestId,
+    textOr(updates.status, '답변 있음'),
+    textOr(updates.hint, '방금 답변이 추가됐어요.'),
+  );
   await writeDatabase(database);
 
-  return updatedRequest;
+  return database.reportRequests.find((requestItem) => requestItem.id === requestId) ?? null;
 }
 
 export async function moderateFieldReportById(reportId, moderationStatus, reason) {
@@ -275,8 +304,13 @@ export async function moderateFieldReportById(reportId, moderationStatus, reason
 
     try {
       await client.query('begin');
-      await client.query(
-        'update field_reports set moderation_status = $2, updated_at = now() where id = $1 and deleted_at is null',
+      const updatedReport = await client.query(
+        `
+          update field_reports
+          set moderation_status = $2, updated_at = now()
+          where id = $1 and deleted_at is null
+          returning request_id
+        `,
         [reportId, status],
       );
       await client.query(
@@ -286,6 +320,8 @@ export async function moderateFieldReportById(reportId, moderationStatus, reason
         `,
         [createStorageId('moderation'), reportId, status, textOr(reason, '')],
       );
+      const requestId = updatedReport.rows[0]?.request_id;
+      if (requestId) await refreshReportRequestAnswerStats(client, requestId);
       await client.query('commit');
     } catch (error) {
       await client.query('rollback');
@@ -298,9 +334,11 @@ export async function moderateFieldReportById(reportId, moderationStatus, reason
   }
 
   const database = await readDatabase();
+  const moderatedReport = database.fieldReports.find((report) => report.id === reportId);
   database.fieldReports = database.fieldReports.map((report) =>
     report.id === reportId ? { ...report, moderationStatus: status } : report,
   );
+  if (moderatedReport?.requestId) refreshJsonRequestAnswerStats(database, moderatedReport.requestId);
   database.moderationEvents.unshift({
     id: createStorageId('moderation'),
     reportId,
@@ -401,7 +439,7 @@ async function readPostgresDatabase() {
         report_requests.place,
         report_requests.distance,
         report_requests.time_label,
-        greatest(report_requests.answers, coalesce(answer_stats.answer_count, 0)) as answers,
+        coalesce(answer_stats.answer_count, 0) as answers,
         report_requests.latitude,
         report_requests.longitude,
         report_requests.cluster_latitude,
@@ -485,34 +523,12 @@ async function ensurePostgresSchema(pool) {
 }
 
 async function syncFieldReports(client, reports) {
-  const ids = reports.map((report) => report.id).filter(Boolean);
-
-  if (ids.length > 0) {
-    await client.query(
-      'update field_reports set deleted_at = now() where deleted_at is null and not (id = any($1::text[]))',
-      [ids],
-    );
-  } else {
-    await client.query('update field_reports set deleted_at = now() where deleted_at is null');
-  }
-
   for (const report of reports) {
     await upsertFieldReportQuery(client, report);
   }
 }
 
 async function syncReportRequests(client, requests) {
-  const ids = requests.map((requestItem) => requestItem.id).filter(Boolean);
-
-  if (ids.length > 0) {
-    await client.query(
-      'update report_requests set deleted_at = now() where deleted_at is null and not (id = any($1::text[]))',
-      [ids],
-    );
-  } else {
-    await client.query('update report_requests set deleted_at = now() where deleted_at is null');
-  }
-
   for (const requestItem of requests) {
     await upsertReportRequestQuery(client, requestItem);
   }
@@ -522,15 +538,25 @@ async function upsertFieldReportQuery(clientOrPool, report) {
   await clientOrPool.query(
     `
       insert into field_reports (
-        id, request_id, place, time_label, condition, body, moderation_status, source, created_at, updated_at
+        id, request_id, author_device_id, place, time_label, condition, body,
+        cluster_latitude, cluster_longitude, privacy_radius_meters,
+        moderation_status, source, created_at, updated_at
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, coalesce($9::timestamptz, now()), $10::timestamptz)
+      values (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10,
+        $11, $12, coalesce($13::timestamptz, now()), $14::timestamptz
+      )
       on conflict (id) do update set
         request_id = excluded.request_id,
+        author_device_id = coalesce(field_reports.author_device_id, excluded.author_device_id),
         place = excluded.place,
         time_label = excluded.time_label,
         condition = excluded.condition,
         body = excluded.body,
+        cluster_latitude = excluded.cluster_latitude,
+        cluster_longitude = excluded.cluster_longitude,
+        privacy_radius_meters = excluded.privacy_radius_meters,
         moderation_status = excluded.moderation_status,
         source = excluded.source,
         updated_at = coalesce(excluded.updated_at, now()),
@@ -539,10 +565,14 @@ async function upsertFieldReportQuery(clientOrPool, report) {
     [
       report.id,
       report.requestId ?? null,
+      report.authorDeviceId ?? null,
       textOr(report.place, '현재 위치 주변'),
       textOr(report.time, '방금'),
       textOr(report.condition, '날씨 확인'),
       textOr(report.body, ''),
+      finiteNumberOrNull(report.clusterLatitude),
+      finiteNumberOrNull(report.clusterLongitude),
+      Number.isFinite(report.privacyRadiusMeters) ? report.privacyRadiusMeters : 1500,
       report.moderationStatus ?? 'visible',
       report.source ?? 'api',
       report.createdAt ?? null,
@@ -555,19 +585,26 @@ async function upsertReportRequestQuery(clientOrPool, requestItem) {
   await clientOrPool.query(
     `
       insert into report_requests (
-        id, question, place, distance, time_label, answers, status, hint, mark, accent, source,
-        last_answered_at, created_at, updated_at
+        id, author_device_id, question, place, distance, time_label, answers,
+        cluster_latitude, cluster_longitude, privacy_radius_meters,
+        status, hint, mark, accent, source, last_answered_at, created_at, updated_at
       )
       values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-        $12::timestamptz, coalesce($13::timestamptz, now()), $14::timestamptz
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10,
+        $11, $12, $13, $14, $15,
+        $16::timestamptz, coalesce($17::timestamptz, now()), $18::timestamptz
       )
       on conflict (id) do update set
+        author_device_id = coalesce(report_requests.author_device_id, excluded.author_device_id),
         question = excluded.question,
         place = excluded.place,
         distance = excluded.distance,
         time_label = excluded.time_label,
         answers = excluded.answers,
+        cluster_latitude = excluded.cluster_latitude,
+        cluster_longitude = excluded.cluster_longitude,
+        privacy_radius_meters = excluded.privacy_radius_meters,
         status = excluded.status,
         hint = excluded.hint,
         mark = excluded.mark,
@@ -579,11 +616,15 @@ async function upsertReportRequestQuery(clientOrPool, requestItem) {
     `,
     [
       requestItem.id,
+      requestItem.authorDeviceId ?? null,
       textOr(requestItem.question, `${textOr(requestItem.place, '현재 위치 주변')} 지금 날씨 어때요?`),
       textOr(requestItem.place, '현재 위치 주변'),
       textOr(requestItem.distance, '근처'),
       textOr(requestItem.time, '방금'),
       Number.isFinite(requestItem.answers) ? requestItem.answers : 0,
+      finiteNumberOrNull(requestItem.clusterLatitude),
+      finiteNumberOrNull(requestItem.clusterLongitude),
+      Number.isFinite(requestItem.privacyRadiusMeters) ? requestItem.privacyRadiusMeters : 1500,
       textOr(requestItem.status, '답변 대기'),
       textOr(requestItem.hint, '근처 사용자에게 현장 제보를 요청합니다.'),
       textOr(requestItem.mark, '요'),
@@ -620,6 +661,7 @@ function mapFieldReportRow(row) {
   return {
     id: row.id,
     requestId: row.request_id ?? undefined,
+    authorDeviceId: row.author_device_id ?? undefined,
     place: row.place,
     time: row.time_label ?? '방금',
     condition: row.condition,
@@ -628,12 +670,16 @@ function mapFieldReportRow(row) {
     updatedAt: toIso(row.updated_at),
     moderationStatus: row.moderation_status ?? 'visible',
     source: row.source ?? 'api',
+    clusterLatitude: finiteNumberOrUndefined(row.cluster_latitude),
+    clusterLongitude: finiteNumberOrUndefined(row.cluster_longitude),
+    privacyRadiusMeters: Number(row.privacy_radius_meters) || 1500,
   };
 }
 
 function mapReportRequestRow(row) {
   return {
     id: row.id,
+    authorDeviceId: row.author_device_id ?? undefined,
     question: row.question,
     hint: row.hint ?? '',
     place: row.place,
@@ -647,6 +693,9 @@ function mapReportRequestRow(row) {
     updatedAt: toIso(row.updated_at),
     lastAnsweredAt: toIso(row.last_answered_at),
     source: row.source ?? 'api',
+    clusterLatitude: finiteNumberOrUndefined(row.cluster_latitude),
+    clusterLongitude: finiteNumberOrUndefined(row.cluster_longitude),
+    privacyRadiusMeters: Number(row.privacy_radius_meters) || 1500,
   };
 }
 
@@ -661,6 +710,68 @@ function mapModerationEventRow(row) {
   };
 }
 
+async function refreshReportRequestAnswerStats(
+  clientOrPool,
+  requestId,
+  answeredStatus = '답변 있음',
+  answeredHint = '현장 답변이 도착했어요.',
+) {
+  const result = await clientOrPool.query(
+    `
+      with answer_stats as (
+        select
+          count(*)::int as answer_count,
+          max(created_at) as last_answered_at
+        from field_reports
+        where request_id = $1
+          and deleted_at is null
+          and moderation_status <> 'hidden'
+      )
+      update report_requests
+      set
+        answers = answer_stats.answer_count,
+        status = case when answer_stats.answer_count > 0 then $2 else '답변 대기' end,
+        hint = case when answer_stats.answer_count > 0 then $3 else '현장 답변을 기다리는 중' end,
+        last_answered_at = answer_stats.last_answered_at,
+        updated_at = now()
+      from answer_stats
+      where report_requests.id = $1
+        and report_requests.deleted_at is null
+      returning report_requests.id
+    `,
+    [requestId, answeredStatus, answeredHint],
+  );
+
+  return result.rowCount > 0;
+}
+
+function refreshJsonRequestAnswerStats(
+  database,
+  requestId,
+  answeredStatus = '답변 있음',
+  answeredHint = '현장 답변이 도착했어요.',
+) {
+  const answers = database.fieldReports.filter(
+    (report) =>
+      report.requestId === requestId &&
+      report.moderationStatus !== 'hidden',
+  );
+  const latestAnswer = sortByCreatedAt(answers)[0];
+
+  database.reportRequests = database.reportRequests.map((requestItem) =>
+    requestItem.id === requestId
+      ? {
+          ...requestItem,
+          answers: answers.length,
+          status: answers.length > 0 ? answeredStatus : '답변 대기',
+          hint: answers.length > 0 ? answeredHint : '현장 답변을 기다리는 중',
+          lastAnsweredAt: latestAnswer?.createdAt,
+          updatedAt: new Date().toISOString(),
+        }
+      : requestItem,
+  );
+}
+
 function toIso(value) {
   if (!value) return undefined;
   const date = value instanceof Date ? value : new Date(value);
@@ -670,6 +781,18 @@ function toIso(value) {
 
 function textOr(value, fallback) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+}
+
+function finiteNumberOrNull(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : null;
+}
+
+function finiteNumberOrUndefined(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : undefined;
 }
 
 function upsertById(items, nextItem) {

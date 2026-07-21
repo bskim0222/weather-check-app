@@ -58,6 +58,15 @@ export function createMockApiServer() {
       source: 'api',
     };
     storedReports.unshift(report);
+    if (report.requestId) {
+      const linkedRequest = storedRequests.find((item) => item.id === report.requestId);
+      if (linkedRequest) {
+        linkedRequest.answers = storedReports.filter((item) => item.requestId === report.requestId).length;
+        linkedRequest.status = '답변 있음';
+        linkedRequest.hint = `${linkedRequest.answers}개의 현장 답변이 있어요.`;
+        linkedRequest.lastAnsweredAt = report.createdAt;
+      }
+    }
     sendJson(response, 201, report);
     return;
   }

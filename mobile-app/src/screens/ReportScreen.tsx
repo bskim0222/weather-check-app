@@ -6,7 +6,6 @@ import { visibleReportsOnly } from '../domain/moderation';
 import { inferConditionFromText } from '../domain/reports';
 import { formatPostTime } from '../domain/timeDisplay';
 import {
-  answerRemoteReportRequest,
   createRemoteFieldReport,
   createRemoteReportRequest,
   getMockFieldReportSnapshot,
@@ -22,6 +21,7 @@ type ReportScreenProps = {
   requests: ReportRequest[];
   searchContext: SearchContext;
   onAddReport: (report: LocalReport) => void;
+  onRemovePendingReport: (reportId: string) => void;
   onDeleteReport: (reportId: string) => void;
   onDeleteRequest: (requestId: string) => void;
   onReportIssue: (report: LocalReport) => void;
@@ -42,6 +42,7 @@ export function ReportScreen({
   requests,
   searchContext,
   onAddReport,
+  onRemovePendingReport,
   onDeleteReport,
   onDeleteRequest,
   onReportIssue,
@@ -108,6 +109,7 @@ export function ReportScreen({
       accent: '#f4f5f2',
       createdAt: new Date().toISOString(),
       source: 'local',
+      syncState: 'pending',
     };
 
     onRequestsChange((prev) => [newRequest, ...prev]);
@@ -116,8 +118,16 @@ export function ReportScreen({
     setReplyNotice('문의가 올라갔어요. 답변이 달리면 문의하기에서 확인할 수 있어요.');
 
     createRemoteReportRequest(newRequest).then((remoteRequest) => {
-      if (!remoteRequest) return;
-      onRequestsChange((prev) => replaceRequestById(prev, newRequest.id, { ...remoteRequest, source: 'local' }));
+      if (!remoteRequest) {
+        onRequestsChange((prev) => prev.filter((request) => request.id !== newRequest.id));
+        setReplyNotice('문의가 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.');
+        return;
+      }
+      onRequestsChange((prev) => replaceRequestById(prev, newRequest.id, {
+        ...remoteRequest,
+        source: 'local',
+        syncState: 'synced',
+      }));
       setSelectedRequestId(remoteRequest.id);
     });
   };
@@ -144,6 +154,7 @@ export function ReportScreen({
       createdAt: new Date().toISOString(),
       moderationStatus: 'visible',
       source: 'local',
+      syncState: 'pending',
     };
 
     onAddReport(replyReport);
@@ -151,18 +162,18 @@ export function ReportScreen({
     setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
     setAnswerModalVisible(false);
 
-    answerRemoteReportRequest(selectedRequest.id, '답변 있음', '방금 답변').then((remoteRequest) => {
-      if (!remoteRequest) return;
-      onRequestsChange((prev) =>
-        replaceRequestById(prev, selectedRequest.id, {
-          ...remoteRequest,
-          source: selectedRequest.source,
-        }),
-      );
-    });
     createRemoteFieldReport(replyReport).then((remoteReport) => {
-      if (!remoteReport) return;
-      onAddReport({ ...remoteReport, source: 'local' });
+      if (!remoteReport) {
+        onRemovePendingReport(replyReport.id!);
+        onRequestsChange((prev) => prev.map((request) => (
+          request.id === selectedRequest.id
+            ? { ...request, answers: Math.max(0, request.answers - 1) }
+            : request
+        )));
+        setReplyNotice('답변이 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.');
+        return;
+      }
+      onAddReport({ ...remoteReport, source: 'local', syncState: 'synced' });
     });
   };
 

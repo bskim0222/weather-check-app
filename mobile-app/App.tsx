@@ -95,6 +95,7 @@ export default function App() {
                   askFocusToken={reportAskFocusToken}
                   searchContext={appState.searchContext}
                   onAddReport={appState.addLocalReport}
+                  onRemovePendingReport={appState.removePendingLocalReport}
                   onReportIssue={appState.reportFieldReport}
                   onRequestsChange={appState.setReportRequests}
                   onUpdateReport={appState.updateLocalReport}

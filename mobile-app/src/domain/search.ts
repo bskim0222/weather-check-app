@@ -156,9 +156,11 @@ function extractLocationCandidate(question: string) {
 function cleanLocationCandidate(value: string) {
   return value
     .replace(/.*(?:근데|그런데|이면|라면|하고|그리고|,)/, '')
+    .replace(/^.*(?:칠\s*건데|갈\s*건데|할\s*건데|건데|인데|한데|는데)\s*/, '')
     .replace(/(오늘|내일|모레|주말|아침|오전|오후|저녁|밤|새벽|점심|낮|지금|퇴근길|\d{1,2}\s*시)/g, ' ')
     .replace(/\s*(날씨|비|눈|안개|기온|우산|소나기|천둥|번개|흐림|구름|맑음|바람).*$/, '')
     .replace(/\s+(날씨|비|눈|안개|기온|우산|소나기|천둥|번개|흐림|구름|맑음|바람)\s*/g, ' ')
+    .replace(/(?:에서|에는|에)$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }

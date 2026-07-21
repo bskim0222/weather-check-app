@@ -1,4 +1,5 @@
-import { formatSeoulDateHour, getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { formatSeoulDateHour, getForecastWindow, getSeoulParts, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { getDailyForecastKey } from '../forecastKeys.mjs';
 
 const fmiEndpoint = 'https://opendata.fmi.fi/wfs';
 const storedQueryId = 'ecmwf::forecast::surface::point::timevaluepair';
@@ -52,6 +53,7 @@ export function createFmiForecastModel(xml, context = null) {
       const rowCondition = conditionFromFmiValues(row);
 
       return {
+        forecastAt: typeof row.time === 'string' ? row.time : '',
         label: formatHourLabel(row.time, index, targetMs),
         weather: rowCondition,
         detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
@@ -119,7 +121,7 @@ function createDailyRows(rows) {
   const byDate = new Map();
 
   rows.forEach((row) => {
-    const date = typeof row.time === 'string' ? row.time.slice(0, 10) : '';
+    const date = getDailyForecastKey(row.time);
 
     if (!date) return;
     const items = byDate.get(date) ?? [];
@@ -133,6 +135,7 @@ function createDailyRows(rows) {
     const representative = afternoon ?? morning ?? createFmiDailyPeriod(rows[0]);
 
     return {
+      periodKey: date,
       label: index === 0 ? '오늘' : index === 1 ? '내일' : date.slice(5, 10).replace('-', '/'),
       weather: representative.weather,
       detail: representative.detail,
@@ -146,14 +149,20 @@ function createDailyRows(rows) {
 
 function pickClosestIsoHour(rows, targetHour) {
   return rows.reduce((best, row) => {
-    const hour = Number(typeof row?.time === 'string' ? row.time.slice(11, 13) : NaN);
+    const hour = getSeoulHour(row?.time);
     if (!Number.isFinite(hour)) return best;
     if (!best) return row;
 
-    const bestHour = Number(typeof best?.time === 'string' ? best.time.slice(11, 13) : NaN);
+    const bestHour = getSeoulHour(best?.time);
 
     return Math.abs(hour - targetHour) < Math.abs(bestHour - targetHour) ? row : best;
   }, null);
+}
+
+function getSeoulHour(value) {
+  if (typeof value !== 'string') return NaN;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? NaN : getSeoulParts(date).hour;
 }
 
 function createFmiDailyPeriod(row) {

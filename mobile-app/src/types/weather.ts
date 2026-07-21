@@ -63,7 +63,13 @@ export type LocalReport = {
   body: string;
   createdAt?: string;
   moderationStatus?: 'visible' | 'pending' | 'hidden';
-  source?: 'local' | 'api' | 'mock';
+    source?: 'local' | 'api' | 'mock';
+    syncState?: 'pending' | 'synced' | 'failed';
+  latitude?: number;
+  longitude?: number;
+  clusterLatitude?: number;
+  clusterLongitude?: number;
+  privacyRadiusMeters?: number;
 };
 
 export type FieldReport = LocalReport;
@@ -95,6 +101,8 @@ export type ProviderForecastSummary = CompareServiceSummary;
 
 export type CompareRow = {
   label: string;
+  forecastKey?: string;
+  periodKey?: string;
   kma: CompareForecastCell;
   yr: CompareForecastCell;
   windy: CompareForecastCell;
@@ -114,7 +122,13 @@ export type ReportRequest = {
   accent: string;
   createdAt?: string;
   lastAnsweredAt?: string;
-  source?: 'local' | 'api' | 'mock';
+    source?: 'local' | 'api' | 'mock';
+    syncState?: 'pending' | 'synced' | 'failed';
+  latitude?: number;
+  longitude?: number;
+  clusterLatitude?: number;
+  clusterLongitude?: number;
+  privacyRadiusMeters?: number;
 };
 
 export type ReportRequestModel = ReportRequest;

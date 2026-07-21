@@ -6,6 +6,7 @@ import {
   deleteReportRequestById,
   findFieldReportById,
   findReportRequestById,
+  getStorageStatus,
   moderateFieldReportById,
   readDatabase,
   saveFieldReport,
@@ -22,7 +23,7 @@ const port = Number(process.env.PORT ?? 8796);
 export function createBackendServer() {
   return http.createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Headers', 'content-type');
+    response.setHeader('Access-Control-Allow-Headers', 'content-type,x-weathercheck-device-id');
     response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
 
     if (request.method === 'OPTIONS') {
@@ -44,7 +45,12 @@ async function routeRequest(request, response) {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 
   if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/health')) {
-    sendJson(response, 200, { ok: true, service: 'weather-check-backend' });
+    const databaseStatus = await getStorageStatus();
+    sendJson(response, databaseStatus.ok ? 200 : 503, {
+      ok: databaseStatus.ok,
+      service: 'weather-check-backend',
+      storage: databaseStatus,
+    });
     return;
   }
 
@@ -64,6 +70,7 @@ async function routeRequest(request, response) {
   }
 
   const payload = request.method === 'DELETE' ? {} : await readJsonBody(request);
+  const deviceId = getRequestDeviceId(request);
 
   const fieldReportMatch = url.pathname.match(/^\/field-reports\/([^/]+)$/);
 
@@ -76,9 +83,14 @@ async function routeRequest(request, response) {
       return;
     }
 
+    if (!canManageOwnedItem(existingReport, deviceId)) {
+      sendJson(response, 403, { error: 'This field report belongs to another device.' });
+      return;
+    }
+
     if (request.method === 'PATCH') {
       const updatedReport = await updateFieldReportById(reportId, payload);
-      sendJson(response, 200, updatedReport);
+      sendJson(response, 200, toViewerItem(updatedReport, deviceId));
       return;
     }
 
@@ -100,9 +112,14 @@ async function routeRequest(request, response) {
       return;
     }
 
+    if (!canManageOwnedItem(existingRequest, deviceId)) {
+      sendJson(response, 403, { error: 'This report request belongs to another device.' });
+      return;
+    }
+
     if (request.method === 'PATCH') {
       const updatedRequest = await updateReportRequestById(requestId, payload);
-      sendJson(response, 200, updatedRequest);
+      sendJson(response, 200, toViewerItem(updatedRequest, deviceId));
       return;
     }
 
@@ -162,21 +179,23 @@ async function routeRequest(request, response) {
       generatedAt: new Date().toISOString(),
       source: 'api',
       context,
-      reports: selectVisibleReports(database.fieldReports, context),
-      requests: selectReportRequests(database.reportRequests, context, database.fieldReports),
+      reports: selectVisibleReports(database.fieldReports, context, deviceId),
+      requests: selectReportRequests(database.reportRequests, context, database.fieldReports, deviceId),
     });
     return;
   }
 
   if (url.pathname === '/field-reports') {
-    const report = createFieldReport(payload);
-    sendJson(response, 201, await saveFieldReport(report));
+    const report = await createFieldReport(payload, deviceId);
+    const savedReport = await saveFieldReport(report);
+    sendJson(response, 201, toViewerItem(savedReport, deviceId));
     return;
   }
 
   if (url.pathname === '/report-requests') {
-    const reportRequest = createReportRequest(payload);
-    sendJson(response, 201, await saveReportRequest(reportRequest));
+    const reportRequest = await createReportRequest(payload, deviceId);
+    const savedRequest = await saveReportRequest(reportRequest);
+    sendJson(response, 201, toViewerItem(savedRequest, deviceId));
     return;
   }
 
@@ -209,24 +228,31 @@ async function routeRequest(request, response) {
   sendJson(response, 404, { error: 'Not found.' });
 }
 
-function createFieldReport(payload) {
+async function createFieldReport(payload, deviceId) {
   const createdAt = new Date().toISOString();
+  const coordinates = await resolvePrivacyCoordinates(payload, textOr(payload.place, '현재 위치 주변'));
+  const isGpsReport = finiteNumber(payload.latitude) != null && finiteNumber(payload.longitude) != null;
 
   return {
     id: typeof payload.id === 'string' ? payload.id : createId('report'),
     requestId: typeof payload.requestId === 'string' ? payload.requestId : undefined,
-    place: textOr(payload.place, '현재 위치 주변'),
+    place: isGpsReport
+      ? sanitizeGpsReportPlace(textOr(payload.place, '현재 위치 주변'))
+      : textOr(payload.place, '현재 위치 주변'),
     time: textOr(payload.time, '방금'),
     condition: textOr(payload.condition, '날씨 확인'),
     body: textOr(payload.body, ''),
     createdAt,
     moderationStatus: 'visible',
     source: 'api',
+    authorDeviceId: deviceId || undefined,
+    ...coordinates,
   };
 }
 
-function createReportRequest(payload) {
+async function createReportRequest(payload, deviceId) {
   const place = textOr(payload.place, '현재 위치 주변');
+  const coordinates = await resolvePrivacyCoordinates(payload, place);
 
   return {
     id: typeof payload.id === 'string' ? payload.id : createId('request'),
@@ -241,16 +267,18 @@ function createReportRequest(payload) {
     accent: textOr(payload.accent, '#d6d2c4'),
     createdAt: new Date().toISOString(),
     source: 'api',
+    authorDeviceId: deviceId || undefined,
+    ...coordinates,
   };
 }
 
-function selectVisibleReports(reports, context) {
+function selectVisibleReports(reports, context, deviceId) {
   const visibleReports = reports.filter((report) => report.moderationStatus !== 'hidden');
 
-  return visibleReports.slice(0, 20);
+  return visibleReports.map((report) => toViewerItem(report, deviceId));
 }
 
-function selectReportRequests(requests, context, reports = []) {
+function selectReportRequests(requests, context, reports = [], deviceId) {
   const visibleAnswers = reports.filter(
     (report) =>
       report.requestId &&
@@ -276,19 +304,86 @@ function selectReportRequests(requests, context, reports = []) {
     .filter((requestItem) => !requestItem.deletedAt)
     .map((requestItem) => {
       const stats = answerStatsByRequestId.get(requestItem.id);
-      const storedAnswers = Number.isFinite(requestItem.answers) ? requestItem.answers : 0;
-      const answers = Math.max(storedAnswers, stats?.answers ?? 0);
+      const answers = stats?.answers ?? 0;
 
-      return {
+      return toViewerItem({
         ...requestItem,
         answers,
-        status: answers > 0 ? '답변 있음' : requestItem.status,
-        hint: answers > 0 ? `${answers}개의 현장 답변이 있어요.` : requestItem.hint,
-        lastAnsweredAt: stats?.lastAnsweredAt ?? requestItem.lastAnsweredAt,
-      };
+        status: answers > 0 ? '답변 있음' : '답변 대기',
+        hint: answers > 0 ? `${answers}개의 현장 답변이 있어요.` : '현장 답변을 기다리는 중',
+        lastAnsweredAt: stats?.lastAnsweredAt,
+      }, deviceId);
     })
     .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
-    .slice(0, 20);
+    .slice(0, 100);
+}
+
+async function resolvePrivacyCoordinates(payload, place) {
+  let latitude = finiteNumber(payload.latitude);
+  let longitude = finiteNumber(payload.longitude);
+
+  if (latitude == null || longitude == null) {
+    const geocoded = await geocodePlace(place, place);
+    latitude = finiteNumber(geocoded?.location?.latitude);
+    longitude = finiteNumber(geocoded?.location?.longitude);
+  }
+
+  if (latitude == null || longitude == null) return {};
+
+  const privacyRadiusMeters = 1500;
+  const gridDegrees = 0.015;
+
+  return {
+    clusterLatitude: Math.round(latitude / gridDegrees) * gridDegrees,
+    clusterLongitude: Math.round(longitude / gridDegrees) * gridDegrees,
+    privacyRadiusMeters,
+  };
+}
+
+function getRequestDeviceId(request) {
+  const value = request.headers['x-weathercheck-device-id'];
+
+  return typeof value === 'string' ? value.trim().slice(0, 160) : '';
+}
+
+function canManageOwnedItem(item, deviceId) {
+  return Boolean(deviceId && item.authorDeviceId && item.authorDeviceId === deviceId);
+}
+
+function isOwnedByDevice(item, deviceId) {
+  return Boolean(deviceId && item.authorDeviceId && item.authorDeviceId === deviceId);
+}
+
+function toViewerItem(item, deviceId) {
+  return {
+    ...item,
+    source: isOwnedByDevice(item, deviceId) ? 'local' : 'api',
+    authorDeviceId: undefined,
+  };
+}
+
+function finiteNumber(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : null;
+}
+
+function sanitizeGpsReportPlace(place) {
+  const clean = place
+    .replace(/\d+(?:동|호|층)/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const administrativeTokens = clean.split(/\s+/).filter((token) => (
+    /(?:특별시|광역시|특별자치시|특별자치도|도|시|군|구|읍|면|동|리)$/.test(token)
+    && !/^\d+동$/.test(token)
+  ));
+
+  if (administrativeTokens.length > 0) {
+    return administrativeTokens.slice(-3).join(' ');
+  }
+
+  return '현재 위치 근처';
 }
 async function readJsonBody(request) {
   const raw = await new Promise((resolve, reject) => {

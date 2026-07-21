@@ -1,4 +1,5 @@
 import { appConfig, isBackendConfigured } from '../config/appConfig';
+import { getClientDeviceId } from './deviceIdentity';
 
 export type ApiClientResult<T> = {
   ok: boolean;
@@ -22,7 +23,10 @@ export async function readApiJson<T>(path: string): Promise<ApiClientResult<T>> 
   }
 
   try {
-    const response = await fetch(buildApiUrl(path));
+    const deviceId = await getClientDeviceId();
+    const response = await fetch(buildApiUrl(path), {
+      headers: { 'X-WeatherCheck-Device-Id': deviceId },
+    });
 
     if (!response.ok) {
       return {
@@ -63,11 +67,13 @@ export async function sendApiJson<TResponse, TBody = undefined>(
   }
 
   try {
+    const deviceId = await getClientDeviceId();
     const response = await fetch(buildApiUrl(path), {
       method,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        'X-WeatherCheck-Device-Id': deviceId,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

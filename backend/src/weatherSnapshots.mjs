@@ -2,6 +2,12 @@ import { fetchKmaShortForecast, shouldUseKmaProvider } from './providers/kmaShor
 import { fetchFmiEcmwfForecast, shouldUseFmiProvider } from './providers/fmiEcmwfForecast.mjs';
 import { fetchWindyPointForecast, shouldUseWindyProvider } from './providers/windyPointForecast.mjs';
 import { fetchYrLocationforecast, shouldUseYrProvider } from './providers/yrLocationforecast.mjs';
+import {
+  formatDailyKeyLabel,
+  formatHourlyKeyLabel,
+  getDailyForecastKey,
+  getHourlyForecastKey,
+} from './forecastKeys.mjs';
 
 const providerColors = {
   kma: '#e6465f',
@@ -28,16 +34,21 @@ export async function createWeatherProviderSnapshot(context) {
   const fallbackProviderIds = ['kma', 'yr', thirdProvider.providerId].filter(
     (providerId) => !liveProviderIds.includes(providerId),
   );
+  const hasLiveForecast = liveProviderIds.length > 0;
+  const unavailable = createUnavailableWeather();
   const resolvedWeather = {
     ...weather,
-    ...(kmaForecast ? { kma: kmaForecast.current } : {}),
-    ...(yrForecast ? { yr: yrForecast.current } : {}),
-    ...(thirdForecast ? { windy: thirdForecast.current } : {}),
-    ...(thirdForecast && thirdProvider.providerId === 'fmi' ? { fmi: thirdForecast.current } : {}),
+    kma: kmaForecast?.current ?? (hasLiveForecast ? unavailable : weather.kma),
+    yr: yrForecast?.current ?? (hasLiveForecast ? unavailable : weather.yr),
+    windy: thirdForecast?.current ?? (hasLiveForecast ? unavailable : weather.windy),
+    ...(thirdProvider.providerId === 'fmi'
+      ? { fmi: thirdForecast?.current ?? (hasLiveForecast ? unavailable : weather.fmi ?? weather.windy) }
+      : {}),
   };
 
   const snapshot = {
     ...createBaseWeatherProviderSnapshot(context, resolvedWeather, thirdProvider),
+    source: hasLiveForecast ? 'api' : 'mock',
     meta: createProviderMeta(thirdProvider.providerId, liveProviderIds, fallbackProviderIds),
   };
 
@@ -45,24 +56,16 @@ export async function createWeatherProviderSnapshot(context) {
 
   return {
     ...snapshot,
-    hourlyRows: mergeProviderRows(
-      mergeProviderRows(
-        mergeProviderRows(snapshot.hourlyRows, 'kma', kmaForecast?.hourlyRows),
-        'yr',
-        yrForecast?.hourlyRows,
-      ),
-      thirdProvider.providerId,
-      thirdForecast?.hourlyRows,
-    ),
-    dailyRows: mergeProviderRows(
-      mergeProviderRows(
-        mergeProviderRows(snapshot.dailyRows, 'kma', kmaForecast?.dailyRows),
-        'yr',
-        yrForecast?.dailyRows,
-      ),
-      thirdProvider.providerId,
-      thirdForecast?.dailyRows,
-    ),
+    hourlyRows: mergeForecastRows(snapshot.hourlyRows, {
+      kma: kmaForecast?.hourlyRows,
+      yr: yrForecast?.hourlyRows,
+      [thirdProvider.providerId]: thirdForecast?.hourlyRows,
+    }, 'hourly', thirdProvider.providerId),
+    dailyRows: mergeForecastRows(snapshot.dailyRows, {
+      kma: kmaForecast?.dailyRows,
+      yr: yrForecast?.dailyRows,
+      [thirdProvider.providerId]: thirdForecast?.dailyRows,
+    }, 'daily', thirdProvider.providerId),
   };
 }
 
@@ -186,30 +189,76 @@ async function resolveFmiForecast(context) {
   }
 }
 
-function mergeProviderRows(baseRows, providerId, providerRows) {
-  if (!Array.isArray(providerRows) || providerRows.length === 0) return baseRows;
+export function mergeForecastRows(baseRows, providerRowsById, mode, thirdProviderId = 'fmi') {
+  const rowKey = mode === 'daily' ? getDailyRowKey : getHourlyRowKey;
+  const providerIds = ['kma', 'yr', thirdProviderId];
+  const maps = Object.fromEntries(providerIds.map((providerId) => {
+    const rows = Array.isArray(providerRowsById?.[providerId]) ? providerRowsById[providerId] : [];
+    return [providerId, new Map(rows.map((row) => [rowKey(row), row]).filter(([key]) => key))];
+  }));
+  const keys = [...new Set(providerIds.flatMap((providerId) => [...maps[providerId].keys()]))]
+    .sort()
+    .slice(0, mode === 'daily' ? 10 : 18);
 
-  return baseRows.map((row, index) => {
-    const providerRow = providerRows[index];
+  if (keys.length === 0) return baseRows;
 
-    if (!providerRow) return row;
-
-    const providerCell = {
-      mark: providerRow.mark,
-      weather: providerRow.weather,
-      detail: providerRow.detail,
-      tone: providerRow.tone,
-      morning: providerRow.morning,
-      afternoon: providerRow.afternoon,
-    };
+  return keys.map((key, index) => {
+    const kma = createProviderCell(maps.kma.get(key));
+    const yr = createProviderCell(maps.yr.get(key));
+    const third = createProviderCell(maps[thirdProviderId].get(key));
 
     return {
-      ...row,
-      label: providerRow.label,
-      [providerId]: providerCell,
-      ...(providerId === 'fmi' ? { windy: providerCell } : {}),
+      forecastKey: mode === 'hourly' ? key : undefined,
+      periodKey: mode === 'daily' ? key : undefined,
+      label: mode === 'daily' ? formatDailyKeyLabel(key, index) : formatHourlyKeyLabel(key),
+      kma,
+      yr,
+      windy: third,
+      ...(thirdProviderId === 'fmi' ? { fmi: third } : {}),
     };
   });
+}
+
+function getHourlyRowKey(row) {
+  return row?.forecastKey || getHourlyForecastKey(row?.forecastAt);
+}
+
+function getDailyRowKey(row) {
+  return row?.periodKey || getDailyForecastKey(row?.forecastAt);
+}
+
+function createProviderCell(providerRow) {
+  if (!providerRow) return createUnavailableCell();
+
+  return {
+    mark: providerRow.mark,
+    weather: providerRow.weather,
+    detail: providerRow.detail,
+    tone: providerRow.tone,
+    morning: providerRow.morning,
+    afternoon: providerRow.afternoon,
+  };
+}
+
+function createUnavailableCell() {
+  return {
+    mark: '-',
+    weather: '자료 없음',
+    detail: '해당 시각 제공값 없음',
+    tone: '#9ca3af',
+  };
+}
+
+function createUnavailableWeather() {
+  return {
+    condition: '자료 없음',
+    temp: '--°C',
+    detail: '실시간 예보를 불러오지 못했어요',
+    badge: '확인 필요',
+    value: '--',
+    mark: '-',
+    tone: '#9ca3af',
+  };
 }
 
 function createSource(providerId, name, mark, weather, color) {

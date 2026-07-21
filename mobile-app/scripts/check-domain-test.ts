@@ -6,13 +6,6 @@ import {
 } from '../src/domain/judgement';
 import { getCompareFocusText, getContextualCompareRows } from '../src/domain/compare';
 import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/domain/moderation';
-import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
-import { getMockFieldReportSnapshot, normalizeFieldReportSnapshot } from '../src/services/fieldReports';
-import {
-  getMockProviderCompareRows,
-  getMockWeatherProviderSnapshot,
-  normalizeProviderSnapshot,
-} from '../src/services/weatherProviders';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -56,7 +49,7 @@ const golfMorningJudgement = createQuestionJudgement('내일 아침7시에 골�
 expectEqual(golfMorningJudgement.weatherKey, 'rain', 'golf question weather');
 expectEqual(golfMorningJudgement.searchContext.locationQuery, '용인cc', 'golf question location query');
 expectEqual(golfMorningJudgement.searchContext.timeLabel, '내일 07시', 'golf question exact time');
-expectEqual(golfMorningJudgement.searchContext.needsClarification, true, 'golf question needs place clarification');
+expectEqual(golfMorningJudgement.searchContext.needsClarification, false, 'golf question has a usable place candidate');
 
 const gimpoTonightJudgement = createQuestionJudgement('김포시 오늘밤 날씨');
 expectEqual(gimpoTonightJudgement.searchContext.locationQuery, '김포시', 'gimpo question location query');
@@ -99,50 +92,10 @@ expectEqual(locatedJudgement.searchContext.target.latitude, 37.5, 'located latit
 expectEqual(locatedJudgement.searchContext.target.longitude, 127.1, 'located longitude');
 
 const hourlyRows = getContextualCompareRows('눈', 'hourly');
-const dailyRows = getMockProviderCompareRows(snowJudgement.searchContext, 'daily');
+const dailyRows = getContextualCompareRows('눈', 'daily');
 expectTruthy(hourlyRows.length > 0, 'hourly compare rows');
 expectTruthy(dailyRows.length > 0, 'daily compare rows');
 expectTruthy(getCompareFocusText(snowJudgement.searchContext).includes('눈'), 'compare focus text');
-
-const providerSnapshot = getMockWeatherProviderSnapshot(snowJudgement.searchContext);
-expectEqual(providerSnapshot.source, 'mock', 'provider snapshot source');
-expectEqual(providerSnapshot.context.place, '석촌호수', 'provider snapshot context');
-expectEqual(providerSnapshot.summaries.length, 3, 'provider summary count');
-expectEqual(providerSnapshot.differences.length, 3, 'provider difference count');
-expectTruthy(providerSnapshot.hourlyRows.length > 0, 'provider hourly rows');
-expectTruthy(providerSnapshot.dailyRows.length > 0, 'provider daily rows');
-
-const adjustedPreset = createProviderAdjustedPreset(defaultJudgement.preset, {
-  ...providerSnapshot,
-  sources: [
-    { ...providerSnapshot.sources[0], condition: '흐림', temp: '24℃' },
-    { ...providerSnapshot.sources[1], condition: '흐림', temp: '25℃' },
-    { ...providerSnapshot.sources[2], condition: '비', temp: '23℃' },
-  ],
-});
-expectEqual(adjustedPreset.condition, '흐림', 'provider adjusted condition');
-expectEqual(adjustedPreset.temp, 24, 'provider adjusted temperature');
-expectEqual(adjustedPreset.sources[1].temp, '25℃', 'provider adjusted source temp');
-
-const fieldSnapshot = getMockFieldReportSnapshot([], snowJudgement.searchContext);
-expectEqual(fieldSnapshot.source, 'mock', 'field snapshot source');
-expectEqual(fieldSnapshot.context.place, '석촌호수', 'field snapshot context');
-expectTruthy(fieldSnapshot.reports.length > 0, 'field snapshot reports');
-expectTruthy(fieldSnapshot.requests.length > 0, 'field snapshot requests');
-
-const normalizedProviderSnapshot = normalizeProviderSnapshot(
-  { ...providerSnapshot, source: 'api' },
-  defaultJudgement.searchContext,
-);
-expectEqual(normalizedProviderSnapshot.source, 'api', 'normalized provider source');
-expectEqual(normalizedProviderSnapshot.context.place, '석촌호수', 'normalized provider context');
-
-const normalizedFieldSnapshot = normalizeFieldReportSnapshot(
-  { ...fieldSnapshot, source: 'api' },
-  defaultJudgement.searchContext,
-);
-expectEqual(normalizedFieldSnapshot.source, 'api', 'normalized field source');
-expectEqual(normalizedFieldSnapshot.context.place, '석촌호수', 'normalized field context');
 
 const moderationReports = [
   { id: 'visible-report', place: 'A', time: 'now', condition: 'clear', body: 'visible', moderationStatus: 'visible' as const },

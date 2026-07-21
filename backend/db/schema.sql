@@ -42,6 +42,49 @@ create table if not exists field_reports (
   deleted_at timestamptz
 );
 
+alter table report_requests add column if not exists author_device_id text;
+alter table report_requests add column if not exists latitude double precision;
+alter table report_requests add column if not exists longitude double precision;
+alter table report_requests add column if not exists cluster_latitude double precision;
+alter table report_requests add column if not exists cluster_longitude double precision;
+alter table report_requests add column if not exists privacy_radius_meters integer not null default 1500;
+
+alter table field_reports add column if not exists request_id text references report_requests(id) on delete set null;
+alter table field_reports add column if not exists author_device_id text;
+alter table field_reports add column if not exists latitude double precision;
+alter table field_reports add column if not exists longitude double precision;
+alter table field_reports add column if not exists cluster_latitude double precision;
+alter table field_reports add column if not exists cluster_longitude double precision;
+alter table field_reports add column if not exists privacy_radius_meters integer not null default 1500;
+
+update report_requests
+set
+  cluster_latitude = coalesce(
+    cluster_latitude,
+    (round((latitude / 0.015)::numeric) * 0.015)::double precision
+  ),
+  cluster_longitude = coalesce(
+    cluster_longitude,
+    (round((longitude / 0.015)::numeric) * 0.015)::double precision
+  ),
+  latitude = null,
+  longitude = null
+where latitude is not null or longitude is not null;
+
+update field_reports
+set
+  cluster_latitude = coalesce(
+    cluster_latitude,
+    (round((latitude / 0.015)::numeric) * 0.015)::double precision
+  ),
+  cluster_longitude = coalesce(
+    cluster_longitude,
+    (round((longitude / 0.015)::numeric) * 0.015)::double precision
+  ),
+  latitude = null,
+  longitude = null
+where latitude is not null or longitude is not null;
+
 create table if not exists moderation_events (
   id text primary key,
   target_type text not null,

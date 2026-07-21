@@ -6,6 +6,9 @@ import {
 } from '../src/domain/judgement';
 import { getCompareFocusText, getContextualCompareRows } from '../src/domain/compare';
 import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/domain/moderation';
+import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
+import { weatherPresets } from '../src/data/mockWeather';
+import type { WeatherProviderSnapshot } from '../src/services/weatherProviders';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -104,5 +107,39 @@ const moderationReports = [
 expectEqual(visibleReportsOnly(moderationReports).length, 1, 'visible moderation reports');
 expectEqual(markReportPending(moderationReports, 'visible-report')[0].moderationStatus, 'pending', 'pending moderation report');
 expectEqual(markReportHidden(moderationReports, 'visible-report')[0].moderationStatus, 'hidden', 'hidden moderation report');
+
+const alignedSnapshot: WeatherProviderSnapshot = {
+  context: defaultJudgement.searchContext,
+  generatedAt: new Date().toISOString(),
+  source: 'api',
+  meta: {
+    providerMode: 'live',
+    liveProviderIds: ['kma', 'yr', 'fmi'],
+    fallbackProviderIds: [],
+    thirdProviderId: 'fmi',
+  },
+  sources: weatherPresets.rain.sources,
+  summaries: [],
+  differences: [],
+  hourlyRows: [
+    {
+      label: '지금',
+      forecastKey: '2026-07-21T15',
+      kma: { mark: 'K', weather: '비', detail: '29°C · 강수 0.5mm', tone: '#aaa' },
+      yr: { mark: '-', weather: '자료 없음', detail: '해당 시각 제공값 없음', tone: '#aaa' },
+      windy: { mark: 'FMI', weather: '자료 없음', detail: '해당 시각 제공값 없음', tone: '#aaa' },
+      fmi: { mark: 'FMI', weather: '자료 없음', detail: '해당 시각 제공값 없음', tone: '#aaa' },
+    },
+  ],
+  dailyRows: [],
+};
+const alignedPreset = createProviderAdjustedPreset(weatherPresets.rain, alignedSnapshot);
+expectEqual(alignedPreset.condition, '비', 'missing providers do not cast fallback cloudy votes');
+expectEqual(alignedPreset.temp, 29, 'representative temperature uses aligned usable cells only');
+expectEqual(alignedPreset.sources[0].condition, '비', 'summary first source uses aligned row');
+expectEqual(alignedPreset.sources[1].condition, '자료 없음', 'summary second source remains explicit');
+expectEqual(alignedPreset.sources[2].condition, '자료 없음', 'summary missing source remains explicit');
+expectEqual(alignedPreset.forecastRows.length, 1, 'live forecast rows never append mock hours');
+expectTruthy(!alignedPreset.summary.includes('자료 없음'), 'missing provider excluded from summary sentence');
 
 console.log('Domain smoke checks passed.');

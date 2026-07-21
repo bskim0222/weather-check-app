@@ -37,7 +37,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
   const title = getDisplayTitle(current.title);
   const artworkCaption = getArtworkCaption(normalizedCondition);
   const figma = getFigmaPreset(normalizedCondition);
-  const forecastSources = getSyncedForecastSources(current, providerSnapshot);
+  const forecastSources = getSyncedForecastSources(current);
 
   return (
     <View style={[styles.decisionCard, styles.figmaWeatherCard, { backgroundColor: figma.bg }]}>
@@ -354,14 +354,8 @@ function extractHumidityDetail(detail: string) {
   return match ? match[0].replace(/\s+/g, ' ') : '';
 }
 
-function getSyncedForecastSources(current: WeatherPreset, providerSnapshot: WeatherProviderSnapshot) {
-  if (providerSnapshot.sources.length < 3) return current.sources.slice(0, 3);
-
-  return providerSnapshot.sources.slice(0, 3).map((source, index) => ({
-    ...current.sources[index],
-    ...source,
-    iconUri: source.iconUri ?? current.sources[index]?.iconUri,
-  }));
+function getSyncedForecastSources(current: WeatherPreset) {
+  return current.sources.slice(0, 3);
 }
 
 function extractForecastTemperature(detail: string) {

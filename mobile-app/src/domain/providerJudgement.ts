@@ -16,6 +16,11 @@ type VoteStats = {
   hasWarningSignal: boolean;
 };
 
+type ProviderCellEntry = {
+  cell: CompareForecastCell;
+  index: number;
+};
+
 const FALLBACK_VOTE: WeatherVote = { key: 'cloudy', label: '흐림' };
 
 const WARNING_KEYS = new Set<WeatherKey>(['typhoon', 'thunder', 'heat', 'dust', 'snow', 'shower']);
@@ -39,7 +44,10 @@ export function createProviderAdjustedPreset(
   basePreset: WeatherPreset,
   providerSnapshot: WeatherProviderSnapshot,
 ): WeatherPreset {
-  const currentCells = getCurrentProviderCells(providerSnapshot);
+  const currentEntries = getCurrentProviderEntries(providerSnapshot);
+  const currentCells = currentEntries
+    .filter(({ cell }) => isUsableForecastCell(cell))
+    .map(({ cell }) => cell);
   const voteStats = getVoteStats(currentCells) ?? {
     consensus: getWeatherVote(basePreset.condition),
     agreeingCount: 0,
@@ -49,8 +57,8 @@ export function createProviderAdjustedPreset(
   };
   const visualPreset = weatherPresets[voteStats.consensus.key] ?? weatherPresets.cloudy;
   const temp = getAverageTemperatureFromCells(currentCells) ?? basePreset.temp;
-  const sources = createSyncedSources(currentCells, providerSnapshot.sources, providerSnapshot.summaries);
-  const copy = createSummaryCopy(sources, voteStats);
+  const sources = createSyncedSources(currentEntries, providerSnapshot.sources, providerSnapshot.summaries);
+  const copy = createSummaryCopy(sources.filter(isUsableForecastSource), voteStats);
 
   return {
     ...basePreset,
@@ -67,24 +75,28 @@ export function createProviderAdjustedPreset(
     signal: copy.signal,
     sources,
     forecastLead: createForecastLead(providerSnapshot.hourlyRows),
-    forecastRows: createForecastRows(providerSnapshot.hourlyRows, visualPreset.forecastRows),
+    forecastRows: createForecastRows(
+      providerSnapshot.hourlyRows,
+      visualPreset.forecastRows,
+      providerSnapshot.source === 'api',
+    ),
   };
 }
 
-function getCurrentProviderCells(providerSnapshot: WeatherProviderSnapshot): CompareForecastCell[] {
+function getCurrentProviderEntries(providerSnapshot: WeatherProviderSnapshot): ProviderCellEntry[] {
   const firstRow = providerSnapshot.hourlyRows[0];
 
   if (!firstRow) return [];
 
-  return [firstRow.kma, firstRow.yr, getThirdProviderCell(firstRow)].filter(Boolean);
+  return [firstRow.kma, firstRow.yr, getThirdProviderCell(firstRow)].map((cell, index) => ({ cell, index }));
 }
 
 function createSyncedSources(
-  cells: CompareForecastCell[],
+  entries: ProviderCellEntry[],
   fallbackSources: ForecastSource[],
   summaries: WeatherProviderSnapshot['summaries'],
 ): ForecastSource[] {
-  return cells.map((cell, index) => {
+  return entries.map(({ cell, index }) => {
     const summary = summaries[index];
     const fallback = fallbackSources[index];
 
@@ -160,9 +172,10 @@ function getWeatherVote(condition: string): WeatherVote {
 }
 
 function getVoteStats(cells: CompareForecastCell[]): VoteStats | null {
-  if (cells.length === 0) return null;
+  const usableCells = cells.filter(isUsableForecastCell);
+  if (usableCells.length === 0) return null;
 
-  const votes = cells.map((cell) => getWeatherVote(cell.weather));
+  const votes = usableCells.map((cell) => getWeatherVote(cell.weather));
   const consensus = getConsensusVote(votes) ?? FALLBACK_VOTE;
   const agreeingCount = votes.filter((vote) => vote.key === consensus.key).length;
   const uniqueKeys = Array.from(new Set(votes.map((vote) => vote.key)));
@@ -219,15 +232,24 @@ function createSummaryCopy(sources: ForecastSource[], stats: VoteStats) {
 
   const providerText = sources.map((source) => `${normalizeProviderName(source.name)} ${source.condition} ${source.temp}`).join(', ');
   const agreementText = `${stats.totalCount}곳 중 ${stats.agreeingCount}곳이 ${stats.consensus.label}`;
-  const isUnanimous = stats.agreeingCount === stats.totalCount;
+  const isUnanimous = stats.totalCount === 3 && stats.agreeingCount === 3;
   const isMajority = stats.agreeingCount >= 2;
   const isSplit = !isMajority;
+
+  if (stats.totalCount < 2) {
+    return {
+      level: '확인 중',
+      title: '예보가 충분히 모이지 않았어요',
+      summary: `${providerText || '확인 가능한 예보 없음'}. 다른 기상청 자료를 불러온 뒤 다시 비교해 주세요.`,
+      signal: `${stats.totalCount}곳 확인`,
+    };
+  }
 
   if (isSplit) {
     return {
       level: '갈림',
       title: '예보가 서로 갈려요',
-      summary: `${providerText}. 세 기상청 의견이 나뉘어서 시간별 변화를 같이 봐야 해요.`,
+      summary: `${providerText}. 확인된 기상청 의견이 나뉘어서 시간별 변화를 같이 봐야 해요.`,
       signal: '예보 갈림',
     };
   }
@@ -334,7 +356,12 @@ function getAverageTemperatureFromCells(cells: CompareForecastCell[]) {
 function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows']) {
   const nextLabels = rows
     .slice(0, 3)
-    .map((row) => getConsensusVote([row.kma, row.yr, getThirdProviderCell(row)].map((cell) => getWeatherVote(cell.weather)))?.label)
+    .map((row) => {
+      const votes = [row.kma, row.yr, getThirdProviderCell(row)]
+        .filter(isUsableForecastCell)
+        .map((cell) => getWeatherVote(cell.weather));
+      return getConsensusVote(votes)?.label;
+    })
     .filter((label): label is string => Boolean(label));
 
   if (nextLabels.length === 0) return '시간별 예보를 다시 맞춰보고 있어요.';
@@ -345,12 +372,15 @@ function createForecastLead(rows: WeatherProviderSnapshot['hourlyRows']) {
 function createForecastRows(
   rows: WeatherProviderSnapshot['hourlyRows'],
   fallbackRows: ForecastStep[],
+  isLiveSnapshot: boolean,
 ) {
-  const rowCount = Math.max(10, Math.min(12, Math.max(rows.length, fallbackRows.length)));
+  const rowCount = isLiveSnapshot
+    ? Math.min(12, rows.length)
+    : Math.max(10, Math.min(12, Math.max(rows.length, fallbackRows.length)));
 
   return Array.from({ length: rowCount }, (_, index) => {
     const row = rows[index];
-    const fallbackRow = fallbackRows[index] ?? fallbackRows[fallbackRows.length - 1];
+    const fallbackRow = isLiveSnapshot ? undefined : fallbackRows[index] ?? fallbackRows[fallbackRows.length - 1];
     const cell = row ? pickRepresentativeCell(row) : null;
 
     return {
@@ -364,10 +394,23 @@ function createForecastRows(
 }
 
 function pickRepresentativeCell(row: WeatherProviderSnapshot['hourlyRows'][number]): CompareForecastCell {
-  const cells = [row.kma, row.yr, getThirdProviderCell(row)];
+  const cells = [row.kma, row.yr, getThirdProviderCell(row)].filter(isUsableForecastCell);
+  if (cells.length === 0) return row.kma;
   const consensus = getConsensusVote(cells.map((cell) => getWeatherVote(cell.weather)));
 
   return cells.find((cell) => getWeatherVote(cell.weather).key === consensus?.key) ?? row.kma;
+}
+
+function isUsableForecastCell(cell: CompareForecastCell | undefined): cell is CompareForecastCell {
+  if (!cell) return false;
+
+  const weather = cell.weather.trim().toLowerCase();
+  return weather !== '' && weather !== '자료 없음' && weather !== 'unavailable' && cell.mark !== '-';
+}
+
+function isUsableForecastSource(source: ForecastSource) {
+  const condition = source.condition.trim().toLowerCase();
+  return condition !== '' && condition !== '자료 없음' && condition !== 'unavailable' && source.mark !== '-';
 }
 
 function getTemperatureFromDetail(detail: string | undefined) {

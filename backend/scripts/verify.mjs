@@ -197,6 +197,20 @@ try {
 
   const deviceA = `verify-device-a-${Date.now()}`;
   const deviceB = `verify-device-b-${Date.now()}`;
+  const missingDevice = await requestJson('/field-reports', 'POST', {
+    place: 'Test place', condition: 'Clear', body: 'Test body',
+  });
+  expectEqual(missingDevice.status, 401, 'creating a report requires a device identity');
+
+  const invalidCoordinates = await requestJson('/field-reports', 'POST', {
+    place: 'Test place', condition: 'Clear', body: 'Test body', latitude: 95, longitude: 127,
+  }, deviceA);
+  expectEqual(invalidCoordinates.status, 400, 'invalid report coordinates are rejected');
+
+  const longBody = await requestJson('/field-reports', 'POST', {
+    place: 'Test place', condition: 'Clear', body: 'x'.repeat(1001),
+  }, deviceA);
+  expectEqual(longBody.status, 400, 'overlong report body is rejected');
   const report = await postJson('/field-reports', {
     place: '잠실운동장',
     condition: '비 없음',
@@ -212,6 +226,8 @@ try {
   expectEqual(report.place, '현재 위치 근처', 'gps report place is privacy-safe');
 
   const request = await postJson('/report-requests', {
+    latitude: 37.515,
+    longitude: 127.0728,
     place: '잠실운동장',
     question: '잠실운동장 지금 비 와요?',
   }, deviceA);
@@ -226,7 +242,24 @@ try {
   );
   expectEqual(duplicateRequest.status, 409, 'another device cannot overwrite request by id');
 
+  const answerWithoutLocation = await requestJson('/field-reports', 'POST', {
+    requestId: request.id, place: 'Test place', condition: 'Clear', body: 'No location',
+  }, deviceB);
+  expectEqual(answerWithoutLocation.status, 400, 'answer requires current location');
+
+  const farAnswer = await requestJson('/field-reports', 'POST', {
+    requestId: request.id,
+    place: 'Far place',
+    condition: 'Clear',
+    body: 'Too far away',
+    latitude: 35.1796,
+    longitude: 129.0756,
+  }, deviceB);
+  expectEqual(farAnswer.status, 403, 'answer is rejected outside the question area');
+
   const answerReport = await postJson('/field-reports', {
+    latitude: 37.515,
+    longitude: 127.0728,
     requestId: request.id,
     place: '잠실운동장',
     condition: '비 없음',
@@ -299,11 +332,18 @@ try {
     'answer count returns to zero after delete',
   );
 
-  const moderation = await postJson(`/reports/${encodeURIComponent(report.id)}/moderation`, {
+  const forbiddenModeration = await requestJson(`/reports/${encodeURIComponent(report.id)}/moderation`, 'POST', {
     moderationStatus: 'hidden',
     reason: 'verify hidden report',
   });
+  expectEqual(forbiddenModeration.status, 400, 'public moderation cannot hide a report');
+
+  const moderation = await postJson(`/reports/${encodeURIComponent(report.id)}/moderation`, {
+    moderationStatus: 'pending',
+    reason: 'verify pending review',
+  });
   expectEqual(moderation.ok, true, 'moderation ok');
+  expectEqual(moderation.moderationStatus, 'pending', 'public moderation only requests review');
 
   const deletedRequest = await requestJson(
     `/report-requests/${encodeURIComponent(request.id)}`,

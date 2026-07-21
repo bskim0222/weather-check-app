@@ -11,6 +11,7 @@ import {
   getMockFieldReportSnapshot,
 } from '../services/fieldReports';
 import { styles } from '../styles/appStyles';
+import type { LocationStatus } from '../types/appState';
 import type { LocalReport, ReportRequest, SearchContext } from '../types/weather';
 
 type ReportTab = 'ask' | 'questions' | 'feed';
@@ -20,6 +21,7 @@ type ReportScreenProps = {
   reports: LocalReport[];
   requests: ReportRequest[];
   searchContext: SearchContext;
+  locationStatus: LocationStatus;
   onAddReport: (report: LocalReport) => void;
   onRemovePendingReport: (reportId: string) => void;
   onDeleteReport: (reportId: string) => void;
@@ -41,6 +43,7 @@ export function ReportScreen({
   reports,
   requests,
   searchContext,
+  locationStatus,
   onAddReport,
   onRemovePendingReport,
   onDeleteReport,
@@ -136,6 +139,16 @@ export function ReportScreen({
     const clean = replyDraft.trim();
     if (!clean || !selectedRequest) return;
 
+    if (!hasUsableLocation(locationStatus)) {
+      setReplyNotice('현장 답변은 현재 위치를 확인한 뒤 남길 수 있어요.');
+      return;
+    }
+
+    if (!isNearRequest(selectedRequest, locationStatus)) {
+      setReplyNotice('질문 지역에서 약 3km 이내에 있을 때만 현장 답변을 남길 수 있어요.');
+      return;
+    }
+
     onRequestsChange((prev) =>
       prev.map((request) =>
         request.id === selectedRequest.id
@@ -155,6 +168,8 @@ export function ReportScreen({
       moderationStatus: 'visible',
       source: 'local',
       syncState: 'pending',
+      latitude: locationStatus.latitude,
+      longitude: locationStatus.longitude,
     };
 
     onAddReport(replyReport);
@@ -313,6 +328,38 @@ export function ReportScreen({
       />
     </View>
   );
+}
+
+function hasUsableLocation(
+  locationStatus: LocationStatus,
+): locationStatus is LocationStatus & { latitude: number; longitude: number } {
+  return Number.isFinite(locationStatus.latitude) && Number.isFinite(locationStatus.longitude);
+}
+
+function isNearRequest(
+  request: ReportRequest,
+  locationStatus: LocationStatus & { latitude: number; longitude: number },
+) {
+  if (!Number.isFinite(request.clusterLatitude) || !Number.isFinite(request.clusterLongitude)) return false;
+
+  return getDistanceMeters(
+    locationStatus.latitude,
+    locationStatus.longitude,
+    request.clusterLatitude!,
+    request.clusterLongitude!,
+  ) <= 3000;
+}
+
+function getDistanceMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value: number) => value * Math.PI / 180;
+  const latitudeDelta = toRadians(latitudeB - latitudeA);
+  const longitudeDelta = toRadians(longitudeB - longitudeA);
+  const a = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(toRadians(latitudeA)) * Math.cos(toRadians(latitudeB))
+    * Math.sin(longitudeDelta / 2) ** 2;
+
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function AskPanel({

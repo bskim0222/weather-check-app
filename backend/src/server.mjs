@@ -12,7 +12,6 @@ import {
   saveFieldReport,
   saveReportRequest,
   updateFieldReportById,
-  updateReportRequestAnswerStatus,
   updateReportRequestById,
 } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
@@ -34,7 +33,7 @@ export function createBackendServer() {
     try {
       await routeRequest(request, response);
     } catch (error) {
-      sendJson(response, 500, {
+      sendJson(response, error instanceof HttpError ? error.statusCode : 500, {
         error: error instanceof Error ? error.message : 'Unknown server error.',
       });
     }
@@ -75,7 +74,10 @@ async function routeRequest(request, response) {
   const fieldReportMatch = url.pathname.match(/^\/field-reports\/([^/]+)$/);
 
   if (fieldReportMatch && fieldReportMatch[1] !== 'snapshot') {
+    requireMethod(request, ['PATCH', 'DELETE']);
+    requireDeviceId(deviceId);
     const reportId = decodeURIComponent(fieldReportMatch[1]);
+    validateId(reportId, 'Field report id');
     const existingReport = await findFieldReportById(reportId);
 
     if (!existingReport) {
@@ -89,7 +91,10 @@ async function routeRequest(request, response) {
     }
 
     if (request.method === 'PATCH') {
-      const updatedReport = await updateFieldReportById(reportId, payload);
+      const updatedReport = await updateFieldReportById(reportId, {
+        condition: optionalText(payload.condition, 'condition', 40),
+        body: optionalText(payload.body, 'body', 1000),
+      });
       sendJson(response, 200, toViewerItem(updatedReport, deviceId));
       return;
     }
@@ -104,7 +109,10 @@ async function routeRequest(request, response) {
   const reportRequestMatch = url.pathname.match(/^\/report-requests\/([^/]+)$/);
 
   if (reportRequestMatch) {
+    requireMethod(request, ['PATCH', 'DELETE']);
+    requireDeviceId(deviceId);
     const requestId = decodeURIComponent(reportRequestMatch[1]);
+    validateId(requestId, 'Report request id');
     const existingRequest = await findReportRequestById(requestId);
 
     if (!existingRequest) {
@@ -118,7 +126,9 @@ async function routeRequest(request, response) {
     }
 
     if (request.method === 'PATCH') {
-      const updatedRequest = await updateReportRequestById(requestId, payload);
+      const updatedRequest = await updateReportRequestById(requestId, {
+        question: optionalText(payload.question, 'question', 500),
+      });
       sendJson(response, 200, toViewerItem(updatedRequest, deviceId));
       return;
     }
@@ -131,11 +141,13 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/weather/provider-snapshot') {
+    requireMethod(request, ['POST']);
     sendJson(response, 200, await createWeatherProviderSnapshot(payload.context ?? createFallbackContext()));
     return;
   }
 
   if (url.pathname === '/geocode') {
+    requireMethod(request, ['POST']);
     const query = textOr(payload.query, '');
     const result = await geocodePlace(query, textOr(payload.raw, ''));
 
@@ -148,6 +160,7 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/places/search') {
+    requireMethod(request, ['POST']);
     const query = textOr(payload.query, '');
     const candidates = await geocodePlaceCandidates(query, textOr(payload.raw, ''), 6);
 
@@ -160,6 +173,8 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/reverse-geocode') {
+    requireMethod(request, ['POST']);
+    validateCoordinatePair(payload.latitude, payload.longitude, true);
     const result = await reverseGeocodePoint(payload.latitude, payload.longitude);
 
     sendJson(response, 200, {
@@ -172,6 +187,7 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/field-reports/snapshot') {
+    requireMethod(request, ['POST']);
     const database = await readDatabase();
     const context = payload.context ?? createFallbackContext();
 
@@ -186,6 +202,8 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/field-reports') {
+    requireMethod(request, ['POST']);
+    requireDeviceId(deviceId);
     const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
     const existingReport = requestedId ? await findFieldReportById(requestedId) : null;
     if (existingReport) {
@@ -205,6 +223,8 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/report-requests') {
+    requireMethod(request, ['POST']);
+    requireDeviceId(deviceId);
     const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
     const existingRequest = requestedId ? await findReportRequestById(requestedId) : null;
     if (existingRequest) {
@@ -226,26 +246,27 @@ async function routeRequest(request, response) {
   const requestAnswerMatch = url.pathname.match(/^\/report-requests\/([^/]+)\/answer$/);
 
   if (requestAnswerMatch) {
-    const requestId = decodeURIComponent(requestAnswerMatch[1]);
-    const existingRequest = await findReportRequestById(requestId);
-
-    if (!existingRequest) {
-      sendJson(response, 404, { error: 'Report request not found.' });
-      return;
-    }
-
-    const updatedRequest = await updateReportRequestAnswerStatus(requestId, payload);
-    sendJson(response, 200, updatedRequest);
+    sendJson(response, 410, { error: 'Create a field report linked to the request instead.' });
     return;
   }
 
   const moderationMatch = url.pathname.match(/^\/reports\/([^/]+)\/moderation$/);
 
   if (moderationMatch) {
+    requireMethod(request, ['POST']);
     const reportId = decodeURIComponent(moderationMatch[1]);
-    const moderationStatus = payload.moderationStatus === 'hidden' ? 'hidden' : 'pending';
+    validateId(reportId, 'Field report id');
+    const existingReport = await findFieldReportById(reportId);
+    if (!existingReport) throw new HttpError(404, 'Field report not found.');
+    if (payload.moderationStatus !== 'pending') {
+      throw new HttpError(400, 'Public moderation requests can only mark a report as pending review.');
+    }
 
-    sendJson(response, 200, await moderateFieldReportById(reportId, moderationStatus, payload.reason));
+    sendJson(response, 200, await moderateFieldReportById(
+      reportId,
+      'pending',
+      optionalText(payload.reason, 'reason', 300) ?? '',
+    ));
     return;
   }
 
@@ -254,18 +275,44 @@ async function routeRequest(request, response) {
 
 async function createFieldReport(payload, deviceId) {
   const createdAt = new Date().toISOString();
+  validateCoordinatePair(payload.latitude, payload.longitude, false);
+  const requestId = optionalText(payload.requestId, 'requestId', 180);
+  const submittedLatitude = finiteNumber(payload.latitude);
+  const submittedLongitude = finiteNumber(payload.longitude);
+  let validatedPlace = requiredText(payload.place, 'place', 120);
+
+  if (requestId) {
+    const existingRequest = await findReportRequestById(requestId);
+    if (!existingRequest) throw new HttpError(404, 'Report request not found.');
+    if (submittedLatitude == null || submittedLongitude == null) {
+      throw new HttpError(400, 'Current location is required to answer a field question.');
+    }
+    if (!Number.isFinite(existingRequest.clusterLatitude) || !Number.isFinite(existingRequest.clusterLongitude)) {
+      throw new HttpError(409, 'The question location cannot be verified.');
+    }
+    const distanceMeters = getDistanceMeters(
+      submittedLatitude,
+      submittedLongitude,
+      existingRequest.clusterLatitude,
+      existingRequest.clusterLongitude,
+    );
+    if (distanceMeters > 3000) {
+      throw new HttpError(403, 'You must be within about 3 km of the question location to answer.');
+    }
+    validatedPlace = existingRequest.place;
+  }
   const coordinates = await resolvePrivacyCoordinates(payload, textOr(payload.place, '현재 위치 주변'));
   const isGpsReport = finiteNumber(payload.latitude) != null && finiteNumber(payload.longitude) != null;
 
   return {
-    id: typeof payload.id === 'string' ? payload.id : createId('report'),
-    requestId: typeof payload.requestId === 'string' ? payload.requestId : undefined,
+    id: validateOptionalId(payload.id) ?? createId('report'),
+    requestId,
     place: isGpsReport
-      ? sanitizeGpsReportPlace(textOr(payload.place, '현재 위치 주변'))
-      : textOr(payload.place, '현재 위치 주변'),
-    time: textOr(payload.time, '방금'),
-    condition: textOr(payload.condition, '날씨 확인'),
-    body: textOr(payload.body, ''),
+      ? (requestId ? validatedPlace : sanitizeGpsReportPlace(validatedPlace))
+      : validatedPlace,
+    time: optionalText(payload.time, 'time', 40) ?? '방금',
+    condition: requiredText(payload.condition, 'condition', 40),
+    body: requiredText(payload.body, 'body', 1000),
     createdAt,
     moderationStatus: 'visible',
     source: 'api',
@@ -275,13 +322,14 @@ async function createFieldReport(payload, deviceId) {
 }
 
 async function createReportRequest(payload, deviceId) {
-  const place = textOr(payload.place, '현재 위치 주변');
+  validateCoordinatePair(payload.latitude, payload.longitude, false);
+  const place = requiredText(payload.place, 'place', 120);
   const coordinates = await resolvePrivacyCoordinates(payload, place);
 
   return {
-    id: typeof payload.id === 'string' ? payload.id : createId('request'),
-    question: textOr(payload.question, `${place} 지금 날씨 어때요?`),
-    hint: textOr(payload.hint, '근처 사용자에게 현장 제보를 요청합니다.'),
+    id: validateOptionalId(payload.id) ?? createId('request'),
+    question: requiredText(payload.question, 'question', 500),
+    hint: optionalText(payload.hint, 'hint', 300) ?? '현장 답변을 기다리는 중',
     place,
     distance: textOr(payload.distance, '근처'),
     answers: Number.isFinite(payload.answers) ? payload.answers : 0,
@@ -412,8 +460,15 @@ function sanitizeGpsReportPlace(place) {
 async function readJsonBody(request) {
   const raw = await new Promise((resolve, reject) => {
     let body = '';
+    let size = 0;
 
     request.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > 32768) {
+        reject(new HttpError(413, 'Request body is too large.'));
+        request.destroy();
+        return;
+      }
       body += chunk;
     });
     request.on('end', () => resolve(body));
@@ -423,8 +478,83 @@ async function readJsonBody(request) {
   try {
     return raw ? JSON.parse(raw) : {};
   } catch {
-    return {};
+    throw new HttpError(400, 'Request body must be valid JSON.');
   }
+}
+
+class HttpError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+function requireMethod(request, allowedMethods) {
+  if (!allowedMethods.includes(request.method)) {
+    throw new HttpError(405, 'Method not allowed.');
+  }
+}
+
+function requireDeviceId(deviceId) {
+  if (!/^[A-Za-z0-9._:-]{12,160}$/.test(deviceId)) {
+    throw new HttpError(401, 'A valid device identity is required.');
+  }
+}
+
+function requiredText(value, fieldName, maxLength) {
+  const clean = optionalText(value, fieldName, maxLength);
+  if (!clean) throw new HttpError(400, `${fieldName} is required.`);
+  return clean;
+}
+
+function optionalText(value, fieldName, maxLength) {
+  if (value == null || value === '') return undefined;
+  if (typeof value !== 'string') throw new HttpError(400, `${fieldName} must be text.`);
+  const clean = value.trim();
+  if (!clean) return undefined;
+  if (clean.length > maxLength) throw new HttpError(400, `${fieldName} is too long.`);
+  return clean;
+}
+
+function validateOptionalId(value) {
+  if (value == null || value === '') return undefined;
+  const id = optionalText(value, 'id', 180);
+  validateId(id, 'id');
+  return id;
+}
+
+function validateId(value, fieldName) {
+  if (!value || !/^[A-Za-z0-9._:-]{1,180}$/.test(value)) {
+    throw new HttpError(400, `${fieldName} is invalid.`);
+  }
+}
+
+function validateCoordinatePair(latitudeValue, longitudeValue, required) {
+  const latitude = finiteNumber(latitudeValue);
+  const longitude = finiteNumber(longitudeValue);
+  const hasLatitude = latitudeValue != null && latitudeValue !== '';
+  const hasLongitude = longitudeValue != null && longitudeValue !== '';
+
+  if ((required || hasLatitude || hasLongitude) && (latitude == null || longitude == null)) {
+    throw new HttpError(400, 'A valid latitude and longitude pair is required.');
+  }
+  if (latitude != null && (latitude < -90 || latitude > 90)) {
+    throw new HttpError(400, 'Latitude is out of range.');
+  }
+  if (longitude != null && (longitude < -180 || longitude > 180)) {
+    throw new HttpError(400, 'Longitude is out of range.');
+  }
+}
+
+function getDistanceMeters(latitudeA, longitudeA, latitudeB, longitudeB) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value) => value * Math.PI / 180;
+  const latitudeDelta = toRadians(latitudeB - latitudeA);
+  const longitudeDelta = toRadians(longitudeB - longitudeA);
+  const a = Math.sin(latitudeDelta / 2) ** 2
+    + Math.cos(toRadians(latitudeA)) * Math.cos(toRadians(latitudeB))
+    * Math.sin(longitudeDelta / 2) ** 2;
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function sendJson(response, statusCode, body) {

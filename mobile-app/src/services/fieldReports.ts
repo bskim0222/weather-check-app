@@ -20,7 +20,7 @@ import type {
 export type FieldReportSnapshot = {
   context: SearchContext;
   generatedAt: string;
-  source: 'mock' | 'api';
+  source: 'mock' | 'api' | 'unavailable';
   reports: LocalReport[];
   requests: ReportRequest[];
 };
@@ -92,9 +92,21 @@ export async function fetchFieldReportSnapshot(
     if (response.ok && response.data) {
       return normalizeFieldReportSnapshot(response.data, searchContext);
     }
+
+    return getUnavailableFieldReportSnapshot(searchContext);
   }
 
   return getMockFieldReportSnapshot(reports, searchContext, requests);
+}
+
+export function getUnavailableFieldReportSnapshot(searchContext: SearchContext): FieldReportSnapshot {
+  return {
+    context: searchContext,
+    generatedAt: new Date().toISOString(),
+    source: 'unavailable',
+    reports: [],
+    requests: [],
+  };
 }
 
 export async function createRemoteFieldReport(report: LocalReport) {

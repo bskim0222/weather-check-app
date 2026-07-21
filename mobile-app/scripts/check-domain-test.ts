@@ -13,6 +13,7 @@ import {
   normalizeProviderSnapshot,
   type WeatherProviderSnapshot,
 } from '../src/services/weatherProviders';
+import { getUnavailableFieldReportSnapshot } from '../src/services/fieldReports';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -151,6 +152,11 @@ const unavailableSnapshot = getUnavailableWeatherProviderSnapshot(defaultJudgeme
 expectEqual(unavailableSnapshot.source, 'unavailable', 'unavailable snapshot source');
 expectEqual(unavailableSnapshot.hourlyRows.length, 0, 'unavailable snapshot has no fake hourly rows');
 expectEqual(unavailableSnapshot.sources.length, 0, 'unavailable snapshot has no fake provider cards');
+
+const unavailableReports = getUnavailableFieldReportSnapshot(defaultJudgement.searchContext);
+expectEqual(unavailableReports.source, 'unavailable', 'unavailable field report source');
+expectEqual(unavailableReports.reports.length, 0, 'unavailable field reports contain no samples');
+expectEqual(unavailableReports.requests.length, 0, 'unavailable report requests contain no samples');
 
 const emptyApiSnapshot = normalizeProviderSnapshot(
   {

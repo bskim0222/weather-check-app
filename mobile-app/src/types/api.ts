@@ -11,7 +11,7 @@ import type {
 
 export type ApiSnapshotMeta = {
   generatedAt: string;
-  source: 'mock' | 'api';
+  source: 'mock' | 'api' | 'unavailable';
 };
 
 export type ApiWeatherProviderSnapshot = ApiSnapshotMeta & {
@@ -67,7 +67,7 @@ export type ApiAnswerReportRequestRequest = {
 };
 
 export type ApiModerateReportRequest = {
-  moderationStatus: 'pending' | 'hidden';
+  moderationStatus: 'pending';
   reason: string;
 };
 

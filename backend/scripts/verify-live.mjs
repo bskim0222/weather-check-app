@@ -38,6 +38,17 @@ try {
   }, deviceB);
   assert(collision.status === 409, 'request id collision protection');
 
+  const farAnswer = await jsonRequest('/field-reports', 'POST', {
+    id: `live-far-answer-${suffix}`,
+    requestId,
+    place: 'Far test place',
+    condition: 'Clear',
+    body: 'This answer must be rejected.',
+    latitude: 35.1796,
+    longitude: 129.0756,
+  }, deviceB);
+  assert(farAnswer.status === 403, 'far-away answer protection');
+
   const createdAnswer = await jsonRequest('/field-reports', 'POST', {
     id: answerId,
     requestId,
@@ -62,6 +73,19 @@ try {
   assert(createdStandalone.status === 201, 'create standalone report');
   assert(!createdStandalone.data?.place.includes('501동'), 'precise building label privacy');
   assert(!('authorDeviceId' in createdStandalone.data), 'report owner id privacy');
+
+  const forbiddenHide = await jsonRequest(`/reports/${standaloneId}/moderation`, 'POST', {
+    moderationStatus: 'hidden',
+    reason: 'public hide attempt',
+  });
+  assert(forbiddenHide.status === 400, 'public hide protection');
+
+  const reviewRequest = await jsonRequest(`/reports/${standaloneId}/moderation`, 'POST', {
+    moderationStatus: 'pending',
+    reason: 'live verification review request',
+  });
+  assert(reviewRequest.status === 200, 'public review request');
+  assert(reviewRequest.data?.moderationStatus === 'pending', 'review status remains pending');
 
   await delay(1200);
   const ownerSnapshot = await jsonRequest('/field-reports/snapshot', 'POST', { context }, deviceA);
@@ -89,7 +113,7 @@ try {
   const afterDelete = await jsonRequest('/field-reports/snapshot', 'POST', { context }, deviceA);
   assert(afterDelete.data?.requests?.find((item) => item.id === requestId)?.answers === 0, 'answer count after deletion');
 
-  console.log('Live Postgres CRUD, ownership, privacy, and answer-count checks passed.');
+  console.log('Live Postgres CRUD, ownership, proximity, moderation, privacy, and answer-count checks passed.');
 } finally {
   await jsonRequest(`/field-reports/${answerId}`, 'DELETE', undefined, deviceB).catch(() => {});
   await jsonRequest(`/field-reports/${standaloneId}`, 'DELETE', undefined, deviceA).catch(() => {});

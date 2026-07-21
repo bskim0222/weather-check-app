@@ -49,6 +49,8 @@ export async function runBackendCreateSmokeCheck() {
     accent: '#d6d2c4',
     createdAt: new Date().toISOString(),
     source: 'local',
+    latitude: 37.515,
+    longitude: 127.0728,
   });
 
   expectTruthy(createdReport?.id, 'created remote report');
@@ -64,6 +66,8 @@ export async function runBackendCreateSmokeCheck() {
     createdAt: new Date().toISOString(),
     moderationStatus: 'visible',
     source: 'local',
+    latitude: 37.515,
+    longitude: 127.0728,
   });
   expectTruthy(answerReport?.id, 'created linked answer');
 

@@ -1,5 +1,7 @@
 allowBuilds:
-  dtrace-provider: set this to true or false
+  dtrace-provider: false
+overrides:
+  "xcode>uuid": 11.1.1
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.3'
   - '@expo/fingerprint@0.20.1'

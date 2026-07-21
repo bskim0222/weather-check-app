@@ -122,6 +122,9 @@ export function NativeMapLayer({
     if (!kakao || !CustomOverlay) return;
 
     centerOverlayRef.current?.setMap(null);
+    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+    overlaysRef.current = [];
+
     const centerOverlay = new CustomOverlay({
       clickable: false,
       content: createCenterPinElement(
@@ -136,30 +139,6 @@ export function NativeMapLayer({
     });
     centerOverlay.setMap(mapRef.current);
     centerOverlayRef.current = centerOverlay;
-
-    return () => {
-      centerOverlay.setMap(null);
-      if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
-    };
-  }, [
-    center.latitude,
-    center.longitude,
-    kakaoReady,
-    kakaoMapMounted,
-    searchContext.place,
-    searchContext.target.kind,
-    shouldUseKakao,
-  ]);
-
-  useEffect(() => {
-    if (!shouldUseKakao || !kakaoReady || !mapRef.current) return;
-
-    const kakao = (window as KakaoWindow).kakao?.maps;
-    const CustomOverlay = kakao?.CustomOverlay;
-    if (!kakao || !CustomOverlay) return;
-
-    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    overlaysRef.current = [];
 
     const nextOverlays = visibleClusters.map((cluster, index) => {
       const offset = clusterCoordinateOffsets[index];
@@ -193,6 +172,8 @@ export function NativeMapLayer({
     overlaysRef.current = nextOverlays;
 
     return () => {
+      centerOverlay.setMap(null);
+      if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
       nextOverlays.forEach((overlay) => overlay.setMap(null));
     };
   }, [
@@ -201,6 +182,8 @@ export function NativeMapLayer({
     kakaoReady,
     kakaoMapMounted,
     onSelectCluster,
+    searchContext.place,
+    searchContext.target.kind,
     selectedIndex,
     shouldUseKakao,
     visibleClusters,

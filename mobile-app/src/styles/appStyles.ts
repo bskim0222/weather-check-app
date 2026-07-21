@@ -5521,7 +5521,7 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
   },
   compareMomentWeatherBox: {
-    width: 44,
+    width: 62,
     minWidth: 0,
   },
   compareMomentWeather: {

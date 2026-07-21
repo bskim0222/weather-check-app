@@ -140,7 +140,7 @@ function CompareMomentHourlyService({
       <View style={styles.compareMomentServiceBody}>
         <WeatherMiniIcon condition={cell.weather} />
         <View style={styles.compareMomentWeatherBox}>
-          <Text numberOfLines={1} style={styles.compareMomentWeather}>{cell.weather}</Text>
+          <Text numberOfLines={2} style={styles.compareMomentWeather}>{cell.weather}</Text>
         </View>
         <View style={styles.compareMomentMetricRow}>
           <MetricPill label="강수" value={metrics.precipitation} />
@@ -186,7 +186,7 @@ function CompareMomentDailyPeriod({
       <Text style={styles.compareMomentDailyLabel}>{label}</Text>
       <WeatherMiniIcon condition={period.weather} />
       <View style={styles.compareMomentDailyText}>
-        <Text numberOfLines={1} style={styles.compareMomentWeather}>{period.weather}</Text>
+        <Text numberOfLines={2} style={styles.compareMomentWeather}>{period.weather}</Text>
         <Text numberOfLines={1} style={styles.compareMomentDetail}>{metrics.temperature}</Text>
         <View style={styles.compareMomentDailyMetricRow}>
           <MetricPill label="강수" value={metrics.precipitation} />

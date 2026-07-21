@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
 import { getPrivacySafePlaceName } from '../domain/locationDisplay';
+import { hasMapTargetCoordinates } from '../domain/mapClustering';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
@@ -57,6 +58,7 @@ export function NativeMapLayer({
   const [kakaoFailed, setKakaoFailed] = useState(false);
   const [kakaoMapMounted, setKakaoMapMounted] = useState(false);
   const center = useMemo(() => resolveMapCenter(searchContext), [searchContext]);
+  const hasVerifiedCenter = hasMapTargetCoordinates(searchContext);
   const shouldUseKakao = appConfig.kakaoJavaScriptKey.trim().length > 0 && !kakaoFailed;
 
   onClusterGridChangeRef.current = onClusterGridChange;
@@ -128,19 +130,21 @@ export function NativeMapLayer({
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
     overlaysRef.current = [];
 
-    const centerOverlay = new CustomOverlay({
-      clickable: false,
-      content: createCenterPinElement(
-        searchContext.target.kind === 'current'
-          ? getPrivacySafePlaceName(searchContext.place)
-          : searchContext.place,
-      ),
-      position: new kakao.LatLng(center.latitude, center.longitude),
-      xAnchor: 0.5,
-      yAnchor: 1,
-      zIndex: 35,
-    });
-    centerOverlay.setMap(mapRef.current);
+    const centerOverlay = hasVerifiedCenter
+      ? new CustomOverlay({
+          clickable: false,
+          content: createCenterPinElement(
+            searchContext.target.kind === 'current'
+              ? getPrivacySafePlaceName(searchContext.place)
+              : searchContext.place,
+          ),
+          position: new kakao.LatLng(center.latitude, center.longitude),
+          xAnchor: 0.5,
+          yAnchor: 1,
+          zIndex: 35,
+        })
+      : null;
+    centerOverlay?.setMap(mapRef.current);
     centerOverlayRef.current = centerOverlay;
 
     const nextOverlays = visibleClusters.map((cluster, index) => {
@@ -181,7 +185,7 @@ export function NativeMapLayer({
     overlaysRef.current = nextOverlays;
 
     return () => {
-      centerOverlay.setMap(null);
+      centerOverlay?.setMap(null);
       if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
       nextOverlays.forEach((overlay) => overlay.setMap(null));
     };
@@ -190,6 +194,7 @@ export function NativeMapLayer({
     center.longitude,
     kakaoReady,
     kakaoMapMounted,
+    hasVerifiedCenter,
     onSelectCluster,
     searchContext.place,
     searchContext.target.kind,

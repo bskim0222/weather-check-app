@@ -499,6 +499,16 @@ try {
   const unauthorizedAdmin = await adminJsonRequest('/admin/reports?status=pending');
   expectEqual(unauthorizedAdmin.status, 401, 'admin reports require authorization');
 
+  const adminPageResponse = await fetch(`${baseUrl}/admin`);
+  const adminPageHtml = await adminPageResponse.text();
+  expectEqual(adminPageResponse.status, 200, 'admin moderation page');
+  expectTruthy(
+    adminPageResponse.headers.get('content-type')?.includes('text/html'),
+    'admin page content type',
+  );
+  expectTruthy(adminPageHtml.includes('웨더체크 현장 제보 검토'), 'admin page title');
+  expectTruthy(!adminPageHtml.includes(adminToken), 'admin page never embeds the admin token');
+
   const pendingReports = await adminJsonRequest('/admin/reports?status=pending', 'GET', undefined, adminToken);
   expectEqual(pendingReports.status, 200, 'admin can list pending reports');
   expectTruthy(

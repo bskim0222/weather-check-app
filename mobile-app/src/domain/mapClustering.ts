@@ -1,5 +1,5 @@
 import { visibleReportsOnly } from './moderation';
-import type { LocalReport, MapReportCluster, ReportRequest } from '../types/weather';
+import type { LocalReport, MapReportCluster, ReportRequest, SearchContext } from '../types/weather';
 
 export type MapCoordinate = {
   latitude: number;
@@ -84,6 +84,11 @@ export function createMapReportClusters(
 
 export function roundToPrivacyGrid(value: number) {
   return roundToGrid(value, MAP_PRIVACY_GRID_DEGREES);
+}
+
+export function hasMapTargetCoordinates(searchContext: SearchContext) {
+  return Number.isFinite(searchContext.target.latitude)
+    && Number.isFinite(searchContext.target.longitude);
 }
 
 function roundToGrid(value: number, gridDegrees: number) {

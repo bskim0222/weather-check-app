@@ -9,6 +9,7 @@ import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/
 import {
   createMapReportClusters,
   getRecentMapReports,
+  hasMapTargetCoordinates,
   hasStoredClusterCoordinate,
   MAP_ACTIVITY_WINDOW_MS,
   MAP_PRIVACY_GRID_DEGREES,
@@ -205,6 +206,29 @@ expectEqual(
   }),
   false,
   'legacy zero coordinates fall back to place geocoding',
+);
+expectEqual(
+  hasMapTargetCoordinates({
+    ...defaultJudgement.searchContext,
+    target: { id: 'current-unverified', label: '현재 위치', kind: 'current', radiusMeters: 1200 },
+  }),
+  false,
+  'map does not show a current-location pin before coordinates are verified',
+);
+expectEqual(
+  hasMapTargetCoordinates({
+    ...defaultJudgement.searchContext,
+    target: {
+      id: 'gwanghwamun',
+      label: '광화문',
+      kind: 'known-place',
+      latitude: 37.5759,
+      longitude: 126.9768,
+      radiusMeters: 900,
+    },
+  }),
+  true,
+  'map shows a pin for a verified searched place',
 );
 
 const alignedSnapshot: WeatherProviderSnapshot = {

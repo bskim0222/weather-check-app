@@ -16,6 +16,7 @@ import {
 } from './storage.mjs';
 import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
 import { diagnoseKakaoLocal, geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
+import { createAdminPage } from './adminPage.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
 const writeRateLimitWindowMs = 10 * 60 * 1000;
@@ -64,6 +65,11 @@ async function routeRequest(request, response) {
 
   if (request.method === 'GET' && url.pathname === '/places/kakao-status') {
     sendJson(response, 200, await diagnoseKakaoLocal(url.searchParams.get('query') ?? '광화문'));
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/admin') {
+    sendHtml(response, 200, createAdminPage());
     return;
   }
 
@@ -585,6 +591,14 @@ function requireAdmin(request) {
   if (authorization !== `Bearer ${configuredToken}`) {
     throw new HttpError(401, 'Admin authorization is required.');
   }
+}
+
+function sendHtml(response, statusCode, html) {
+  response.statusCode = statusCode;
+  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+  response.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'");
+  response.end(html);
 }
 
 function enforceWriteRateLimit(request, deviceId) {

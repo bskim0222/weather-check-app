@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 
+import { hasMapTargetCoordinates } from '../domain/mapClustering';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
@@ -22,6 +23,7 @@ export function NativeMapLayer({
 }: NativeMapLayerProps) {
   const mapRef = useRef<MapView | null>(null);
   const center = useMemo(() => resolveMapCenter(searchContext), [searchContext]);
+  const hasVerifiedCenter = hasMapTargetCoordinates(searchContext);
   const region = useMemo<Region>(() => ({
     ...center,
     latitudeDelta: 0.035,
@@ -48,12 +50,14 @@ export function NativeMapLayer({
       toolbarEnabled={false}
       zoomEnabled
     >
-      <Marker
-        coordinate={center}
-        description={searchContext.target.kind === 'current' ? '현재 위치' : '검색한 위치'}
-        pinColor="#2f7894"
-        title={searchContext.place}
-      />
+      {hasVerifiedCenter ? (
+        <Marker
+          coordinate={center}
+          description={searchContext.target.kind === 'current' ? '현재 위치' : '검색한 위치'}
+          pinColor="#2f7894"
+          title={searchContext.place}
+        />
+      ) : null}
       {visibleClusters.map((cluster, index) => {
         if (!Number.isFinite(cluster.latitude) || !Number.isFinite(cluster.longitude)) return null;
         const active = index === selectedIndex;

@@ -9,6 +9,7 @@ import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/
 import {
   createMapReportClusters,
   getRecentMapReports,
+  hasStoredClusterCoordinate,
   MAP_ACTIVITY_WINDOW_MS,
   MAP_PRIVACY_GRID_DEGREES,
 } from '../src/domain/mapClustering';
@@ -190,6 +191,19 @@ expectEqual(wideMapClusters.length, 1, 'nearby map reports merge at wide zoom');
 expectEqual(wideMapClusters[0].count, 2, 'wide map cluster count');
 expectEqual(wideMapClusters[0].dominantCondition, '비', 'wide map cluster dominant weather');
 expectTruthy(Math.abs((wideMapClusters[0].latitude ?? 0) - 37.56) < 0.000001, 'wide map cluster uses grid center latitude');
+expectEqual(
+  hasStoredClusterCoordinate({
+    id: 'legacy-zero-coordinate',
+    place: 'legacy place',
+    time: 'now',
+    condition: 'clear',
+    body: 'legacy record',
+    clusterLatitude: 0,
+    clusterLongitude: 0,
+  }),
+  false,
+  'legacy zero coordinates fall back to place geocoding',
+);
 
 const alignedSnapshot: WeatherProviderSnapshot = {
   context: defaultJudgement.searchContext,

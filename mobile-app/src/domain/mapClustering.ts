@@ -93,7 +93,16 @@ function roundToGrid(value: number, gridDegrees: number) {
 export function hasStoredClusterCoordinate(
   report: LocalReport,
 ): report is LocalReport & { clusterLatitude: number; clusterLongitude: number } {
-  return Number.isFinite(report.clusterLatitude) && Number.isFinite(report.clusterLongitude);
+  const latitude = report.clusterLatitude;
+  const longitude = report.clusterLongitude;
+
+  return typeof latitude === 'number'
+    && typeof longitude === 'number'
+    && Number.isFinite(latitude)
+    && Number.isFinite(longitude)
+    && Math.abs(latitude) <= 90
+    && Math.abs(longitude) <= 180
+    && !(latitude === 0 && longitude === 0);
 }
 
 function normalizeClusterLabel(place: string) {

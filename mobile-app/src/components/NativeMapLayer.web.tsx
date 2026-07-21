@@ -92,12 +92,15 @@ export function NativeMapLayer({
 
       const map = new kakao.Map(containerRef.current, {
         center: mapCenter,
-        level: 4,
+        // A 1.5 km privacy grid can move a public marker several hundred
+        // metres from the searched point. Level 6 keeps that safe marker in
+        // view on narrow phones instead of making it appear to be missing.
+        level: 6,
       });
       mapRef.current = map;
 
       const syncClusterGrid = () => {
-        onClusterGridChangeRef.current(getGridDegreesForKakaoLevel(map.getLevel?.() ?? 4));
+        onClusterGridChangeRef.current(getGridDegreesForKakaoLevel(map.getLevel?.() ?? 6));
       };
       syncClusterGrid();
       kakao.event?.addListener(map, 'zoom_changed', syncClusterGrid);

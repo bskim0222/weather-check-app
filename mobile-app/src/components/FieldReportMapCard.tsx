@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
@@ -76,7 +77,7 @@ export function FieldReportMapCard({
 
       <View style={styles.mapSearchOverlay}>
         <View style={styles.mapSearchBox}>
-          <Text style={styles.mapSearchIcon}>⌕</Text>
+          <Ionicons color="rgba(36,36,36,0.58)" name="search" size={24} style={styles.mapSearchIcon} />
           <TextInput
             value={mapQuery}
             onChangeText={(nextValue) => {
@@ -132,9 +133,7 @@ export function FieldReportMapCard({
         onPress={onUseCurrentLocation}
         style={styles.mapCurrentButton}
       >
-        <View style={styles.mapCurrentGlyph}>
-          <View style={styles.mapCurrentGlyphDot} />
-        </View>
+        <Ionicons color="#ffffff" name="locate" size={25} />
       </Pressable>
 
       <View pointerEvents="none" style={styles.mapStatusPill}>

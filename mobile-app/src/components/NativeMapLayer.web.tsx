@@ -2,6 +2,7 @@ import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
+import { getPrivacySafePlaceName } from '../domain/locationDisplay';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
@@ -108,7 +109,11 @@ export function NativeMapLayer({
     centerOverlayRef.current?.setMap(null);
     const centerOverlay = new CustomOverlay({
       clickable: false,
-      content: createCenterPinElement(searchContext.place),
+      content: createCenterPinElement(
+        searchContext.target.kind === 'current'
+          ? getPrivacySafePlaceName(searchContext.place)
+          : searchContext.place,
+      ),
       position: new kakao.LatLng(center.latitude, center.longitude),
       xAnchor: 0.5,
       yAnchor: 1,
@@ -125,7 +130,9 @@ export function NativeMapLayer({
     center.latitude,
     center.longitude,
     kakaoReady,
+    kakaoMapMounted,
     searchContext.place,
+    searchContext.target.kind,
     shouldUseKakao,
   ]);
 
@@ -139,9 +146,11 @@ export function NativeMapLayer({
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
     overlaysRef.current = [];
 
-    const nextOverlays = visibleClusters.slice(0, clusterCoordinateOffsets.length).map((cluster, index) => {
+    const nextOverlays = visibleClusters.map((cluster, index) => {
       const offset = clusterCoordinateOffsets[index];
-      const coordinate = new kakao.LatLng(center.latitude + offset.latitude, center.longitude + offset.longitude);
+      const latitude = cluster.latitude ?? center.latitude + (offset?.latitude ?? 0);
+      const longitude = cluster.longitude ?? center.longitude + (offset?.longitude ?? 0);
+      const coordinate = new kakao.LatLng(latitude, longitude);
       const element = createClusterElement(cluster, index === selectedIndex);
 
       const openSheet = (event: Event) => {
@@ -175,6 +184,7 @@ export function NativeMapLayer({
     center.latitude,
     center.longitude,
     kakaoReady,
+    kakaoMapMounted,
     onSelectCluster,
     selectedIndex,
     shouldUseKakao,
@@ -350,7 +360,6 @@ function createCenterPinElement(place: string) {
   element.className = 'weather-check-center-pin';
   pin.className = 'weather-check-center-pin-dot';
   label.className = 'weather-check-center-pin-label';
-  pin.textContent = '⌖';
   label.textContent = place;
   element.append(pin, label);
 
@@ -465,7 +474,7 @@ function ensureClusterAnimationStyle() {
       width: 42px;
       height: 42px;
       border-radius: 999px;
-      background: #242424;
+      background: #2f7894;
       border: 4px solid rgba(255,255,255,0.96);
       box-shadow: 0 16px 28px rgba(36,36,36,0.32);
       box-sizing: border-box;
@@ -477,6 +486,18 @@ function ensureClusterAnimationStyle() {
       line-height: 1;
       position: relative;
     }
+    .weather-check-center-pin-dot::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #ffffff;
+      border-radius: 999px;
+      box-sizing: border-box;
+      transform: translate(-50%, -50%);
+    }
     .weather-check-center-pin-dot::after {
       content: "";
       position: absolute;
@@ -485,7 +506,7 @@ function ensureClusterAnimationStyle() {
       width: 44px;
       height: 44px;
       border-radius: 999px;
-      background: #242424;
+      background: #2f7894;
       transform: translate(-50%, -50%);
       z-index: -1;
       animation: weatherCheckCenterPinPulse 1.65s ease-out infinite;
@@ -495,7 +516,7 @@ function ensureClusterAnimationStyle() {
       overflow: hidden;
       text-overflow: ellipsis;
       border-radius: 999px;
-      background: rgba(36,36,36,0.88);
+      background: rgba(32,87,108,0.92);
       box-shadow: 0 10px 20px rgba(36,36,36,0.18);
       color: #ffffff;
       display: block;
@@ -511,6 +532,7 @@ function ensureClusterAnimationStyle() {
 function getClusterTone(cluster: MapReportCluster) {
   const kind = getClusterWeatherKind(cluster.dominantCondition);
 
+  if (kind === 'question') return 'rgba(242, 166, 144, 0.82)';
   if (kind === 'rain') return 'rgba(109, 178, 222, 0.74)';
   if (kind === 'snow') return 'rgba(238, 246, 247, 0.90)';
   if (kind === 'storm') return 'rgba(55, 48, 76, 0.80)';
@@ -537,12 +559,15 @@ function getClusterWeatherSymbol(condition: string) {
   if (kind === 'snow') return '\u2744';
   if (kind === 'fog') return '≋';
   if (kind === 'dust') return '•';
+  if (kind === 'question') return '?';
 
   return '●';
 }
 
 function getClusterWeatherKind(condition: string) {
   const value = condition.toLowerCase();
+
+  if (value.includes('문의') || value.includes('question')) return 'question';
 
   if (value.includes('천둥') || value.includes('번개') || value.includes('storm') || value.includes('thunder')) {
     return 'storm';

@@ -67,7 +67,9 @@ export function AppLoadingScreen() {
         ]}
       >
         <BrandLogo />
-        <Text style={styles.loadingTitle}>날씨가 헤깔릴땐, 한자리에서 비교하세요.</Text>
+        <Text style={styles.loadingTitle}>
+          오늘 옷 뭐 입지? 날씨가 애매할 땐 비교하고, 수상할 땐 물어보세요
+        </Text>
         <Text style={styles.loadingBody}>세 기상청 예보와 현장 제보를 불러오는 중이에요.</Text>
         <View style={styles.loadingDots}>
           {[0, 1, 2].map((index) => (

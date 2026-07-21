@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { FieldReportMapCard } from '../components/FieldReportMapCard';
 import { visibleReportsOnly } from '../domain/moderation';
+import { searchRemotePlaces } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
 import type { LocalReport, MapReportCluster, ReportRequest, SearchContext, WeatherPreset } from '../types/weather';
 
@@ -28,18 +29,51 @@ export function MapScreen({
   onReportIssue,
 }: MapScreenProps) {
   const mapReports = useMemo(
-    () => getMapReportsForContext([...reports, ...requests.map(requestToMapReport)], searchContext),
-    [reports, requests, searchContext],
+    () => getRecentMapReports([...reports, ...requests.map(requestToMapReport)]),
+    [reports, requests],
   );
+  const [coordinatesByPlace, setCoordinatesByPlace] = useState<Record<string, MapCoordinate | null>>({});
   const visibleClusters = useMemo(
-    () => createMapReportClusters(mapReports, searchContext.place),
-    [mapReports, searchContext.place],
+    () => createMapReportClusters(mapReports, coordinatesByPlace),
+    [coordinatesByPlace, mapReports],
   );
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   useEffect(() => {
     setSelectedIndex(-1);
   }, [searchContext.place]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const places = Array.from(new Set(mapReports.map((report) => report.place.trim()).filter(Boolean)));
+    const unresolvedPlaces = places.filter((place) => !(place in coordinatesByPlace));
+
+    if (unresolvedPlaces.length === 0) return;
+
+    Promise.all(
+      unresolvedPlaces.map(async (place) => {
+        const candidates = await searchRemotePlaces(place, place);
+        const location = candidates[0]?.location;
+
+        return [
+          place,
+          location?.latitude != null && location?.longitude != null
+            ? {
+              latitude: roundToPrivacyGrid(location.latitude),
+              longitude: roundToPrivacyGrid(location.longitude),
+            }
+            : null,
+        ] as const;
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setCoordinatesByPlace((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coordinatesByPlace, mapReports]);
 
   const selectedCluster = selectedIndex >= 0 ? visibleClusters[selectedIndex] : undefined;
 
@@ -62,13 +96,21 @@ export function MapScreen({
   );
 }
 
+type MapCoordinate = {
+  latitude: number;
+  longitude: number;
+};
+
+const MAP_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const MAP_PRIVACY_GRID_DEGREES = 0.015;
+
 function requestToMapReport(request: ReportRequest): LocalReport {
   return {
     id: `map-request-${request.id}`,
     requestId: request.id,
     place: request.place,
     time: request.time,
-    condition: request.mark || 'question',
+    condition: '현장 문의',
     body: request.question,
     createdAt: request.createdAt,
     moderationStatus: 'visible',
@@ -76,36 +118,51 @@ function requestToMapReport(request: ReportRequest): LocalReport {
   };
 }
 
-function getMapReportsForContext(reports: LocalReport[], searchContext: SearchContext) {
-  const contextPlaces = [
-    searchContext.place,
-    searchContext.target.label,
-    searchContext.locationQuery ?? '',
-  ].filter(Boolean);
-
+function getRecentMapReports(reports: LocalReport[]) {
+  const cutoff = Date.now() - MAP_ACTIVITY_WINDOW_MS;
   return visibleReportsOnly(reports)
     .filter((report) => report.source !== 'mock')
-    .filter((report) => contextPlaces.some((contextPlace) => isRelatedPlace(report.place, contextPlace)));
+    .filter((report) => {
+      const createdAt = report.createdAt ? Date.parse(report.createdAt) : Number.NaN;
+      return Number.isFinite(createdAt) && createdAt >= cutoff;
+    });
 }
 
-function createMapReportClusters(reports: LocalReport[], fallbackPlace: string): MapReportCluster[] {
-  const groups = new Map<string, LocalReport[]>();
+function createMapReportClusters(
+  reports: LocalReport[],
+  coordinatesByPlace: Record<string, MapCoordinate | null>,
+): MapReportCluster[] {
+  const groups = new Map<string, { coordinate: MapCoordinate; reports: LocalReport[] }>();
 
   reports.forEach((report) => {
-    const key = normalizeClusterLabel(report.place || fallbackPlace);
-    const group = groups.get(key) ?? [];
-    group.push(report);
+    const sourcePlace = report.place.trim();
+    const coordinate = coordinatesByPlace[sourcePlace];
+    if (!sourcePlace || !coordinate) return;
+    const key = `${coordinate.latitude.toFixed(4)}:${coordinate.longitude.toFixed(4)}`;
+    const group = groups.get(key) ?? { coordinate, reports: [] };
+    group.reports.push(report);
     groups.set(key, group);
   });
 
-  return Array.from(groups.entries()).map(([label, group], index) => ({
-    id: `cluster-${index}-${label}`,
-    label: `${label} 주변`,
-    count: group.length,
-    dominantCondition: getDominantCondition(group),
-    privacyRadiusLabel: '약 1.5km 묶음',
-    reports: group,
-  }));
+  return Array.from(groups.entries()).map(([gridKey, group], index) => {
+    const sourcePlace = group.reports[0]?.place ?? '현재 위치';
+    const label = normalizeClusterLabel(sourcePlace);
+
+    return {
+      id: `cluster-${index}-${gridKey}`,
+      label: `${label} 주변`,
+      count: group.reports.length,
+      dominantCondition: getDominantCondition(group.reports),
+      privacyRadiusLabel: '최근 24시간 · 약 1.5km 묶음',
+      reports: group.reports,
+      latitude: group.coordinate.latitude,
+      longitude: group.coordinate.longitude,
+    };
+  });
+}
+
+function roundToPrivacyGrid(value: number) {
+  return Math.round(value / MAP_PRIVACY_GRID_DEGREES) * MAP_PRIVACY_GRID_DEGREES;
 }
 
 function normalizeClusterLabel(place: string) {
@@ -116,35 +173,10 @@ function normalizeClusterLabel(place: string) {
   const neighborhood = parts.find((part) => /(동|읍|면|리|가)$/.test(part));
   if (neighborhood) return neighborhood.replace(/[0-9-]/g, '');
 
-  const district = parts.find((part) => /(구|군|시)$/.test(part) && !isBroadPlaceToken(part));
+  const district = parts.find((part) => /(구|군|시)$/.test(part));
   if (district) return district;
 
   return parts.at(-1) ?? clean;
-}
-
-function isRelatedPlace(reportPlace: string, contextPlace: string) {
-  const reportTokens = tokenizePlace(reportPlace);
-  const contextTokens = tokenizePlace(contextPlace);
-
-  if (reportTokens.length === 0 || contextTokens.length === 0) return false;
-
-  return contextTokens.some((token) => {
-    if (isBroadPlaceToken(token)) return false;
-
-    return reportTokens.some((reportToken) => {
-      if (isBroadPlaceToken(reportToken)) return false;
-      return reportToken.includes(token) || token.includes(reportToken);
-    });
-  });
-}
-
-function tokenizePlace(place: string) {
-  return normalizePlaceText(place)
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2)
-    .filter((token) => !/^\d+$/.test(token));
 }
 
 function normalizePlaceText(place: string) {
@@ -155,48 +187,6 @@ function normalizePlaceText(place: string) {
     .replace(/\d+(?:-\d+)?/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function isBroadPlaceToken(token: string) {
-  return [
-    '서울',
-    '서울시',
-    '서울특별시',
-    '부산',
-    '부산시',
-    '부산광역시',
-    '대구',
-    '대구시',
-    '인천',
-    '인천시',
-    '광주',
-    '광주시',
-    '대전',
-    '대전시',
-    '울산',
-    '울산시',
-    '세종',
-    '세종시',
-    '경기',
-    '경기도',
-    '강원',
-    '강원도',
-    '충북',
-    '충청북도',
-    '충남',
-    '충청남도',
-    '전북',
-    '전라북도',
-    '전남',
-    '전라남도',
-    '경북',
-    '경상북도',
-    '경남',
-    '경상남도',
-    '제주',
-    '제주도',
-    '제주특별자치도',
-  ].includes(token);
 }
 
 function getDominantCondition(reports: LocalReport[]) {

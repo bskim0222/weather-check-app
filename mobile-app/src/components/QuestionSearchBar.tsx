@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
@@ -63,7 +64,7 @@ export function QuestionSearchBar({
   return (
     <View>
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>⌕</Text>
+        <Ionicons color="rgba(25,28,27,0.62)" name="search" size={23} style={styles.searchIcon} />
         <TextInput
           ref={inputRef}
           editable={!isBusy}

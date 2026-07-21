@@ -75,6 +75,8 @@ export type MapReportCluster = {
   dominantCondition: string;
   privacyRadiusLabel: string;
   reports: LocalReport[];
+  latitude?: number;
+  longitude?: number;
 };
 
 export type ForecastSource = {

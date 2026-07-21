@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, Text, View } from 'react-native';
 
 import { getCurrentLocationDisplay } from '../domain/locationDisplay';
@@ -26,7 +27,8 @@ export function AppHeader({ locationStatus, onRefresh, refreshLabel }: AppHeader
         onPress={onRefresh}
         style={styles.refreshButton}
       >
-        <Text style={styles.refreshText}>↻</Text>
+        <Ionicons color="#2f7894" name="refresh" size={22} />
+        <Text style={styles.refreshButtonLabel}>새로고침</Text>
       </Pressable>
     </View>
   );

@@ -6,6 +6,7 @@ import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
 import { normalizeHourlyLabels } from '../domain/forecastLabels';
+import { getCurrentLocationDisplay } from '../domain/locationDisplay';
 import { getThirdProviderCell } from '../domain/providerRows';
 import type { WeatherProviderSnapshot } from '../services/weatherProviders';
 import { styles } from '../styles/appStyles';
@@ -446,17 +447,7 @@ function includesAny(value: string, patterns: string[]) {
 
 function getDecisionPlaceLabel(searchContext: SearchContext, locationStatus: LocationStatus) {
   if (searchContext.target.kind !== 'current') return searchContext.place;
-
-  if (locationStatus.phase === 'granted') {
-    return locationStatus.placeName ?? locationStatus.label ?? '현재 위치 확인됨';
-  }
-
-  if (locationStatus.phase === 'checking') return '현재 위치 확인 중';
-  if (locationStatus.phase === 'denied') return '현재 위치 권한 꺼짐';
-  if (locationStatus.phase === 'unavailable') return locationStatus.label;
-  if (locationStatus.phase === 'fallback') return locationStatus.placeName ?? '기본 위치 사용 중';
-
-  return searchContext.place;
+  return getCurrentLocationDisplay(locationStatus);
 }
 
 function getDisplayTitle(title: string) {

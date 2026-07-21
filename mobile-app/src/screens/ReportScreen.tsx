@@ -8,7 +8,6 @@ import { formatPostTime } from '../domain/timeDisplay';
 import {
   createRemoteFieldReport,
   createRemoteReportRequest,
-  getMockFieldReportSnapshot,
 } from '../services/fieldReports';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
@@ -64,20 +63,21 @@ export function ReportScreen({
   const [editingRequest, setEditingRequest] = useState<ReportRequest | undefined>();
   const [editDraft, setEditDraft] = useState('');
 
-  const fieldSnapshot = useMemo(
-    () => getMockFieldReportSnapshot(reports, searchContext, requests),
-    [reports, requests, searchContext],
+  const orderedRequests = useMemo(
+    () => requests.filter((request) => request.source !== 'mock'),
+    [requests],
   );
-  const orderedReports = fieldSnapshot.reports;
-  const orderedRequests = fieldSnapshot.requests.filter((request) => request.source !== 'mock');
-  const visibleReports = orderLiveReports(orderedReports);
+  const visibleReports = useMemo(
+    () => orderLiveReports(visibleReportsOnly(reports).filter((report) => report.source !== 'mock')),
+    [reports],
+  );
   const myQuestions = orderedRequests.filter((request) => request.source === 'local');
   const selectedRequest = useMemo(
     () => orderedRequests.find((request) => request.id === selectedRequestId),
     [orderedRequests, selectedRequestId],
   );
   const selectedRequestReplies = selectedRequestId
-    ? orderedReports.filter((report) => report.requestId === selectedRequestId)
+    ? visibleReports.filter((report) => report.requestId === selectedRequestId)
     : [];
 
   useEffect(() => {

@@ -241,18 +241,6 @@ function getNearbyDecisionReports(
 
   if (matchedReports.length > 0) return matchedReports.slice(0, 6);
 
-  if (!isCurrentContext && contextPlace) {
-    return [
-      {
-        place: searchContext.place,
-        time: '확인 필요',
-        condition: searchContext.detectedWeather,
-        body: `${searchContext.place} 주변 현장 제보가 아직 없어요. 가까운 분의 제보가 필요해요.`,
-        source: 'mock' as const,
-      },
-    ];
-  }
-
   return [];
 }
 

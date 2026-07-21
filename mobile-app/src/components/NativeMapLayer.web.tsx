@@ -153,8 +153,14 @@ export function NativeMapLayer({
         onSelectCluster(index);
       };
 
+      const openSheetFromKeyboard = (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        openSheet(event);
+      };
+
       element.addEventListener('click', openSheet);
       element.addEventListener('touchend', openSheet);
+      element.addEventListener('keydown', openSheetFromKeyboard);
 
       const overlay = new CustomOverlay({
         clickable: true,
@@ -196,6 +202,8 @@ export function NativeMapLayer({
           ? null
           : createElement('div', {
               ref: containerRef,
+              'data-weather-check-map-cluster-count': String(visibleClusters.length),
+              'data-weather-check-map-mounted': kakaoMapMounted ? 'true' : 'false',
               style: {
                 bottom: 0,
                 left: 0,
@@ -313,7 +321,9 @@ const fallbackClusterPositions = [
 function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   ensureClusterAnimationStyle();
 
-  const element = document.createElement('button');
+  // Kakao CustomOverlay reliably mounts a div root. Interactive button roots
+  // can be dropped by the SDK wrapper on mobile web, leaving no report marker.
+  const element = document.createElement('div');
   const icon = document.createElement('span');
   const count = document.createElement('span');
   const isDark = isDarkCluster(cluster);
@@ -323,10 +333,11 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   count.className = 'weather-check-cluster-count';
   count.textContent = String(cluster.count);
 
-  element.type = 'button';
   element.className = isActive
     ? 'weather-check-cluster-marker weather-check-cluster-marker-active'
     : 'weather-check-cluster-marker';
+  element.setAttribute('role', 'button');
+  element.setAttribute('tabindex', '0');
   element.setAttribute('aria-label', `${cluster.label} 현장 제보 ${cluster.count}개 보기`);
   element.append(icon, count);
   element.style.background = 'transparent';

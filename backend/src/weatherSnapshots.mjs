@@ -16,7 +16,39 @@ const providerColors = {
   fmi: '#7f9f8d',
 };
 
+const snapshotCacheTtlMs = 2 * 60 * 1000;
+const snapshotCache = new Map();
+
 export async function createWeatherProviderSnapshot(context) {
+  const cacheKey = createSnapshotCacheKey(context);
+  const cached = snapshotCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached?.snapshot && cached.expiresAt > now) return cached.snapshot;
+  if (cached?.pending) return cached.pending;
+
+  const pending = createWeatherProviderSnapshotUncached(context);
+  snapshotCache.set(cacheKey, { pending, expiresAt: now + snapshotCacheTtlMs });
+
+  try {
+    const snapshot = await pending;
+    if (snapshot.source === 'api') {
+      snapshotCache.set(cacheKey, {
+        snapshot,
+        expiresAt: Date.now() + snapshotCacheTtlMs,
+      });
+      trimSnapshotCache();
+    } else {
+      snapshotCache.delete(cacheKey);
+    }
+    return snapshot;
+  } catch (error) {
+    snapshotCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+async function createWeatherProviderSnapshotUncached(context) {
   const weather = normalizeWeather(context?.detectedWeather);
   const [kmaForecast, yrForecast, fmiForecast, windyForecast] = await Promise.all([
     resolveKmaForecast(context),
@@ -67,6 +99,36 @@ export async function createWeatherProviderSnapshot(context) {
       [thirdProvider.providerId]: thirdForecast?.dailyRows,
     }, 'daily', thirdProvider.providerId),
   };
+}
+
+function createSnapshotCacheKey(context) {
+  const target = context?.target ?? {};
+  const latitude = Number.isFinite(target.latitude) ? Number(target.latitude).toFixed(4) : '';
+  const longitude = Number.isFinite(target.longitude) ? Number(target.longitude).toFixed(4) : '';
+
+  return [
+    latitude,
+    longitude,
+    context?.place ?? '',
+    context?.timeLabel ?? '',
+    context?.raw ?? '',
+    process.env.WEATHER_PROVIDER_MODE ?? '',
+  ].join('|');
+}
+
+function trimSnapshotCache() {
+  if (snapshotCache.size <= 200) return;
+  const now = Date.now();
+
+  for (const [key, value] of snapshotCache) {
+    if (!value.pending && value.expiresAt <= now) snapshotCache.delete(key);
+  }
+
+  while (snapshotCache.size > 200) {
+    const oldestKey = snapshotCache.keys().next().value;
+    if (oldestKey == null) break;
+    snapshotCache.delete(oldestKey);
+  }
 }
 
 function createProviderMeta(thirdProviderId, liveProviderIds, fallbackProviderIds) {

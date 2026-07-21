@@ -14,6 +14,8 @@ import {
   MAP_PRIVACY_GRID_DEGREES,
 } from '../src/domain/mapClustering';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
+import { createFallbackLocationStatus } from '../src/domain/locationStatus';
+import { deviceIdStorageKey, loadOrCreateDeviceId } from '../src/services/deviceIdentityShared';
 import { weatherPresets } from '../src/data/mockWeather';
 import {
   getUnavailableWeatherProviderSnapshot,
@@ -245,6 +247,12 @@ expectEqual(unavailableSnapshot.source, 'unavailable', 'unavailable snapshot sou
 expectEqual(unavailableSnapshot.hourlyRows.length, 0, 'unavailable snapshot has no fake hourly rows');
 expectEqual(unavailableSnapshot.sources.length, 0, 'unavailable snapshot has no fake provider cards');
 
+const failedLocation = createFallbackLocationStatus();
+expectEqual(failedLocation.phase, 'fallback', 'failed location remains an explicit fallback state');
+expectEqual(failedLocation.latitude, undefined, 'failed location never injects a sample latitude');
+expectEqual(failedLocation.longitude, undefined, 'failed location never injects a sample longitude');
+expectTruthy(!failedLocation.placeName, 'failed location never presents a sample place as the current location');
+
 const unavailableReports = getUnavailableFieldReportSnapshot(defaultJudgement.searchContext);
 expectEqual(unavailableReports.source, 'unavailable', 'unavailable field report source');
 expectEqual(unavailableReports.reports.length, 0, 'unavailable field reports contain no samples');
@@ -266,6 +274,22 @@ const emptyApiSnapshot = normalizeProviderSnapshot(
 expectEqual(emptyApiSnapshot.hourlyRows.length, 0, 'empty API response does not receive mock hourly rows');
 expectEqual(emptyApiSnapshot.sources.length, 0, 'empty API response does not receive mock provider cards');
 expectEqual(emptyApiSnapshot.source, 'unavailable', 'empty API response is explicitly unavailable');
+
+export async function verifyPersistentDeviceIdentity() {
+  const identityStore = new Map<string, string>();
+  const identityStorage = {
+    async getItem(key: string) {
+      return identityStore.get(key) ?? null;
+    },
+    async setItem(key: string, value: string) {
+      identityStore.set(key, value);
+    },
+  };
+  const firstPersistentDeviceId = await loadOrCreateDeviceId(identityStorage);
+  const restoredPersistentDeviceId = await loadOrCreateDeviceId(identityStorage);
+  expectEqual(restoredPersistentDeviceId, firstPersistentDeviceId, 'device identity persists across app restarts');
+  expectEqual(identityStore.get(deviceIdStorageKey), firstPersistentDeviceId, 'device identity uses the stable storage key');
+}
 
 const threeProviderSnapshot: WeatherProviderSnapshot = {
   ...alignedSnapshot,

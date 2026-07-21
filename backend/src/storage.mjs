@@ -9,6 +9,7 @@ const schemaPath = join(rootDir, 'db', 'schema.sql');
 const maxFieldReports = 200;
 const maxReportRequests = 100;
 const maxModerationEvents = 300;
+const maxOwnedItems = 500;
 let pgPool;
 let pgSchemaReady = false;
 
@@ -40,9 +41,9 @@ export async function getStorageStatus() {
   }
 }
 
-export async function readDatabase() {
+export async function readDatabase(options = {}) {
   if (shouldUsePostgresStorage()) {
-    return readPostgresDatabase();
+    return readPostgresDatabase(options);
   }
 
   await mkdir(dataDir, { recursive: true });
@@ -51,8 +52,11 @@ export async function readDatabase() {
     const raw = await readFile(databasePath, 'utf8');
 
     return normalizeDatabase(JSON.parse(raw));
-  } catch {
-    return createEmptyDatabase();
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return createEmptyDatabase();
+    }
+    throw error;
   }
 }
 
@@ -120,6 +124,25 @@ export async function saveFieldReport(report) {
 }
 
 export async function updateFieldReportById(reportId, updates) {
+  if (shouldUsePostgresStorage()) {
+    const pool = await getPostgresPool();
+    await ensurePostgresSchema(pool);
+    const result = await pool.query(
+      `
+        update field_reports
+        set
+          condition = coalesce($2, condition),
+          body = coalesce($3, body),
+          updated_at = now()
+        where id = $1 and deleted_at is null
+        returning id
+      `,
+      [reportId, updates.condition ?? null, updates.body ?? null],
+    );
+
+    return result.rowCount > 0 ? findFieldReportById(reportId) : null;
+  }
+
   const existingReport = await findFieldReportById(reportId);
 
   if (!existingReport) return null;
@@ -215,6 +238,22 @@ export async function saveReportRequest(requestItem) {
 }
 
 export async function updateReportRequestById(requestId, updates) {
+  if (shouldUsePostgresStorage()) {
+    const pool = await getPostgresPool();
+    await ensurePostgresSchema(pool);
+    const result = await pool.query(
+      `
+        update report_requests
+        set question = coalesce($2, question), updated_at = now()
+        where id = $1 and deleted_at is null
+        returning id
+      `,
+      [requestId, updates.question ?? null],
+    );
+
+    return result.rowCount > 0 ? findReportRequestById(requestId) : null;
+  }
+
   const existingRequest = await findReportRequestById(requestId);
 
   if (!existingRequest) return null;
@@ -315,6 +354,10 @@ export async function moderateFieldReportById(reportId, moderationStatus, reason
         `,
         [reportId, status],
       );
+      if (updatedReport.rowCount === 0) {
+        await client.query('rollback');
+        return null;
+      }
       await client.query(
         `
           insert into moderation_events (id, target_type, target_id, action, reason, created_at)
@@ -337,6 +380,7 @@ export async function moderateFieldReportById(reportId, moderationStatus, reason
 
   const database = await readDatabase();
   const moderatedReport = database.fieldReports.find((report) => report.id === reportId);
+  if (!moderatedReport) return null;
   database.fieldReports = database.fieldReports.map((report) =>
     report.id === reportId ? { ...report, moderationStatus: status } : report,
   );
@@ -393,9 +437,60 @@ function shouldUsePostgresStorage() {
   return mode === 'postgres' || (!mode && Boolean(process.env.DATABASE_URL));
 }
 
-async function readPostgresDatabase() {
+async function readPostgresDatabase(options = {}) {
   const pool = await getPostgresPool();
   await ensurePostgresSchema(pool);
+  const ownerDeviceId = typeof options.ownerDeviceId === 'string'
+    ? options.ownerDeviceId.trim()
+    : '';
+  const fieldReportParams = ownerDeviceId
+    ? [maxFieldReports, ownerDeviceId, maxFieldReports + maxOwnedItems]
+    : [maxFieldReports];
+  const reportRequestParams = ownerDeviceId
+    ? [maxReportRequests, ownerDeviceId, maxReportRequests + maxOwnedItems]
+    : [maxReportRequests];
+  const fieldReportSelection = ownerDeviceId
+    ? `
+      where deleted_at is null
+        and (
+          author_device_id = $2
+          or id in (
+            select id
+            from field_reports
+            where deleted_at is null
+            order by created_at desc
+            limit $1
+          )
+        )
+      order by created_at desc
+      limit $3
+    `
+    : `
+      where deleted_at is null
+      order by created_at desc
+      limit $1
+    `;
+  const reportRequestSelection = ownerDeviceId
+    ? `
+      where report_requests.deleted_at is null
+        and (
+          report_requests.author_device_id = $2
+          or report_requests.id in (
+            select id
+            from report_requests
+            where deleted_at is null
+            order by created_at desc
+            limit $1
+          )
+        )
+      order by report_requests.created_at desc
+      limit $3
+    `
+    : `
+      where report_requests.deleted_at is null
+      order by report_requests.created_at desc
+      limit $1
+    `;
 
   const [fieldReportsResult, reportRequestsResult, moderationEventsResult] = await Promise.all([
     pool.query(`
@@ -418,10 +513,8 @@ async function readPostgresDatabase() {
         updated_at,
         deleted_at
       from field_reports
-      where deleted_at is null
-      order by created_at desc
-      limit $1
-    `, [maxFieldReports]),
+      ${fieldReportSelection}
+    `, fieldReportParams),
     pool.query(`
       with answer_stats as (
         select
@@ -458,10 +551,8 @@ async function readPostgresDatabase() {
         report_requests.deleted_at
       from report_requests
       left join answer_stats on answer_stats.request_id = report_requests.id
-      where report_requests.deleted_at is null
-      order by report_requests.created_at desc
-      limit $1
-    `, [maxReportRequests]),
+      ${reportRequestSelection}
+    `, reportRequestParams),
     pool.query(`
       select id, target_type, target_id, action, reason, created_at
       from moderation_events
@@ -537,7 +628,7 @@ async function syncReportRequests(client, requests) {
 }
 
 async function upsertFieldReportQuery(clientOrPool, report) {
-  await clientOrPool.query(
+  return clientOrPool.query(
     `
       insert into field_reports (
         id, request_id, author_device_id, place, time_label, condition, body,
@@ -563,6 +654,7 @@ async function upsertFieldReportQuery(clientOrPool, report) {
         source = excluded.source,
         updated_at = coalesce(excluded.updated_at, now()),
         deleted_at = null
+      where field_reports.deleted_at is null
     `,
     [
       report.id,
@@ -584,7 +676,7 @@ async function upsertFieldReportQuery(clientOrPool, report) {
 }
 
 async function upsertReportRequestQuery(clientOrPool, requestItem) {
-  await clientOrPool.query(
+  return clientOrPool.query(
     `
       insert into report_requests (
         id, author_device_id, question, place, distance, time_label, answers,
@@ -615,6 +707,7 @@ async function upsertReportRequestQuery(clientOrPool, requestItem) {
         last_answered_at = excluded.last_answered_at,
         updated_at = coalesce(excluded.updated_at, now()),
         deleted_at = null
+      where report_requests.deleted_at is null
     `,
     [
       requestItem.id,

@@ -8,8 +8,8 @@ export function getTargetTimestampMs(context, now = new Date()) {
   if (!hasExplicitTime) return null;
 
   const dayOffset = getDayOffset(text, now);
-  const hour = getTargetHour(text);
   const parts = getSeoulParts(now);
+  const hour = getTargetHour(text, parts.hour);
 
   return Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset, hour - 9, 0, 0);
 }
@@ -72,7 +72,7 @@ function getDayOffset(text, now) {
   return 0;
 }
 
-function getTargetHour(text) {
+function getTargetHour(text, currentHour) {
   const exactHour = getExactHour(text);
   if (Number.isFinite(exactHour)) return exactHour;
 
@@ -82,6 +82,8 @@ function getTargetHour(text) {
   if (text.includes('오후')) return 15;
   if (text.includes('퇴근') || text.includes('저녁')) return 18;
   if (text.includes('밤')) return 21;
+
+  if (text.includes('오늘') && Number.isFinite(currentHour)) return currentHour;
 
   return 12;
 }

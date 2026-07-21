@@ -1,5 +1,6 @@
 import { formatSeoulDateHour, getForecastWindow, getSeoulParts, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
 import { getDailyForecastKey } from '../forecastKeys.mjs';
+import { fetchWithTimeout } from '../httpFetch.mjs';
 
 const fmiEndpoint = 'https://opendata.fmi.fi/wfs';
 const storedQueryId = 'ecmwf::forecast::surface::point::timevaluepair';
@@ -20,7 +21,7 @@ export async function fetchFmiEcmwfForecast(context) {
   url.searchParams.set('starttime', new Date().toISOString());
   url.searchParams.set('endtime', new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString());
 
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url, {}, 12000);
 
   if (!response.ok) {
     throw new Error(`FMI request failed with ${response.status}.`);
@@ -43,7 +44,7 @@ export function createFmiForecastModel(xml, context = null) {
     current: {
       condition,
       temp: formatTemperature(current.Temperature),
-      detail: createDetail(current.Precipitation1h, current.WindSpeedMS),
+      detail: createDetail(current.Precipitation1h, current.WindSpeedMS, current.RelativeHumidity),
       badge: condition,
       value: formatPrecipitation(current.Precipitation1h),
       mark: conditionToMark(condition),
@@ -56,7 +57,7 @@ export function createFmiForecastModel(xml, context = null) {
         forecastAt: typeof row.time === 'string' ? row.time : '',
         label: formatHourLabel(row.time, index, targetMs),
         weather: rowCondition,
-        detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
+        detail: createForecastDetail(row),
         mark: conditionToMark(rowCondition),
         tone: conditionToTone(rowCondition),
       };
@@ -172,7 +173,7 @@ function createFmiDailyPeriod(row) {
 
   return {
     weather: condition,
-    detail: `${formatTemperature(row.Temperature)} · ${formatPrecipitation(row.Precipitation1h)}`,
+    detail: createForecastDetail(row),
     mark: conditionToMark(condition),
     tone: conditionToTone(condition),
   };
@@ -206,14 +207,25 @@ function conditionFromFmiValues(values) {
   return '흐림';
 }
 
-function createDetail(precipitation, wind) {
+function createDetail(precipitation, wind, humidity = null) {
   const parts = [`강수 ${formatPrecipitation(precipitation)}`];
 
   if (wind !== null && wind !== undefined) {
     parts.push(`바람 ${Math.round(Number(wind))}m/s`);
   }
 
+  if (humidity !== null && humidity !== undefined && Number.isFinite(Number(humidity))) {
+    parts.push(`습도 ${Math.round(Number(humidity))}%`);
+  }
+
   return parts.join(' · ');
+}
+
+function createForecastDetail(row) {
+  return [
+    formatTemperature(row.Temperature),
+    createDetail(row.Precipitation1h, row.WindSpeedMS, row.RelativeHumidity),
+  ].join(' · ');
 }
 
 function getCoordinates(context) {
@@ -234,9 +246,11 @@ function formatTemperature(value) {
 }
 
 function formatPrecipitation(value) {
+  if (value === null || value === undefined || value === '') return '--';
+
   const number = Number(value);
 
-  return Number.isFinite(number) ? `${roundOneDecimal(number)}mm` : '0mm';
+  return Number.isFinite(number) ? `${roundOneDecimal(number)}mm` : '--';
 }
 
 function formatHourLabel(value, index, targetMs = null) {

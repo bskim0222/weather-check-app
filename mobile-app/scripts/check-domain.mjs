@@ -47,7 +47,8 @@ if (result.status !== 0) {
 }
 
 try {
-  await import(`file://${join(outDir, 'scripts', 'check-domain-test.js').replace(/\\/g, '/')}`);
+  const domainTests = await import(`file://${join(outDir, 'scripts', 'check-domain-test.js').replace(/\\/g, '/')}`);
+  await domainTests.verifyPersistentDeviceIdentity?.();
 } finally {
   rmSync(outDir, { force: true, recursive: true });
 }

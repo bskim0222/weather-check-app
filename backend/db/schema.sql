@@ -85,6 +85,39 @@ set
   longitude = null
 where latitude is not null or longitude is not null;
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'report_requests_no_exact_location'
+  ) then
+    alter table report_requests
+      add constraint report_requests_no_exact_location
+      check (latitude is null and longitude is null);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'report_requests_answers_nonnegative'
+  ) then
+    alter table report_requests
+      add constraint report_requests_answers_nonnegative
+      check (answers >= 0);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'field_reports_no_exact_location'
+  ) then
+    alter table field_reports
+      add constraint field_reports_no_exact_location
+      check (latitude is null and longitude is null);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'field_reports_moderation_status_valid'
+  ) then
+    alter table field_reports
+      add constraint field_reports_moderation_status_valid
+      check (moderation_status in ('visible', 'pending', 'hidden'));
+  end if;
+end
+$$;
+
 create table if not exists moderation_events (
   id text primary key,
   target_type text not null,
@@ -94,12 +127,20 @@ create table if not exists moderation_events (
   created_at timestamptz not null default now()
 );
 
+alter table report_requests enable row level security;
+alter table field_reports enable row level security;
+alter table moderation_events enable row level security;
+
 create index if not exists idx_report_requests_visible_time
   on report_requests (created_at desc)
   where deleted_at is null;
 
 create index if not exists idx_report_requests_cluster
   on report_requests (cluster_latitude, cluster_longitude)
+  where deleted_at is null;
+
+create index if not exists idx_report_requests_owner_time
+  on report_requests (author_device_id, created_at desc)
   where deleted_at is null;
 
 create index if not exists idx_field_reports_visible_time
@@ -113,3 +154,7 @@ create index if not exists idx_field_reports_request
 create index if not exists idx_field_reports_cluster
   on field_reports (cluster_latitude, cluster_longitude)
   where deleted_at is null and moderation_status <> 'hidden';
+
+create index if not exists idx_field_reports_owner_time
+  on field_reports (author_device_id, created_at desc)
+  where deleted_at is null;

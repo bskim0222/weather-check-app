@@ -1,11 +1,12 @@
-import { createBackendServer } from '../src/server.mjs';
+import { createBackendServer, resolveRequestAnswerSummary } from '../src/server.mjs';
 import { compactDatabase, storageLimits } from '../src/storage.mjs';
 import { createFmiForecastModel } from '../src/providers/fmiEcmwfForecast.mjs';
 import { convertLatLonToKmaGrid, createKmaForecastModel } from '../src/providers/kmaShortForecast.mjs';
 import { createWindyForecastModel } from '../src/providers/windyPointForecast.mjs';
 import { createYrForecastModel } from '../src/providers/yrLocationforecast.mjs';
-import { getForecastWindow } from '../src/timeIntent.mjs';
-import { mergeForecastRows } from '../src/weatherSnapshots.mjs';
+import { getForecastWindow, getTargetTimestampMs } from '../src/timeIntent.mjs';
+import { createWeatherProviderSnapshot, mergeForecastRows } from '../src/weatherSnapshots.mjs';
+import { fetchWithTimeout } from '../src/httpFetch.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +26,23 @@ try {
   const health = await getJson('/health');
   expectEqual(health.ok, true, 'health ok');
 
+  const allowedCorsResponse = await fetch(`${baseUrl}/health`, {
+    headers: { Origin: 'https://weather-check-web.onrender.com' },
+  });
+  expectEqual(
+    allowedCorsResponse.headers.get('access-control-allow-origin'),
+    'https://weather-check-web.onrender.com',
+    'production web origin is allowed',
+  );
+  const blockedCorsResponse = await fetch(`${baseUrl}/health`, {
+    headers: { Origin: 'https://untrusted.example' },
+  });
+  expectEqual(
+    blockedCorsResponse.headers.get('access-control-allow-origin'),
+    null,
+    'untrusted web origin is not allowed',
+  );
+
   const providerStatus = await getJson('/provider-status');
   expectEqual(providerStatus.ok, true, 'provider status ok');
   expectEqual(providerStatus.recommendedMode, 'kma,yr,fmi', 'provider recommended mode');
@@ -35,6 +53,9 @@ try {
   expectTruthy(schemaSql.includes('author_device_id'), 'postgres ownership columns');
   expectTruthy(schemaSql.includes('cluster_latitude'), 'postgres privacy cluster columns');
   expectTruthy(schemaSql.includes('latitude = null'), 'postgres exact location cleanup');
+  expectTruthy(schemaSql.includes('report_requests_no_exact_location'), 'postgres request location privacy constraint');
+  expectTruthy(schemaSql.includes('field_reports_no_exact_location'), 'postgres report location privacy constraint');
+  expectTruthy(schemaSql.includes('enable row level security'), 'postgres tables enable row level security');
   const envExample = readFileSync(join(backendRoot, '.env.example'), 'utf8');
   expectTruthy(envExample.includes('REPORT_STORAGE_MODE='), 'storage mode env example');
   expectTruthy(envExample.includes('DATABASE_URL='), 'database url env example');
@@ -43,6 +64,16 @@ try {
   expectEqual(compacted.fieldReports.length, storageLimits.maxFieldReports, 'compacted field reports');
   expectEqual(compacted.reportRequests.length, storageLimits.maxReportRequests, 'compacted report requests');
   expectEqual(compacted.moderationEvents.length, storageLimits.maxModerationEvents, 'compacted moderation events');
+  const retainedAnswerSummary = resolveRequestAnswerSummary(
+    { answers: 7, lastAnsweredAt: '2026-07-01T10:00:00Z' },
+    { answers: 1, lastAnsweredAt: '2026-07-01T11:00:00Z' },
+  );
+  expectEqual(retainedAnswerSummary.answers, 7, 'stored answer count survives a truncated report window');
+  expectEqual(
+    retainedAnswerSummary.lastAnsweredAt,
+    '2026-07-01T11:00:00Z',
+    'latest visible answer timestamp is retained',
+  );
 
   const context = {
     raw: '잠실운동장 지금 비 와?',
@@ -95,6 +126,7 @@ try {
               { category: 'RN1', obsrValue: '0' },
               { category: 'PTY', obsrValue: '0' },
               { category: 'WSD', obsrValue: '2' },
+              { category: 'REH', obsrValue: '66' },
             ],
           },
         },
@@ -109,6 +141,8 @@ try {
               { category: 'RN1', fcstDate: '20260702', fcstTime: '1500', fcstValue: '0' },
               { category: 'PTY', fcstDate: '20260702', fcstTime: '1500', fcstValue: '0' },
               { category: 'SKY', fcstDate: '20260702', fcstTime: '1500', fcstValue: '4' },
+              { category: 'WSD', fcstDate: '20260702', fcstTime: '1500', fcstValue: '4' },
+              { category: 'REH', fcstDate: '20260702', fcstTime: '1500', fcstValue: '72' },
             ],
           },
         },
@@ -117,8 +151,11 @@ try {
   );
   expectEqual(kmaModel.current.temp, '24℃', 'kma temperature');
   expectEqual(kmaModel.current.value, '0mm', 'kma rain amount');
+  expectTruthy(kmaModel.current.detail.includes('습도 66%'), 'kma current humidity');
   expectTruthy(kmaModel.hourlyRows.length > 0, 'kma hourly rows');
   expectTruthy(Boolean(kmaModel.hourlyRows[0].forecastAt), 'kma hourly timestamp');
+  expectTruthy(kmaModel.hourlyRows[0].detail.includes('바람 4m/s'), 'kma hourly wind');
+  expectTruthy(kmaModel.hourlyRows[0].detail.includes('습도 72%'), 'kma hourly humidity');
 
   const windyModel = createWindyForecastModel({
     ts: [Date.UTC(2026, 6, 2, 9), Date.UTC(2026, 6, 2, 12)],
@@ -146,6 +183,7 @@ try {
               details: {
                 air_temperature: 23.4,
                 wind_speed: 3.2,
+                relative_humidity: 73,
               },
             },
             next_1_hours: {
@@ -163,8 +201,70 @@ try {
   });
   expectEqual(yrModel.current.condition, '비', 'yr condition');
   expectEqual(yrModel.current.temp, '23℃', 'yr temperature');
+  expectTruthy(yrModel.current.detail.includes('습도 73%'), 'yr humidity');
   expectTruthy(yrModel.hourlyRows.length > 0, 'yr hourly rows');
   expectEqual(yrModel.hourlyRows[0].forecastAt, '2026-07-02T09:00:00Z', 'yr hourly timestamp');
+  expectTruthy(yrModel.hourlyRows[0].detail.includes('바람 3m/s'), 'yr hourly wind');
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (_url, options = {}) => new Promise((_resolve, reject) => {
+    options.signal?.addEventListener('abort', () => reject(options.signal.reason));
+  });
+  let timedOut = false;
+  try {
+    await fetchWithTimeout('https://example.invalid/slow', {}, 20);
+  } catch {
+    timedOut = true;
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  expectEqual(timedOut, true, 'external fetch timeout aborts a stalled provider');
+
+  const originalProviderMode = process.env.WEATHER_PROVIDER_MODE;
+  const originalYrUserAgent = process.env.YR_USER_AGENT;
+  let yrFetchCount = 0;
+  process.env.WEATHER_PROVIDER_MODE = 'yr';
+  process.env.YR_USER_AGENT = 'WeatherCheck verifier';
+  globalThis.fetch = async () => {
+    yrFetchCount += 1;
+    return {
+      ok: true,
+      json: async () => ({
+        properties: {
+          timeseries: [
+            {
+              time: new Date().toISOString(),
+              data: {
+                instant: { details: { air_temperature: 23, wind_speed: 2 } },
+                next_1_hours: {
+                  summary: { symbol_code: 'cloudy' },
+                  details: { precipitation_amount: 0 },
+                },
+              },
+            },
+          ],
+        },
+      }),
+    };
+  };
+  try {
+    const cacheContext = {
+      ...context,
+      raw: `cache-verification-${Date.now()}`,
+      target: { ...context.target, latitude: 37.515, longitude: 127.0728 },
+    };
+    const firstCachedSnapshot = await createWeatherProviderSnapshot(cacheContext);
+    const secondCachedSnapshot = await createWeatherProviderSnapshot(cacheContext);
+    expectEqual(firstCachedSnapshot.source, 'api', 'live provider snapshot is cacheable');
+    expectEqual(secondCachedSnapshot.generatedAt, firstCachedSnapshot.generatedAt, 'cached snapshot is reused');
+    expectEqual(yrFetchCount, 1, 'same weather context calls provider once within cache TTL');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalProviderMode == null) delete process.env.WEATHER_PROVIDER_MODE;
+    else process.env.WEATHER_PROVIDER_MODE = originalProviderMode;
+    if (originalYrUserAgent == null) delete process.env.YR_USER_AGENT;
+    else process.env.YR_USER_AGENT = originalYrUserAgent;
+  }
 
   const fmiModel = createFmiForecastModel(createFmiSampleXml());
   expectEqual(fmiModel.current.condition, '비', 'fmi condition');
@@ -172,6 +272,19 @@ try {
   expectEqual(fmiModel.dailyRows.length, 2, 'fmi daily rows');
   expectTruthy(fmiModel.hourlyRows.length > 0, 'fmi hourly rows');
   expectTruthy(Boolean(fmiModel.hourlyRows[0].forecastAt), 'fmi hourly timestamp');
+  expectTruthy(/습도 \d+%/.test(fmiModel.hourlyRows[0].detail), 'fmi hourly humidity');
+
+  const fixedSeoulNow = new Date('2026-07-02T02:34:00Z');
+  expectEqual(
+    getTargetTimestampMs({ timeLabel: '오늘', raw: '서울 오늘 날씨' }, fixedSeoulNow),
+    Date.parse('2026-07-02T02:00:00Z'),
+    'today-only query uses the current Seoul hour',
+  );
+  expectEqual(
+    getTargetTimestampMs({ timeLabel: '내일', raw: '서울 내일 날씨' }, fixedSeoulNow),
+    Date.parse('2026-07-03T03:00:00Z'),
+    'tomorrow-only query keeps the noon default',
+  );
 
   const explicitWindow = getForecastWindow(
     [8, 9, 10].map((hour) => ({ time: Date.UTC(2026, 6, 2, hour) })),
@@ -209,6 +322,22 @@ try {
   }, deviceA);
   expectEqual(invalidCoordinates.status, 400, 'invalid report coordinates are rejected');
 
+  const nullCoordinateReport = await postJson('/field-reports', {
+    place: '홍대앞',
+    condition: '흐림',
+    body: '좌표가 없으면 장소를 안전 범위로 변환하는 테스트예요.',
+    latitude: null,
+    longitude: null,
+  }, deviceA);
+  expectTruthy(
+    Math.abs(nullCoordinateReport.clusterLatitude) > 1,
+    'null coordinates are geocoded instead of becoming latitude zero',
+  );
+  expectTruthy(
+    Math.abs(nullCoordinateReport.clusterLongitude) > 1,
+    'null coordinates are geocoded instead of becoming longitude zero',
+  );
+
   const longBody = await requestJson('/field-reports', 'POST', {
     place: 'Test place', condition: 'Clear', body: 'x'.repeat(1001),
   }, deviceA);
@@ -232,9 +361,29 @@ try {
     longitude: 127.0728,
     place: '잠실운동장',
     question: '잠실운동장 지금 비 와요?',
+    answers: 999,
+    status: '조작된 상태',
+    accent: '#AABBCC',
   }, deviceA);
   expectTruthy(request.id, 'created request id');
   expectEqual(request.authorDeviceId, undefined, 'request device id is never returned');
+  expectEqual(request.answers, 0, 'request answer count is server-owned');
+  expectEqual(request.status, '답변 대기', 'request status is server-owned');
+  expectEqual(request.accent, '#aabbcc', 'request accent is normalized');
+
+  const invalidAccent = await requestJson('/report-requests', 'POST', {
+    place: '잠실운동장',
+    question: '잘못된 색상 테스트',
+    accent: 'url(javascript:bad)',
+  }, deviceB);
+  expectEqual(invalidAccent.status, 400, 'invalid request accent is rejected');
+
+  const overlongDistance = await requestJson('/report-requests', 'POST', {
+    place: '잠실운동장',
+    question: '긴 거리 표시 테스트',
+    distance: 'x'.repeat(81),
+  }, deviceB);
+  expectEqual(overlongDistance.status, 400, 'overlong request distance is rejected');
 
   const duplicateRequest = await requestJson(
     '/report-requests',
@@ -381,6 +530,24 @@ try {
   );
   expectEqual(deletedReport.status, 200, 'report owner can delete report');
 
+  const rateLimitedDevice = `verify-rate-limit-${Date.now()}`;
+  for (let index = 0; index < 30; index += 1) {
+    const missingWrite = await requestJson(
+      `/field-reports/missing-rate-limit-${index}`,
+      'DELETE',
+      undefined,
+      rateLimitedDevice,
+    );
+    expectEqual(missingWrite.status, 404, `write rate limit allows request ${index + 1}`);
+  }
+  const rateLimitedWrite = await requestJson(
+    '/field-reports/missing-rate-limit-overflow',
+    'DELETE',
+    undefined,
+    rateLimitedDevice,
+  );
+  expectEqual(rateLimitedWrite.status, 429, 'write rate limit rejects excessive changes');
+
   console.log('Backend verification checks passed.');
 } finally {
   await new Promise((resolve) => {
@@ -463,6 +630,11 @@ function createFmiSampleXml() {
         ['2026-07-02T09:00:00Z', '2.1'],
         ['2026-07-02T12:00:00Z', '3.2'],
         ['2026-07-03T09:00:00Z', '1.4'],
+      ])}
+      ${createFmiMember('RelativeHumidity', [
+        ['2026-07-02T09:00:00Z', '81'],
+        ['2026-07-02T12:00:00Z', '74'],
+        ['2026-07-03T09:00:00Z', '68'],
       ])}
       ${createFmiMember('TotalCloudCover', [
         ['2026-07-02T09:00:00Z', '90'],

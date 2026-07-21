@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from './httpFetch.mjs';
+
 const kakaoKeywordEndpoint = 'https://dapi.kakao.com/v2/local/search/keyword.json';
 const kakaoAddressEndpoint = 'https://dapi.kakao.com/v2/local/search/address.json';
 const kakaoReverseEndpoint = 'https://dapi.kakao.com/v2/local/geo/coord2address.json';
@@ -87,7 +89,7 @@ export async function diagnoseKakaoLocal(query = '광화문') {
   url.searchParams.set('size', '1');
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         Accept: 'application/json',
         Authorization: `KakaoAK ${restApiKey}`,
@@ -177,7 +179,7 @@ async function fetchKakaoRows(endpoint, params) {
   const url = new URL(endpoint);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: 'application/json',
       Authorization: `KakaoAK ${restApiKey}`,
@@ -264,7 +266,7 @@ async function fetchNominatimCandidates(query, raw) {
   url.searchParams.set('addressdetails', '1');
   url.searchParams.set('q', createNominatimQuery(query, raw));
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: 'application/json',
       'User-Agent': process.env.GEOCODING_USER_AGENT || process.env.YR_USER_AGENT || defaultUserAgent,
@@ -312,7 +314,7 @@ async function fetchKakaoReverse(latitude, longitude) {
   url.searchParams.set('x', String(longitude));
   url.searchParams.set('y', String(latitude));
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: 'application/json',
       Authorization: `KakaoAK ${restApiKey}`,
@@ -367,7 +369,7 @@ async function fetchNominatimReverse(latitude, longitude) {
   url.searchParams.set('zoom', '18');
   url.searchParams.set('accept-language', 'ko');
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: 'application/json',
       'User-Agent': process.env.GEOCODING_USER_AGENT || process.env.YR_USER_AGENT || defaultUserAgent,

@@ -80,6 +80,7 @@ export function useWeatherAppState() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [isPersistenceReady, setIsPersistenceReady] = useState(false);
   const refreshTokenRef = useRef(0);
+  const locationResolutionTokenRef = useRef(0);
   const locationAutoRefreshRequestedRef = useRef(false);
 
   const current = useMemo(
@@ -241,54 +242,97 @@ export function useWeatherAppState() {
   };
 
   const updateLocalReport = (reportId: string, updates: Partial<Pick<LocalReport, 'body' | 'condition'>>) => {
-    setReports((prev) =>
-      prev.map((report) =>
-        report.id === reportId
-          ? {
-              ...report,
-              ...updates,
-              source: report.source ?? 'local',
-            }
-          : report,
-      ),
-    );
+    if (appConfig.dataMode !== 'api') {
+      setReports((prev) =>
+        prev.map((report) =>
+          report.id === reportId
+            ? { ...report, ...updates, source: report.source ?? 'local' }
+            : report,
+        ),
+      );
+      return;
+    }
 
     updateRemoteFieldReport(reportId, updates).then((remoteReport) => {
-      if (!remoteReport) return;
+      if (!remoteReport) {
+        setDataStatus({
+          phase: 'error',
+          label: '제보 수정 실패',
+          message: '서버에서 제보를 수정하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.',
+        });
+        return;
+      }
 
       setReports((prev) => replaceReportById(prev, reportId, { ...remoteReport, source: 'local' }));
     });
   };
 
   const deleteLocalReport = (reportId: string) => {
-    setReports((prev) => prev.filter((report) => report.id !== reportId));
-    deleteRemoteFieldReport(reportId);
+    if (appConfig.dataMode !== 'api') {
+      setReports((prev) => prev.filter((report) => report.id !== reportId));
+      return;
+    }
+
+    deleteRemoteFieldReport(reportId).then((deleted) => {
+      if (!deleted?.ok) {
+        setDataStatus({
+          phase: 'error',
+          label: '제보 삭제 실패',
+          message: '서버에서 제보를 삭제하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.',
+        });
+        return;
+      }
+
+      setReports((prev) => prev.filter((report) => report.id !== reportId));
+    });
   };
 
   const updateLocalRequest = (requestId: string, updates: Partial<Pick<ReportRequest, 'question'>>) => {
-    setReportRequests((prev) =>
-      prev.map((request) =>
-        request.id === requestId
-          ? {
-              ...request,
-              ...updates,
-              source: request.source ?? 'local',
-            }
-          : request,
-      ),
-    );
+    if (appConfig.dataMode !== 'api') {
+      setReportRequests((prev) =>
+        prev.map((request) =>
+          request.id === requestId
+            ? { ...request, ...updates, source: request.source ?? 'local' }
+            : request,
+        ),
+      );
+      return;
+    }
 
     updateRemoteReportRequest(requestId, updates).then((remoteRequest) => {
-      if (!remoteRequest) return;
+      if (!remoteRequest) {
+        setDataStatus({
+          phase: 'error',
+          label: '문의 수정 실패',
+          message: '서버에서 문의를 수정하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.',
+        });
+        return;
+      }
 
       setReportRequests((prev) => replaceRequestById(prev, requestId, { ...remoteRequest, source: 'local' }));
     });
   };
 
   const deleteLocalRequest = (requestId: string) => {
-    setReportRequests((prev) => prev.filter((request) => request.id !== requestId));
-    setReports((prev) => prev.filter((report) => report.requestId !== requestId));
-    deleteRemoteReportRequest(requestId);
+    if (appConfig.dataMode !== 'api') {
+      setReportRequests((prev) => prev.filter((request) => request.id !== requestId));
+      setReports((prev) => prev.filter((report) => report.requestId !== requestId));
+      return;
+    }
+
+    deleteRemoteReportRequest(requestId).then((deleted) => {
+      if (!deleted?.ok) {
+        setDataStatus({
+          phase: 'error',
+          label: '문의 삭제 실패',
+          message: '서버에서 문의를 삭제하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.',
+        });
+        return;
+      }
+
+      setReportRequests((prev) => prev.filter((request) => request.id !== requestId));
+      setReports((prev) => prev.filter((report) => report.requestId !== requestId));
+    });
   };
 
   const submitReport = () => {
@@ -344,8 +388,23 @@ export function useWeatherAppState() {
       return;
     }
 
-    setReports((prev) => markReportPending(prev, reportId));
-    moderateRemoteFieldReport(reportId, 'User reported this field weather post.');
+    if (appConfig.dataMode !== 'api') {
+      setReports((prev) => markReportPending(prev, reportId));
+      return;
+    }
+
+    moderateRemoteFieldReport(reportId, 'User reported this field weather post.').then((moderation) => {
+      if (!moderation?.ok) {
+        setDataStatus({
+          phase: 'error',
+          label: '신고 접수 실패',
+          message: '서버에서 신고를 접수하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.',
+        });
+        return;
+      }
+
+      setReports((prev) => markReportPending(prev, reportId));
+    });
   };
 
   const runQuestion = (question: string, resolvedLocation?: LocationReference) => {
@@ -370,6 +429,8 @@ export function useWeatherAppState() {
       return;
     }
 
+    const locationResolutionToken = locationResolutionTokenRef.current + 1;
+    locationResolutionTokenRef.current = locationResolutionToken;
     setJudgement(nextJudgement);
     setQuestionText(clean);
     setRecentQuestions((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 3));
@@ -383,12 +444,11 @@ export function useWeatherAppState() {
         label: '장소 확인 중',
         message: `${nextJudgement.searchContext.place} 위치를 찾고 있어요. 확인되면 그 장소 기준으로 날씨를 판정할게요.`,
       });
-      resolveQuestionLocation(nextJudgement);
+      resolveQuestionLocation(nextJudgement, locationResolutionToken);
       return;
     }
 
     refreshData('질문 기준', nextJudgement.searchContext);
-    resolveQuestionLocation(nextJudgement);
   };
 
   const submitQuestion = (query?: string, resolvedLocation?: LocationReference) => {
@@ -415,6 +475,7 @@ export function useWeatherAppState() {
   };
 
   const refreshCurrentLocation = async () => {
+    locationResolutionTokenRef.current += 1;
     const nextJudgement = createDefaultJudgement();
     setQuestionText('');
     setReportText('');
@@ -513,8 +574,12 @@ export function useWeatherAppState() {
     }
   };
 
-  const resolveQuestionLocation = async (nextJudgement: ReturnType<typeof createQuestionJudgement>) => {
+  const resolveQuestionLocation = async (
+    nextJudgement: ReturnType<typeof createQuestionJudgement>,
+    locationResolutionToken: number,
+  ) => {
     const resolvedLocation = await resolveRemoteLocation(nextJudgement.searchContext);
+    if (locationResolutionTokenRef.current !== locationResolutionToken) return;
 
     if (!resolvedLocation) {
       if (nextJudgement.searchContext.target.kind !== 'pending-place') return;

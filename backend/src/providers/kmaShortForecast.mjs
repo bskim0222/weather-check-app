@@ -1,5 +1,6 @@
 import { getForecastWindow, getTargetTimestampMs, getSeoulParts, pickTargetItem } from '../timeIntent.mjs';
 import { getKmaDailyForecastKey, getKmaHourlyForecastAt } from '../forecastKeys.mjs';
+import { fetchWithTimeout } from '../httpFetch.mjs';
 
 const kmaBaseUrl = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0';
 
@@ -59,13 +60,18 @@ export function createKmaForecastModel(currentPayload, forecastPayload = current
   const rain = Number.isFinite(targetMs)
     ? targetForecast?.rn1 ?? currentByCategory.RN1 ?? '0'
     : currentByCategory.RN1 ?? targetForecast?.rn1 ?? '0';
-  const wind = currentByCategory.WSD ?? null;
+  const wind = Number.isFinite(targetMs)
+    ? targetForecast?.wind ?? currentByCategory.WSD ?? null
+    : currentByCategory.WSD ?? targetForecast?.wind ?? null;
+  const humidity = Number.isFinite(targetMs)
+    ? targetForecast?.humidity ?? currentByCategory.REH ?? null
+    : currentByCategory.REH ?? targetForecast?.humidity ?? null;
 
   return {
     current: {
       condition,
       temp: formatTemperature(temp),
-      detail: createDetail(rain, wind),
+      detail: createDetail(rain, wind, humidity),
       badge: condition,
       value: formatKmaRain(rain),
       mark: conditionToMark(condition),
@@ -75,7 +81,7 @@ export function createKmaForecastModel(currentPayload, forecastPayload = current
       forecastAt: getKmaHourlyForecastAt(row.date, row.time),
       label: formatKmaRowLabel(row, index, targetMs),
       weather: conditionFromKmaValues(row),
-      detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
+      detail: createForecastDetail(row),
       mark: conditionToMark(conditionFromKmaValues(row)),
       tone: conditionToTone(conditionFromKmaValues(row)),
     })),
@@ -139,7 +145,7 @@ async function fetchKmaEndpoint(path, params) {
   url.searchParams.set('nx', String(params.nx));
   url.searchParams.set('ny', String(params.ny));
 
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
 
   if (!response.ok) {
     throw new Error(`KMA request failed with ${response.status}.`);
@@ -225,6 +231,8 @@ function createForecastRows(items) {
     if (item.category === 'RN1' || item.category === 'PCP') row.rn1 = item.fcstValue;
     if (item.category === 'PTY') row.pty = item.fcstValue;
     if (item.category === 'SKY') row.sky = item.fcstValue;
+    if (item.category === 'WSD') row.wind = item.fcstValue;
+    if (item.category === 'REH') row.humidity = item.fcstValue;
   });
 
   return [...rows.values()].filter((row) => row.time);
@@ -291,7 +299,7 @@ function createKmaDailyPeriod(row) {
 
   return {
     weather,
-    detail: `${formatTemperature(row.temperature)} · ${formatKmaRain(row.rn1)}`,
+    detail: createForecastDetail(row),
     mark: conditionToMark(weather),
     tone: conditionToTone(weather),
   };
@@ -324,14 +332,22 @@ function conditionFromKmaValues(values) {
   return '흐림';
 }
 
-function createDetail(rain, wind) {
+function createDetail(rain, wind, humidity = null) {
   const parts = [`강수 ${formatKmaRain(rain)}`];
 
-  if (wind !== null && wind !== undefined) {
+  if (wind !== null && wind !== undefined && Number.isFinite(Number(wind))) {
     parts.push(`바람 ${Math.round(Number(wind))}m/s`);
   }
 
+  if (humidity !== null && humidity !== undefined && Number.isFinite(Number(humidity))) {
+    parts.push(`습도 ${Math.round(Number(humidity))}%`);
+  }
+
   return parts.join(' · ');
+}
+
+function createForecastDetail(row) {
+  return [formatTemperature(row.temperature), createDetail(row.rn1, row.wind, row.humidity)].join(' · ');
 }
 
 function formatTemperature(value) {
@@ -341,7 +357,9 @@ function formatTemperature(value) {
 }
 
 function formatKmaRain(value) {
-  const raw = String(value ?? '0');
+  if (value === null || value === undefined || value === '') return '--';
+
+  const raw = String(value);
 
   if (raw === '강수없음') return '0mm';
   if (raw.includes('mm')) return raw;

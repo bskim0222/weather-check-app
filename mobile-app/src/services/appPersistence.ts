@@ -2,6 +2,8 @@ import type { PersistedAppSnapshot } from '../types/appState';
 import { getPersistentStorage } from './persistentStorage';
 
 const storageKey = 'weather-check-app-state-v2';
+let pendingSnapshot: PersistedAppSnapshot | null = null;
+let writeLoopPromise: Promise<void> | null = null;
 
 export async function readPersistedAppSnapshot() {
   const storage = getPersistentStorage();
@@ -21,13 +23,32 @@ export async function readPersistedAppSnapshot() {
 }
 
 export async function writePersistedAppSnapshot(snapshot: PersistedAppSnapshot) {
+  pendingSnapshot = snapshot;
+  if (!writeLoopPromise) writeLoopPromise = drainPendingSnapshots();
+
+  await writeLoopPromise;
+}
+
+async function drainPendingSnapshots() {
   const storage = getPersistentStorage();
-  if (!storage) return;
+
+  if (!storage) {
+    pendingSnapshot = null;
+    writeLoopPromise = null;
+    return;
+  }
 
   try {
-    await storage.setItem(storageKey, JSON.stringify(snapshot));
+    while (pendingSnapshot) {
+      const nextSnapshot = pendingSnapshot;
+      pendingSnapshot = null;
+      await storage.setItem(storageKey, JSON.stringify(nextSnapshot));
+    }
   } catch {
     // Storage can fail in private mode or when quota is full. The app should keep working.
+    pendingSnapshot = null;
+  } finally {
+    writeLoopPromise = null;
   }
 }
 

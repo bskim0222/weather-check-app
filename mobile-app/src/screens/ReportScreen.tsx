@@ -22,7 +22,6 @@ type ReportScreenProps = {
   searchContext: SearchContext;
   locationStatus: LocationStatus;
   onAddReport: (report: LocalReport) => void;
-  onRemovePendingReport: (reportId: string) => void;
   onDeleteReport: (reportId: string) => void;
   onDeleteRequest: (requestId: string) => void;
   onReportIssue: (report: LocalReport) => void;
@@ -44,7 +43,6 @@ export function ReportScreen({
   searchContext,
   locationStatus,
   onAddReport,
-  onRemovePendingReport,
   onDeleteReport,
   onDeleteRequest,
   onReportIssue,
@@ -57,6 +55,7 @@ export function ReportScreen({
   const [replyDraft, setReplyDraft] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState(requests[0]?.id ?? '');
   const [replyNotice, setReplyNotice] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
   const [answerModalVisible, setAnswerModalVisible] = useState(false);
   const [myQuestionModalVisible, setMyQuestionModalVisible] = useState(false);
   const [editingReport, setEditingReport] = useState<LocalReport | undefined>();
@@ -135,9 +134,9 @@ export function ReportScreen({
     });
   };
 
-  const submitReply = () => {
+  const submitReply = async () => {
     const clean = replyDraft.trim();
-    if (!clean || !selectedRequest) return;
+    if (!clean || !selectedRequest || replySubmitting) return;
 
     if (!hasUsableLocation(locationStatus)) {
       setReplyNotice('현장 답변은 현재 위치를 확인한 뒤 남길 수 있어요.');
@@ -148,14 +147,6 @@ export function ReportScreen({
       setReplyNotice('질문 지역에서 약 3km 이내에 있을 때만 현장 답변을 남길 수 있어요.');
       return;
     }
-
-    onRequestsChange((prev) =>
-      prev.map((request) =>
-        request.id === selectedRequest.id
-          ? { ...request, answers: request.answers + 1, status: '답변 있음', hint: '방금 답변' }
-          : request,
-      ),
-    );
 
     const replyReport: LocalReport = {
       id: `reply-${selectedRequest.id}-${Date.now()}`,
@@ -172,24 +163,33 @@ export function ReportScreen({
       longitude: locationStatus.longitude,
     };
 
-    onAddReport(replyReport);
-    setReplyDraft('');
-    setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
-    setAnswerModalVisible(false);
+    setReplySubmitting(true);
+    setReplyNotice('현장 답변을 저장하고 있어요.');
 
-    createRemoteFieldReport(replyReport).then((remoteReport) => {
+    try {
+      const remoteReport = await createRemoteFieldReport(replyReport);
       if (!remoteReport) {
-        onRemovePendingReport(replyReport.id!);
-        onRequestsChange((prev) => prev.map((request) => (
-          request.id === selectedRequest.id
-            ? { ...request, answers: Math.max(0, request.answers - 1) }
-            : request
-        )));
         setReplyNotice('답변이 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.');
         return;
       }
+
       onAddReport({ ...remoteReport, source: 'local', syncState: 'synced' });
-    });
+      onRequestsChange((prev) => prev.map((request) => (
+        request.id === selectedRequest.id
+          ? {
+              ...request,
+              answers: request.answers + 1,
+              status: '답변 있음',
+              hint: '방금 답변',
+            }
+          : request
+      )));
+      setReplyDraft('');
+      setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
+      setAnswerModalVisible(false);
+    } finally {
+      setReplySubmitting(false);
+    }
   };
 
   const openAnswerModal = (request: ReportRequest) => {
@@ -309,6 +309,7 @@ export function ReportScreen({
         replyDraft={replyDraft}
         setReplyDraft={setReplyDraft}
         submitReply={submitReply}
+        submitting={replySubmitting}
         visible={answerModalVisible}
         onClose={() => setAnswerModalVisible(false)}
       />
@@ -720,6 +721,7 @@ function AnswerModal({
   request,
   setReplyDraft,
   submitReply,
+  submitting,
   visible,
 }: {
   onClose: () => void;
@@ -728,6 +730,7 @@ function AnswerModal({
   request?: ReportRequest;
   setReplyDraft: (value: string) => void;
   submitReply: () => void;
+  submitting: boolean;
   visible: boolean;
 }) {
   return (
@@ -746,8 +749,14 @@ function AnswerModal({
             placeholderTextColor="#8f7f87"
             style={styles.replyInput}
           />
-          <Pressable onPress={submitReply} style={styles.replySubmitButton}>
-            <Text style={styles.replySubmitText}>현장 답변 남기기</Text>
+          <Pressable
+            disabled={submitting}
+            onPress={submitReply}
+            style={[styles.replySubmitButton, submitting && { opacity: 0.55 }]}
+          >
+            <Text style={styles.replySubmitText}>
+              {submitting ? '저장 중...' : '현장 답변 남기기'}
+            </Text>
           </Pressable>
           <Pressable onPress={onClose} style={styles.reportModalClose}>
             <Text style={styles.reportModalCloseText}>닫기</Text>

@@ -18,10 +18,14 @@ import { createWeatherProviderSnapshot } from './weatherSnapshots.mjs';
 import { diagnoseKakaoLocal, geocodePlace, geocodePlaceCandidates, reverseGeocodePoint } from './geocoding.mjs';
 
 const port = Number(process.env.PORT ?? 8796);
+const writeRateLimitWindowMs = 10 * 60 * 1000;
+const writeRateLimitMax = 30;
+const ipWriteRateLimitMax = 300;
+const writeRateLimitEntries = new Map();
 
 export function createBackendServer() {
   return http.createServer(async (request, response) => {
-    response.setHeader('Access-Control-Allow-Origin', '*');
+    applyCorsHeaders(request, response);
     response.setHeader('Access-Control-Allow-Headers', 'authorization,content-type,x-weathercheck-device-id');
     response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
 
@@ -89,6 +93,7 @@ async function routeRequest(request, response) {
   if (fieldReportMatch && fieldReportMatch[1] !== 'snapshot') {
     requireMethod(request, ['PATCH', 'DELETE']);
     requireDeviceId(deviceId);
+    enforceWriteRateLimit(request, deviceId);
     const reportId = decodeURIComponent(fieldReportMatch[1]);
     validateId(reportId, 'Field report id');
     const existingReport = await findFieldReportById(reportId);
@@ -108,12 +113,14 @@ async function routeRequest(request, response) {
         condition: optionalText(payload.condition, 'condition', 40),
         body: optionalText(payload.body, 'body', 1000),
       });
+      if (!updatedReport) throw new HttpError(409, 'The field report changed before the update completed.');
       sendJson(response, 200, toViewerItem(updatedReport, deviceId));
       return;
     }
 
     if (request.method === 'DELETE') {
-      await deleteFieldReportById(reportId);
+      const deleted = await deleteFieldReportById(reportId);
+      if (!deleted) throw new HttpError(409, 'The field report changed before deletion completed.');
       sendJson(response, 200, { ok: true, reportId });
       return;
     }
@@ -124,6 +131,7 @@ async function routeRequest(request, response) {
   if (reportRequestMatch) {
     requireMethod(request, ['PATCH', 'DELETE']);
     requireDeviceId(deviceId);
+    enforceWriteRateLimit(request, deviceId);
     const requestId = decodeURIComponent(reportRequestMatch[1]);
     validateId(requestId, 'Report request id');
     const existingRequest = await findReportRequestById(requestId);
@@ -142,12 +150,14 @@ async function routeRequest(request, response) {
       const updatedRequest = await updateReportRequestById(requestId, {
         question: optionalText(payload.question, 'question', 500),
       });
+      if (!updatedRequest) throw new HttpError(409, 'The report request changed before the update completed.');
       sendJson(response, 200, toViewerItem(updatedRequest, deviceId));
       return;
     }
 
     if (request.method === 'DELETE') {
-      await deleteReportRequestById(requestId);
+      const deleted = await deleteReportRequestById(requestId);
+      if (!deleted) throw new HttpError(409, 'The report request changed before deletion completed.');
       sendJson(response, 200, { ok: true, requestId });
       return;
     }
@@ -201,7 +211,7 @@ async function routeRequest(request, response) {
 
   if (url.pathname === '/field-reports/snapshot') {
     requireMethod(request, ['POST']);
-    const database = await readDatabase();
+    const database = await readDatabase({ ownerDeviceId: deviceId });
     const context = payload.context ?? createFallbackContext();
 
     sendJson(response, 200, {
@@ -217,6 +227,7 @@ async function routeRequest(request, response) {
   if (url.pathname === '/field-reports') {
     requireMethod(request, ['POST']);
     requireDeviceId(deviceId);
+    enforceWriteRateLimit(request, deviceId);
     const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
     const existingReport = requestedId ? await findFieldReportById(requestedId) : null;
     if (existingReport) {
@@ -231,6 +242,7 @@ async function routeRequest(request, response) {
 
     const report = await createFieldReport(payload, deviceId);
     const savedReport = await saveFieldReport(report);
+    if (!savedReport) throw new HttpError(409, 'This field report id is no longer available.');
     sendJson(response, 201, toViewerItem(savedReport, deviceId));
     return;
   }
@@ -238,6 +250,7 @@ async function routeRequest(request, response) {
   if (url.pathname === '/report-requests') {
     requireMethod(request, ['POST']);
     requireDeviceId(deviceId);
+    enforceWriteRateLimit(request, deviceId);
     const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
     const existingRequest = requestedId ? await findReportRequestById(requestedId) : null;
     if (existingRequest) {
@@ -252,6 +265,7 @@ async function routeRequest(request, response) {
 
     const reportRequest = await createReportRequest(payload, deviceId);
     const savedRequest = await saveReportRequest(reportRequest);
+    if (!savedRequest) throw new HttpError(409, 'This report request id is no longer available.');
     sendJson(response, 201, toViewerItem(savedRequest, deviceId));
     return;
   }
@@ -267,6 +281,7 @@ async function routeRequest(request, response) {
 
   if (moderationMatch) {
     requireMethod(request, ['POST']);
+    enforceWriteRateLimit(request, deviceId);
     const reportId = decodeURIComponent(moderationMatch[1]);
     validateId(reportId, 'Field report id');
     const existingReport = await findFieldReportById(reportId);
@@ -275,11 +290,13 @@ async function routeRequest(request, response) {
       throw new HttpError(400, 'Public moderation requests can only mark a report as pending review.');
     }
 
-    sendJson(response, 200, await moderateFieldReportById(
+    const moderated = await moderateFieldReportById(
       reportId,
       'pending',
       optionalText(payload.reason, 'reason', 300) ?? '',
-    ));
+    );
+    if (!moderated) throw new HttpError(409, 'The field report changed before moderation completed.');
+    sendJson(response, 200, moderated);
     return;
   }
 
@@ -296,11 +313,13 @@ async function routeRequest(request, response) {
     if (!['visible', 'pending', 'hidden'].includes(moderationStatus)) {
       throw new HttpError(400, 'Invalid moderation status.');
     }
-    sendJson(response, 200, await moderateFieldReportById(
+    const moderated = await moderateFieldReportById(
       reportId,
       moderationStatus,
       optionalText(payload.reason, 'reason', 300) ?? '',
-    ));
+    );
+    if (!moderated) throw new HttpError(409, 'The field report changed before moderation completed.');
+    sendJson(response, 200, moderated);
     return;
   }
 
@@ -365,12 +384,12 @@ async function createReportRequest(payload, deviceId) {
     question: requiredText(payload.question, 'question', 500),
     hint: optionalText(payload.hint, 'hint', 300) ?? '현장 답변을 기다리는 중',
     place,
-    distance: textOr(payload.distance, '근처'),
-    answers: Number.isFinite(payload.answers) ? payload.answers : 0,
-    time: textOr(payload.time, '방금'),
-    status: textOr(payload.status, '답변 대기'),
-    mark: textOr(payload.mark, '요'),
-    accent: textOr(payload.accent, '#d6d2c4'),
+    distance: optionalText(payload.distance, 'distance', 80) ?? '근처',
+    answers: 0,
+    time: optionalText(payload.time, 'time', 40) ?? '방금',
+    status: '답변 대기',
+    mark: optionalText(payload.mark, 'mark', 8) ?? '요',
+    accent: normalizeAccent(payload.accent),
     createdAt: new Date().toISOString(),
     source: 'api',
     authorDeviceId: deviceId || undefined,
@@ -410,18 +429,37 @@ function selectReportRequests(requests, context, reports = [], deviceId) {
     .filter((requestItem) => !requestItem.deletedAt)
     .map((requestItem) => {
       const stats = answerStatsByRequestId.get(requestItem.id);
-      const answers = stats?.answers ?? 0;
+      // PostgreSQL readDatabase already derives this count from the complete
+      // answer table. Keep that authoritative value when the public snapshot
+      // contains only the newest report window.
+      const { answers, lastAnsweredAt } = resolveRequestAnswerSummary(requestItem, stats);
 
       return toViewerItem({
         ...requestItem,
         answers,
         status: answers > 0 ? '답변 있음' : '답변 대기',
         hint: answers > 0 ? `${answers}개의 현장 답변이 있어요.` : '현장 답변을 기다리는 중',
-        lastAnsweredAt: stats?.lastAnsweredAt,
+        lastAnsweredAt,
       }, deviceId);
     })
     .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
     .slice(0, 100);
+}
+
+export function resolveRequestAnswerSummary(requestItem, stats) {
+  const storedAnswers = Number.isFinite(Number(requestItem?.answers))
+    ? Math.max(0, Number(requestItem.answers))
+    : 0;
+  const visibleAnswers = Number.isFinite(Number(stats?.answers))
+    ? Math.max(0, Number(stats.answers))
+    : 0;
+
+  return {
+    answers: Math.max(storedAnswers, visibleAnswers),
+    lastAnsweredAt: getTime(stats?.lastAnsweredAt) > getTime(requestItem?.lastAnsweredAt)
+      ? stats.lastAnsweredAt
+      : requestItem?.lastAnsweredAt,
+  };
 }
 
 async function resolvePrivacyCoordinates(payload, place) {
@@ -469,6 +507,9 @@ function toViewerItem(item, deviceId) {
 }
 
 function finiteNumber(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && !value.trim()) return null;
+
   const number = Number(value);
 
   return Number.isFinite(number) ? number : null;
@@ -544,6 +585,70 @@ function requireAdmin(request) {
   if (authorization !== `Bearer ${configuredToken}`) {
     throw new HttpError(401, 'Admin authorization is required.');
   }
+}
+
+function enforceWriteRateLimit(request, deviceId) {
+  const now = Date.now();
+  if (writeRateLimitEntries.size > 2000) {
+    for (const [key, entry] of writeRateLimitEntries) {
+      if (now - entry.windowStartedAt >= writeRateLimitWindowMs) writeRateLimitEntries.delete(key);
+    }
+  }
+
+  const forwardedFor = typeof request.headers['x-forwarded-for'] === 'string'
+    ? request.headers['x-forwarded-for'].split(',')[0].trim()
+    : '';
+  const remoteAddress = forwardedFor || request.socket?.remoteAddress || 'unknown';
+  incrementRateLimit(`ip:${remoteAddress}`, ipWriteRateLimitMax, now);
+  incrementRateLimit(`device:${deviceId || remoteAddress}`, writeRateLimitMax, now);
+}
+
+function incrementRateLimit(identity, maxRequests, now) {
+  const entry = writeRateLimitEntries.get(identity);
+
+  if (!entry || now - entry.windowStartedAt >= writeRateLimitWindowMs) {
+    writeRateLimitEntries.set(identity, { count: 1, windowStartedAt: now });
+    return;
+  }
+
+  if (entry.count >= maxRequests) {
+    throw new HttpError(429, 'Too many changes were submitted. Please try again later.');
+  }
+
+  entry.count += 1;
+}
+
+function applyCorsHeaders(request, response) {
+  const origin = typeof request.headers.origin === 'string' ? request.headers.origin : '';
+
+  if (origin && isAllowedOrigin(origin)) {
+    response.setHeader('Access-Control-Allow-Origin', origin);
+    response.setHeader('Vary', 'Origin');
+  }
+}
+
+function isAllowedOrigin(origin) {
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const allowedOrigins = new Set([
+    'https://weather-check-web.onrender.com',
+    ...configuredOrigins,
+  ]);
+
+  if (allowedOrigins.has(origin)) return true;
+
+  return /^http:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(?::\d+)?$/.test(origin);
+}
+
+function normalizeAccent(value) {
+  const accent = optionalText(value, 'accent', 20);
+  if (!accent) return '#d6d2c4';
+  if (!/^#[0-9a-fA-F]{6}$/.test(accent)) {
+    throw new HttpError(400, 'accent must be a six-digit hex color.');
+  }
+  return accent.toLowerCase();
 }
 
 function requiredText(value, fieldName, maxLength) {

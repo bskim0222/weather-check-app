@@ -1,8 +1,11 @@
 import * as ExpoLocation from 'expo-location';
 import { Platform } from 'react-native';
 
+import { createFallbackLocationStatus } from '../domain/locationStatus';
 import type { LocationStatus } from '../types/appState';
 import { resolveRemotePlaceName } from './geocoding';
+
+export { createFallbackLocationStatus } from '../domain/locationStatus';
 
 type BrowserGeolocationHost = {
   isSecureContext?: boolean;
@@ -36,10 +39,6 @@ type ExtendedGeocodedAddress = ExpoLocation.LocationGeocodedAddress & {
   formattedAddress?: string | null;
 };
 
-const fallbackLatitude = 37.5146;
-const fallbackLongitude = 127.0736;
-const fallbackPlaceName = '서울 송파구 잠실동';
-
 export const initialLocationStatus: LocationStatus = {
   phase: 'idle',
   label: '위치 준비',
@@ -51,22 +50,6 @@ export function createCheckingLocationStatus(): LocationStatus {
     phase: 'checking',
     label: '위치 확인 중',
     message: '현재 위치를 확인해서 가까운 예보와 제보를 맞춰볼게요.',
-  };
-}
-
-export function createFallbackLocationStatus(
-  message = '위치를 확인할 수 없어 잠실 기준 샘플 위치로 보여주고 있어요.',
-): LocationStatus {
-  return {
-    phase: 'fallback',
-    label: fallbackPlaceName,
-    message,
-    placeName: fallbackPlaceName,
-    shortPlaceName: '잠실동',
-    latitude: fallbackLatitude,
-    longitude: fallbackLongitude,
-    accuracyMeters: null,
-    source: 'fallback',
   };
 }
 
@@ -86,7 +69,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       return {
         phase: 'denied',
         label: '위치 권한 꺼짐',
-        message: '위치 권한이 꺼져 있어 기본 위치 기준으로 보여주고 있어요.',
+        message: '위치 권한이 꺼져 있어 날씨를 불러오지 않았어요. 권한을 허용한 뒤 다시 시도해주세요.',
         source: 'native',
       };
     }
@@ -94,7 +77,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
     const servicesEnabled = await ExpoLocation.hasServicesEnabledAsync();
 
     if (!servicesEnabled) {
-      return createFallbackLocationStatus('기기 위치 서비스가 꺼져 있어 기본 위치 기준으로 보여주고 있어요.');
+      return createFallbackLocationStatus('기기 위치 서비스가 꺼져 있어 날씨를 불러오지 않았어요. 위치 서비스를 켜고 다시 시도해주세요.');
     }
 
     const position =
@@ -111,7 +94,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       }));
 
     if (!position) {
-      return createFallbackLocationStatus('현재 위치를 제때 확인하지 못해 기본 위치 기준으로 보여주고 있어요.');
+      return createFallbackLocationStatus('현재 위치를 제때 확인하지 못해 날씨를 불러오지 않았어요. 잠시 뒤 다시 시도해주세요.');
     }
 
     const [nativePlace, remotePlaceName] = await Promise.all([
@@ -137,7 +120,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       source: place.source,
     };
   } catch {
-    return createFallbackLocationStatus('위치 확인 중 문제가 생겨 기본 위치 기준으로 보여주고 있어요.');
+    return createFallbackLocationStatus('위치 확인 중 문제가 생겨 날씨를 불러오지 않았어요. 잠시 뒤 다시 시도해주세요.');
   }
 }
 
@@ -258,7 +241,7 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
     return Promise.resolve({
       phase: 'unavailable',
       label: '위치 기능 없음',
-      message: '현재 환경에서는 위치 기능을 사용할 수 없어 기본 위치로 보여주고 있어요.',
+      message: '현재 환경에서는 위치 기능을 사용할 수 없어 날씨를 불러오지 않았어요.',
       source: 'web',
     });
   }
@@ -292,16 +275,11 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
         const permissionDenied = error.code === 1;
         resolve({
           phase: permissionDenied ? 'denied' : 'fallback',
-          label: permissionDenied ? '위치 권한 꺼짐' : fallbackPlaceName,
+          label: permissionDenied ? '위치 권한 꺼짐' : '위치 확인 실패',
           message:
             permissionDenied
-              ? '위치 권한이 꺼져 있어 기본 위치 기준으로 보여주고 있어요.'
-              : '위치를 정확히 확인하지 못해 기본 위치 기준으로 보여주고 있어요.',
-          placeName: permissionDenied ? undefined : fallbackPlaceName,
-          shortPlaceName: permissionDenied ? undefined : '잠실동',
-          latitude: permissionDenied ? undefined : fallbackLatitude,
-          longitude: permissionDenied ? undefined : fallbackLongitude,
-          accuracyMeters: permissionDenied ? undefined : null,
+              ? '위치 권한이 꺼져 있어 날씨를 불러오지 않았어요. 권한을 허용한 뒤 다시 시도해주세요.'
+              : '위치를 정확히 확인하지 못해 날씨를 불러오지 않았어요. 잠시 뒤 다시 시도해주세요.',
           source: 'web',
         });
       },

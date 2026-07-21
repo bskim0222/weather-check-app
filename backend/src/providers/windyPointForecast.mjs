@@ -1,5 +1,6 @@
 import { getDailyForecastKey } from '../forecastKeys.mjs';
 import { getForecastWindow, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
+import { fetchWithTimeout } from '../httpFetch.mjs';
 
 const windyEndpoint = 'https://api.windy.com/api/point-forecast/v2';
 
@@ -11,7 +12,7 @@ export async function fetchWindyPointForecast(context) {
     return null;
   }
 
-  const response = await fetch(windyEndpoint, {
+  const response = await fetchWithTimeout(windyEndpoint, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -211,7 +212,7 @@ function formatTemperature(value) {
 }
 
 function formatPrecipitation(value) {
-  return value === null ? '0mm' : `${roundOneDecimal(value)}mm`;
+  return value === null ? '--' : `${roundOneDecimal(value)}mm`;
 }
 
 function formatHourLabel(value) {

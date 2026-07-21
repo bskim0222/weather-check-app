@@ -1,22 +1,9 @@
-import { createDeviceId, deviceIdStorageKey } from './deviceIdentityShared';
+import { loadOrCreateDeviceId } from './deviceIdentityShared';
+import { getPersistentStorage } from './persistentStorage';
 
-let deviceId: string | null = null;
+let deviceIdPromise: Promise<string> | null = null;
 
 export async function getClientDeviceId() {
-  if (deviceId) return deviceId;
-
-  try {
-    const stored = globalThis.localStorage?.getItem(deviceIdStorageKey);
-    if (stored) {
-      deviceId = stored;
-      return stored;
-    }
-
-    deviceId = createDeviceId();
-    globalThis.localStorage?.setItem(deviceIdStorageKey, deviceId);
-    return deviceId;
-  } catch {
-    deviceId = createDeviceId();
-    return deviceId;
-  }
+  if (!deviceIdPromise) deviceIdPromise = loadOrCreateDeviceId(getPersistentStorage());
+  return deviceIdPromise;
 }

@@ -1,5 +1,6 @@
 import { formatSeoulDateHour, getForecastWindow, getSeoulParts, getTargetTimestampMs, pickTargetItem } from '../timeIntent.mjs';
 import { getDailyForecastKey } from '../forecastKeys.mjs';
+import { fetchWithTimeout } from '../httpFetch.mjs';
 
 const yrEndpoint = 'https://api.met.no/weatherapi/locationforecast/2.0/compact';
 
@@ -15,7 +16,7 @@ export async function fetchYrLocationforecast(context) {
   url.searchParams.set('lat', roundCoordinate(coordinates.latitude));
   url.searchParams.set('lon', roundCoordinate(coordinates.longitude));
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: 'application/json',
       'User-Agent': userAgent,
@@ -40,6 +41,7 @@ export function createYrForecastModel(payload, context = null) {
   const currentSymbol = getSymbolCode(current);
   const currentPrecipitation = getPrecipitationAmount(current);
   const currentWind = numberOrNull(currentDetails.wind_speed);
+  const currentHumidity = numberOrNull(currentDetails.relative_humidity);
   const temperature = numberOrNull(currentDetails.air_temperature);
   const condition = symbolToCondition(currentSymbol);
 
@@ -47,7 +49,7 @@ export function createYrForecastModel(payload, context = null) {
     current: {
       condition,
       temp: formatTemperature(temperature),
-      detail: createDetail(currentPrecipitation, currentWind),
+      detail: createDetail(currentPrecipitation, currentWind, currentHumidity),
       badge: condition,
       value: formatPrecipitation(currentPrecipitation),
       mark: symbolToMark(currentSymbol),
@@ -74,7 +76,7 @@ function createRows(items, mode, targetMs = null) {
       forecastAt: typeof item?.time === 'string' ? item.time : '',
       label: mode === 'hourly' ? formatHourLabel(item?.time, index, targetMs) : formatDayLabel(item?.time, index),
       weather: symbolToCondition(symbol),
-      detail: `${formatTemperature(numberOrNull(details.air_temperature))} · ${formatPrecipitation(precipitation)}`,
+      detail: createForecastDetail(details, precipitation),
       mark: symbolToMark(symbol),
       tone: symbolToTone(symbol),
     };
@@ -138,7 +140,7 @@ function createYrDailyPeriod(item) {
 
   return {
     weather: symbolToCondition(symbol),
-    detail: `${formatTemperature(numberOrNull(details.air_temperature))} · ${formatPrecipitation(precipitation)}`,
+    detail: createForecastDetail(details, precipitation),
     mark: symbolToMark(symbol),
     tone: symbolToTone(symbol),
   };
@@ -213,14 +215,29 @@ function symbolToTone(symbol) {
   return '#8f9191';
 }
 
-function createDetail(precipitation, wind) {
+function createDetail(precipitation, wind, humidity = null) {
   const parts = [`강수 ${formatPrecipitation(precipitation)}`];
 
   if (wind !== null) {
     parts.push(`바람 ${Math.round(wind)}m/s`);
   }
 
+  if (humidity !== null) {
+    parts.push(`습도 ${Math.round(humidity)}%`);
+  }
+
   return parts.join(' · ');
+}
+
+function createForecastDetail(details, precipitation) {
+  return [
+    formatTemperature(numberOrNull(details.air_temperature)),
+    createDetail(
+      precipitation,
+      numberOrNull(details.wind_speed),
+      numberOrNull(details.relative_humidity),
+    ),
+  ].join(' · ');
 }
 
 function formatTemperature(value) {
@@ -228,7 +245,7 @@ function formatTemperature(value) {
 }
 
 function formatPrecipitation(value) {
-  return value === null ? '0mm' : `${roundOneDecimal(value)}mm`;
+  return value === null ? '--' : `${roundOneDecimal(value)}mm`;
 }
 
 function formatHourLabel(value, index, targetMs = null) {

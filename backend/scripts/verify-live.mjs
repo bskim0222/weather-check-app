@@ -21,6 +21,18 @@ try {
   assert(health.data?.storage?.ok === true, 'database health');
   assert(health.data?.storage?.mode === 'postgres', 'postgres storage mode');
 
+  const providerSnapshot = await jsonRequest('/weather/provider-snapshot', 'POST', { context });
+  assert(providerSnapshot.status === 200, 'provider snapshot endpoint');
+  assert(providerSnapshot.data?.source === 'api', 'provider snapshot uses live data');
+  assert(providerSnapshot.data?.hourlyRows?.length > 0, 'provider hourly forecast rows');
+  assert(providerSnapshot.data?.dailyRows?.length > 0, 'provider daily forecast rows');
+  for (const providerId of ['kma', 'yr', 'fmi']) {
+    assert(
+      providerSnapshot.data?.meta?.liveProviderIds?.includes(providerId),
+      `${providerId} live provider connection`,
+    );
+  }
+
   const createdRequest = await jsonRequest('/report-requests', 'POST', {
     id: requestId,
     place: '서울 송파구 잠실동',
@@ -136,18 +148,26 @@ try {
 }
 
 async function jsonRequest(path, method = 'GET', body, deviceId = '', bearerToken = '') {
-  const response = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers: {
-      Accept: 'application/json',
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(deviceId ? { 'X-WeatherCheck-Device-Id': deviceId } : {}),
-      ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await response.text();
-  return { status: response.status, data: text ? JSON.parse(text) : null };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
+  try {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(deviceId ? { 'X-WeatherCheck-Device-Id': deviceId } : {}),
+        ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    return { status: response.status, data: text ? JSON.parse(text) : null };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function assert(value, label) {

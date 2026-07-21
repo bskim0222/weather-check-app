@@ -35,6 +35,14 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [appState.isInitialLoading]);
 
+  useEffect(() => {
+    const maximumBootLoadingId = setTimeout(() => {
+      setShowBootLoading(false);
+    }, 12_000);
+
+    return () => clearTimeout(maximumBootLoadingId);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <NativeStatusBar backgroundColor="#f4f5f2" barStyle="dark-content" translucent={false} />
@@ -95,7 +103,6 @@ export default function App() {
                   searchContext={appState.searchContext}
                   locationStatus={appState.locationStatus}
                   onAddReport={appState.addLocalReport}
-                  onRemovePendingReport={appState.removePendingLocalReport}
                   onReportIssue={appState.reportFieldReport}
                   onRequestsChange={appState.setReportRequests}
                   onUpdateReport={appState.updateLocalReport}

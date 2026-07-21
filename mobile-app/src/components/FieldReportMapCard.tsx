@@ -6,16 +6,16 @@ import { NativeMapLayer } from './NativeMapLayer';
 import { formatPostTime } from '../domain/timeDisplay';
 import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
-import type { LocalReport, LocationReference, MapReportCluster, SearchContext, WeatherPreset } from '../types/weather';
+import type { LocalReport, LocationReference, MapReportCluster, SearchContext } from '../types/weather';
 
 type FieldReportMapCardProps = {
-  current: WeatherPreset;
   questionText: string;
   searchContext: SearchContext;
   selectedCluster?: MapReportCluster;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
   onCloseCluster: () => void;
+  onClusterGridChange: (gridDegrees: number) => void;
   onReportIssue: (report: LocalReport) => void;
   onSearchLocation: (query?: string, location?: LocationReference) => void;
   onSelectCluster: (index: number) => void;
@@ -23,13 +23,13 @@ type FieldReportMapCardProps = {
 };
 
 export function FieldReportMapCard({
-  current,
   questionText,
   searchContext,
   selectedCluster,
   selectedIndex,
   visibleClusters,
   onCloseCluster,
+  onClusterGridChange,
   onReportIssue,
   onSearchLocation,
   onSelectCluster,
@@ -69,6 +69,7 @@ export function FieldReportMapCard({
   return (
     <View style={styles.mapCard}>
       <NativeMapLayer
+        onClusterGridChange={onClusterGridChange}
         searchContext={searchContext}
         selectedIndex={selectedIndex}
         visibleClusters={visibleClusters}
@@ -133,14 +134,9 @@ export function FieldReportMapCard({
         onPress={onUseCurrentLocation}
         style={styles.mapCurrentButton}
       >
-        <Ionicons color="#ffffff" name="locate" size={25} />
+        <Ionicons color="#ffffff" name="locate" size={21} />
+        <Text style={styles.mapCurrentButtonLabel}>내 위치</Text>
       </Pressable>
-
-      <View pointerEvents="none" style={styles.mapStatusPill}>
-        <Text numberOfLines={1} style={styles.mapStatusPillText}>
-          {searchContext.place} · {current.condition} {current.temp}°C
-        </Text>
-      </View>
 
       <Animated.View
         pointerEvents={selectedCluster ? 'auto' : 'none'}

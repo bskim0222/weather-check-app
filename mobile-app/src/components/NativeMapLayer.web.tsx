@@ -14,7 +14,11 @@ type KakaoWindow = Window & {
       Map: new (container: HTMLElement, options: Record<string, unknown>) => {
         setCenter?: (center: unknown) => void;
         setLevel?: (level: number) => void;
+        getLevel?: () => number;
         addControl?: (control: unknown, position: unknown) => void;
+      };
+      event?: {
+        addListener: (target: unknown, eventName: string, handler: () => void) => void;
       };
       CustomOverlay?: new (options: Record<string, unknown>) => {
         setMap: (map: unknown | null) => void;
@@ -28,6 +32,7 @@ type KakaoWindow = Window & {
 };
 
 type NativeMapLayerProps = {
+  onClusterGridChange: (gridDegrees: number) => void;
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
@@ -37,12 +42,14 @@ type NativeMapLayerProps = {
 const KAKAO_SCRIPT_ID = 'weather-check-kakao-map-sdk';
 
 export function NativeMapLayer({
+  onClusterGridChange,
   searchContext,
   selectedIndex,
   visibleClusters,
   onSelectCluster,
 }: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
+  const onClusterGridChangeRef = useRef(onClusterGridChange);
   const mapRef = useRef<unknown | null>(null);
   const centerOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
   const overlaysRef = useRef<Array<{ setMap: (map: unknown | null) => void }>>([]);
@@ -51,6 +58,8 @@ export function NativeMapLayer({
   const [kakaoMapMounted, setKakaoMapMounted] = useState(false);
   const center = useMemo(() => resolveMapCenter(searchContext), [searchContext]);
   const shouldUseKakao = appConfig.kakaoJavaScriptKey.trim().length > 0 && !kakaoFailed;
+
+  onClusterGridChangeRef.current = onClusterGridChange;
 
   useEffect(() => {
     if (!shouldUseKakao || typeof document === 'undefined') return;
@@ -86,6 +95,12 @@ export function NativeMapLayer({
         level: 4,
       });
       mapRef.current = map;
+
+      const syncClusterGrid = () => {
+        onClusterGridChangeRef.current(getGridDegreesForKakaoLevel(map.getLevel?.() ?? 4));
+      };
+      syncClusterGrid();
+      kakao.event?.addListener(map, 'zoom_changed', syncClusterGrid);
 
       if (kakao.ZoomControl && kakao.ControlPosition?.RIGHT && map.addControl) {
         map.addControl(new kakao.ZoomControl(), kakao.ControlPosition.RIGHT);
@@ -622,6 +637,17 @@ function resolveMapCenter(searchContext: SearchContext) {
     latitude: searchContext.target.latitude ?? 37.5146,
     longitude: searchContext.target.longitude ?? 127.0736,
   };
+}
+
+function getGridDegreesForKakaoLevel(level: number) {
+  if (level <= 4) return 0.015;
+  if (level === 5) return 0.03;
+  if (level === 6) return 0.06;
+  if (level === 7) return 0.12;
+  if (level === 8) return 0.25;
+  if (level === 9) return 0.5;
+  if (level === 10) return 1;
+  return 2;
 }
 
 function createOpenStreetMapEmbedUrl(latitude: number, longitude: number) {

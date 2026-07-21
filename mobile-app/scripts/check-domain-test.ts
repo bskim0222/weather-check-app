@@ -6,6 +6,12 @@ import {
 } from '../src/domain/judgement';
 import { getCompareFocusText, getContextualCompareRows } from '../src/domain/compare';
 import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/domain/moderation';
+import {
+  createMapReportClusters,
+  getRecentMapReports,
+  MAP_ACTIVITY_WINDOW_MS,
+  MAP_PRIVACY_GRID_DEGREES,
+} from '../src/domain/mapClustering';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
 import { weatherPresets } from '../src/data/mockWeather';
 import {
@@ -112,6 +118,78 @@ const moderationReports = [
 expectEqual(visibleReportsOnly(moderationReports).length, 1, 'visible moderation reports');
 expectEqual(markReportPending(moderationReports, 'visible-report')[0].moderationStatus, 'pending', 'pending moderation report');
 expectEqual(markReportHidden(moderationReports, 'visible-report')[0].moderationStatus, 'hidden', 'hidden moderation report');
+
+const mapNow = Date.parse('2026-07-21T12:00:00.000Z');
+const recentMapReports = getRecentMapReports([
+  {
+    id: 'map-visible-a',
+    place: '서울 송파구 잠실동',
+    time: '방금',
+    condition: '비',
+    body: '비가 와요',
+    source: 'api',
+    moderationStatus: 'visible',
+    createdAt: new Date(mapNow - 60_000).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.095,
+  },
+  {
+    id: 'map-visible-b',
+    place: '서울 송파구 잠실동',
+    time: '방금',
+    condition: '비',
+    body: '우산이 필요해요',
+    source: 'api',
+    moderationStatus: 'visible',
+    createdAt: new Date(mapNow - 120_000).toISOString(),
+    clusterLatitude: 37.53,
+    clusterLongitude: 127.11,
+  },
+  {
+    id: 'map-old',
+    place: '서울 송파구 잠실동',
+    time: '어제',
+    condition: '맑음',
+    body: '오래된 글',
+    source: 'api',
+    moderationStatus: 'visible',
+    createdAt: new Date(mapNow - MAP_ACTIVITY_WINDOW_MS - 1).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.095,
+  },
+  {
+    id: 'map-hidden',
+    place: '서울 송파구 잠실동',
+    time: '방금',
+    condition: '맑음',
+    body: '숨김 글',
+    source: 'api',
+    moderationStatus: 'hidden',
+    createdAt: new Date(mapNow - 60_000).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.095,
+  },
+  {
+    id: 'map-mock',
+    place: '서울 송파구 잠실동',
+    time: '방금',
+    condition: '맑음',
+    body: '샘플 글',
+    source: 'mock',
+    moderationStatus: 'visible',
+    createdAt: new Date(mapNow - 60_000).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.095,
+  },
+], mapNow);
+expectEqual(recentMapReports.length, 2, 'map only includes visible real reports from the last 24 hours');
+const closeMapClusters = createMapReportClusters(recentMapReports, {}, MAP_PRIVACY_GRID_DEGREES);
+expectEqual(closeMapClusters.length, 2, 'nearby map reports remain separate at close zoom');
+const wideMapClusters = createMapReportClusters(recentMapReports, {}, 0.12);
+expectEqual(wideMapClusters.length, 1, 'nearby map reports merge at wide zoom');
+expectEqual(wideMapClusters[0].count, 2, 'wide map cluster count');
+expectEqual(wideMapClusters[0].dominantCondition, '비', 'wide map cluster dominant weather');
+expectTruthy(Math.abs((wideMapClusters[0].latitude ?? 0) - 37.56) < 0.000001, 'wide map cluster uses grid center latitude');
 
 const alignedSnapshot: WeatherProviderSnapshot = {
   context: defaultJudgement.searchContext,

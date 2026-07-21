@@ -6,6 +6,7 @@ import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
 type NativeMapLayerProps = {
+  onClusterGridChange: (gridDegrees: number) => void;
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
@@ -13,6 +14,7 @@ type NativeMapLayerProps = {
 };
 
 export function NativeMapLayer({
+  onClusterGridChange,
   onSelectCluster,
   searchContext,
   selectedIndex,
@@ -40,7 +42,8 @@ export function NativeMapLayer({
       scrollEnabled
       showsCompass={false}
       showsMyLocationButton={false}
-      showsUserLocation={searchContext.target.kind === 'current'}
+      onRegionChangeComplete={(nextRegion) => onClusterGridChange(getGridDegreesForRegion(nextRegion))}
+      showsUserLocation={false}
       style={styles.mapNativeMap}
       toolbarEnabled={false}
       zoomEnabled
@@ -81,6 +84,18 @@ function resolveMapCenter(searchContext: SearchContext) {
     latitude: searchContext.target.latitude ?? 37.5146,
     longitude: searchContext.target.longitude ?? 127.0736,
   };
+}
+
+function getGridDegreesForRegion(region: Region) {
+  const delta = Math.max(region.latitudeDelta, region.longitudeDelta);
+  if (delta <= 0.06) return 0.015;
+  if (delta <= 0.12) return 0.03;
+  if (delta <= 0.25) return 0.06;
+  if (delta <= 0.5) return 0.12;
+  if (delta <= 1) return 0.25;
+  if (delta <= 2) return 0.5;
+  if (delta <= 4) return 1;
+  return 2;
 }
 
 function getClusterWeatherSymbol(condition: string) {

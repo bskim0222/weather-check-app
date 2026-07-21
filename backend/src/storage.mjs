@@ -295,7 +295,9 @@ export async function updateReportRequestAnswerStatus(requestId, updates) {
 }
 
 export async function moderateFieldReportById(reportId, moderationStatus, reason) {
-  const status = moderationStatus === 'hidden' ? 'hidden' : 'pending';
+  const status = ['visible', 'pending', 'hidden'].includes(moderationStatus)
+    ? moderationStatus
+    : 'pending';
 
   if (shouldUsePostgresStorage()) {
     const pool = await getPostgresPool();

@@ -22,7 +22,7 @@ const port = Number(process.env.PORT ?? 8796);
 export function createBackendServer() {
   return http.createServer(async (request, response) => {
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Headers', 'content-type,x-weathercheck-device-id');
+    response.setHeader('Access-Control-Allow-Headers', 'authorization,content-type,x-weathercheck-device-id');
     response.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
 
     if (request.method === 'OPTIONS') {
@@ -60,6 +60,19 @@ async function routeRequest(request, response) {
 
   if (request.method === 'GET' && url.pathname === '/places/kakao-status') {
     sendJson(response, 200, await diagnoseKakaoLocal(url.searchParams.get('query') ?? '광화문'));
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/admin/reports') {
+    requireAdmin(request);
+    const database = await readDatabase();
+    const requestedStatus = url.searchParams.get('status') ?? 'pending';
+    const reports = database.fieldReports
+      .filter((report) => !report.deletedAt)
+      .filter((report) => requestedStatus === 'all' || report.moderationStatus === requestedStatus)
+      .map((report) => toViewerItem(report, ''))
+      .slice(0, 200);
+    sendJson(response, 200, { reports });
     return;
   }
 
@@ -265,6 +278,27 @@ async function routeRequest(request, response) {
     sendJson(response, 200, await moderateFieldReportById(
       reportId,
       'pending',
+      optionalText(payload.reason, 'reason', 300) ?? '',
+    ));
+    return;
+  }
+
+  const adminModerationMatch = url.pathname.match(/^\/admin\/reports\/([^/]+)\/moderation$/);
+
+  if (adminModerationMatch) {
+    requireMethod(request, ['POST']);
+    requireAdmin(request);
+    const reportId = decodeURIComponent(adminModerationMatch[1]);
+    validateId(reportId, 'Field report id');
+    const existingReport = await findFieldReportById(reportId);
+    if (!existingReport) throw new HttpError(404, 'Field report not found.');
+    const moderationStatus = optionalText(payload.moderationStatus, 'moderationStatus', 20);
+    if (!['visible', 'pending', 'hidden'].includes(moderationStatus)) {
+      throw new HttpError(400, 'Invalid moderation status.');
+    }
+    sendJson(response, 200, await moderateFieldReportById(
+      reportId,
+      moderationStatus,
       optionalText(payload.reason, 'reason', 300) ?? '',
     ));
     return;
@@ -498,6 +532,17 @@ function requireMethod(request, allowedMethods) {
 function requireDeviceId(deviceId) {
   if (!/^[A-Za-z0-9._:-]{12,160}$/.test(deviceId)) {
     throw new HttpError(401, 'A valid device identity is required.');
+  }
+}
+
+function requireAdmin(request) {
+  const configuredToken = process.env.ADMIN_API_TOKEN?.trim();
+  if (!configuredToken) throw new HttpError(503, 'Admin moderation is not configured.');
+  const authorization = typeof request.headers.authorization === 'string'
+    ? request.headers.authorization
+    : '';
+  if (authorization !== `Bearer ${configuredToken}`) {
+    throw new HttpError(401, 'Admin authorization is required.');
   }
 }
 

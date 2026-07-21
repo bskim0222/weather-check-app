@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 const port = Number(process.env.BACKEND_VERIFY_PORT ?? 8797);
 const baseUrl = `http://127.0.0.1:${port}`;
 const backendRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const adminToken = `verify-admin-${Date.now()}`;
+process.env.ADMIN_API_TOKEN = adminToken;
 const server = createBackendServer();
 
 await new Promise((resolve) => {
@@ -345,6 +347,25 @@ try {
   expectEqual(moderation.ok, true, 'moderation ok');
   expectEqual(moderation.moderationStatus, 'pending', 'public moderation only requests review');
 
+  const unauthorizedAdmin = await adminJsonRequest('/admin/reports?status=pending');
+  expectEqual(unauthorizedAdmin.status, 401, 'admin reports require authorization');
+
+  const pendingReports = await adminJsonRequest('/admin/reports?status=pending', 'GET', undefined, adminToken);
+  expectEqual(pendingReports.status, 200, 'admin can list pending reports');
+  expectTruthy(
+    pendingReports.data.reports.some((item) => item.id === report.id),
+    'pending report appears in admin list',
+  );
+
+  const hiddenByAdmin = await adminJsonRequest(
+    `/admin/reports/${encodeURIComponent(report.id)}/moderation`,
+    'POST',
+    { moderationStatus: 'hidden', reason: 'verified by admin' },
+    adminToken,
+  );
+  expectEqual(hiddenByAdmin.status, 200, 'admin can hide report');
+  expectEqual(hiddenByAdmin.data.moderationStatus, 'hidden', 'admin hide status');
+
   const deletedRequest = await requestJson(
     `/report-requests/${encodeURIComponent(request.id)}`,
     'DELETE',
@@ -397,6 +418,20 @@ async function requestJson(path, method, body, deviceId) {
     status: response.status,
     data: await response.json(),
   };
+}
+
+async function adminJsonRequest(path, method = 'GET', body, token = '') {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await response.text();
+  return { status: response.status, data: text ? JSON.parse(text) : null };
 }
 
 function expectEqual(actual, expected, label) {

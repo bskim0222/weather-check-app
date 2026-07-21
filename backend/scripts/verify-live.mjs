@@ -1,5 +1,6 @@
 const baseUrl = (process.env.WEATHER_CHECK_LIVE_API_URL
   ?? 'https://weather-check-backend-hvfs.onrender.com').replace(/\/$/, '');
+const adminToken = process.env.WEATHER_CHECK_ADMIN_TOKEN?.trim() ?? '';
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const deviceA = `live-verify-owner-${suffix}`;
 const deviceB = `live-verify-other-${suffix}`;
@@ -87,6 +88,20 @@ try {
   assert(reviewRequest.status === 200, 'public review request');
   assert(reviewRequest.data?.moderationStatus === 'pending', 'review status remains pending');
 
+  if (adminToken) {
+    const pendingReports = await jsonRequest('/admin/reports?status=pending', 'GET', undefined, '', adminToken);
+    assert(pendingReports.status === 200, 'admin pending report list');
+    assert(pendingReports.data?.reports?.some((item) => item.id === standaloneId), 'admin list includes review request');
+    assert(!('authorDeviceId' in pendingReports.data.reports.find((item) => item.id === standaloneId)), 'admin list hides device id');
+
+    const restoredReport = await jsonRequest(`/admin/reports/${standaloneId}/moderation`, 'POST', {
+      moderationStatus: 'visible',
+      reason: 'live verification restore',
+    }, '', adminToken);
+    assert(restoredReport.status === 200, 'admin restores report');
+    assert(restoredReport.data?.moderationStatus === 'visible', 'admin restore status');
+  }
+
   await delay(1200);
   const ownerSnapshot = await jsonRequest('/field-reports/snapshot', 'POST', { context }, deviceA);
   const ownerRequest = ownerSnapshot.data?.requests?.find((item) => item.id === requestId);
@@ -120,13 +135,14 @@ try {
   await jsonRequest(`/report-requests/${requestId}`, 'DELETE', undefined, deviceA).catch(() => {});
 }
 
-async function jsonRequest(path, method = 'GET', body, deviceId = '') {
+async function jsonRequest(path, method = 'GET', body, deviceId = '', bearerToken = '') {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(deviceId ? { 'X-WeatherCheck-Device-Id': deviceId } : {}),
+      ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });

@@ -13,6 +13,7 @@
     "check:render-live": "node scripts/check-render-live.mjs",
     "check:windy-live": "node scripts/check-windy-live.mjs",
     "check:yr-live": "node scripts/check-yr-live.mjs",
+    "verify:live": "node scripts/verify-live.mjs",
     "moderate": "node scripts/moderate-report.mjs",
     "start:fmi": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-fmi-backend.ps1",
     "start:mvp": "powershell.exe -ExecutionPolicy Bypass -File scripts/start-mvp-backend.ps1",

@@ -186,6 +186,18 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/field-reports') {
+    const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
+    const existingReport = requestedId ? await findFieldReportById(requestedId) : null;
+    if (existingReport) {
+      if (!canManageOwnedItem(existingReport, deviceId)) {
+        sendJson(response, 409, { error: 'A field report with this id already exists.' });
+        return;
+      }
+
+      sendJson(response, 200, toViewerItem(existingReport, deviceId));
+      return;
+    }
+
     const report = await createFieldReport(payload, deviceId);
     const savedReport = await saveFieldReport(report);
     sendJson(response, 201, toViewerItem(savedReport, deviceId));
@@ -193,6 +205,18 @@ async function routeRequest(request, response) {
   }
 
   if (url.pathname === '/report-requests') {
+    const requestedId = typeof payload.id === 'string' ? payload.id.trim() : '';
+    const existingRequest = requestedId ? await findReportRequestById(requestedId) : null;
+    if (existingRequest) {
+      if (!canManageOwnedItem(existingRequest, deviceId)) {
+        sendJson(response, 409, { error: 'A report request with this id already exists.' });
+        return;
+      }
+
+      sendJson(response, 200, toViewerItem(existingRequest, deviceId));
+      return;
+    }
+
     const reportRequest = await createReportRequest(payload, deviceId);
     const savedRequest = await saveReportRequest(reportRequest);
     sendJson(response, 201, toViewerItem(savedRequest, deviceId));

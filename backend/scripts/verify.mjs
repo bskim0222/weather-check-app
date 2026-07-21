@@ -218,6 +218,14 @@ try {
   expectTruthy(request.id, 'created request id');
   expectEqual(request.authorDeviceId, undefined, 'request device id is never returned');
 
+  const duplicateRequest = await requestJson(
+    '/report-requests',
+    'POST',
+    { id: request.id, place: '다른 장소', question: '덮어쓰기 시도' },
+    deviceB,
+  );
+  expectEqual(duplicateRequest.status, 409, 'another device cannot overwrite request by id');
+
   const answerReport = await postJson('/field-reports', {
     requestId: request.id,
     place: '잠실운동장',
@@ -225,6 +233,14 @@ try {
     body: '현장에는 비가 오지 않아요.',
   }, deviceB);
   expectTruthy(answerReport.id, 'created answer report id');
+
+  const duplicateReport = await requestJson(
+    '/field-reports',
+    'POST',
+    { id: report.id, place: '다른 장소', condition: '맑음', body: '덮어쓰기 시도' },
+    deviceB,
+  );
+  expectEqual(duplicateReport.status, 409, 'another device cannot overwrite report by id');
 
   const fieldSnapshot = await postJson('/field-reports/snapshot', { context }, deviceA);
   expectEqual(fieldSnapshot.source, 'api', 'field source');

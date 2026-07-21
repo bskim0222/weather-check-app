@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Text, View } from 'react-native';
 
 import { ProviderServiceIcon } from './ProviderServiceIcon';
 import { WeatherIcon } from './WeatherIcon';
@@ -132,7 +132,7 @@ function SignalLoader() {
         toValue: 1,
         duration: 1400,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     );
     loop.start();

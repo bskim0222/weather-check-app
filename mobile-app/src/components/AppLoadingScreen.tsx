@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Text, View } from 'react-native';
+import { Animated, Platform, Text, View } from 'react-native';
 
 import { BrandLogo } from './BrandLogo';
 import { styles } from '../styles/appStyles';
@@ -14,12 +14,12 @@ export function AppLoadingScreen() {
         Animated.timing(pulse, {
           toValue: 1,
           duration: 820,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulse, {
           toValue: 0,
           duration: 820,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );
@@ -28,12 +28,12 @@ export function AppLoadingScreen() {
         Animated.timing(drift, {
           toValue: 1,
           duration: 1100,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(drift, {
           toValue: 0,
           duration: 1100,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { NativeMapLayer } from './NativeMapLayer';
 import { formatPostTime } from '../domain/timeDisplay';
@@ -46,7 +46,7 @@ export function FieldReportMapCard({
       damping: 18,
       mass: 0.9,
       stiffness: 180,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [selectedCluster, sheetProgress]);
 

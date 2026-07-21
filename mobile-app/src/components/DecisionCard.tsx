@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef } from 'react';
 import { useState } from 'react';
-import { Animated, Easing, Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Easing, Image, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 
 import { ProviderServiceIcon } from './ProviderServiceIcon';
@@ -1015,13 +1015,13 @@ function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; str
           toValue: 1,
           duration: 3200,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(drift, {
           toValue: 0,
           duration: 3200,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );
@@ -1032,13 +1032,13 @@ function WeatherLineArtwork({ condition, stroke, dim }: { condition: string; str
           toValue: 1,
           duration: 1100,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulse, {
           toValue: 0,
           duration: 1100,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );
@@ -2198,13 +2198,13 @@ function WeatherArtwork({ condition }: { condition: string }) {
           toValue: 1,
           duration: 2600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(drift, {
           toValue: 0,
           duration: 2600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]),
     );

@@ -19,7 +19,7 @@ import type {
 export type WeatherProviderSnapshot = {
   context: SearchContext;
   generatedAt: string;
-  source: 'mock' | 'api';
+  source: 'mock' | 'api' | 'unavailable';
   meta: WeatherProviderSnapshotMeta;
   sources: ForecastSource[];
   summaries: CompareServiceSummary[];
@@ -27,6 +27,25 @@ export type WeatherProviderSnapshot = {
   hourlyRows: CompareRow[];
   dailyRows: CompareRow[];
 };
+
+export function getUnavailableWeatherProviderSnapshot(searchContext: SearchContext): WeatherProviderSnapshot {
+  return {
+    context: searchContext,
+    generatedAt: new Date().toISOString(),
+    source: 'unavailable',
+    meta: {
+      providerMode: 'unavailable',
+      liveProviderIds: [],
+      fallbackProviderIds: [],
+      thirdProviderId: 'fmi',
+    },
+    sources: [],
+    summaries: [],
+    differences: [],
+    hourlyRows: [],
+    dailyRows: [],
+  };
+}
 
 export function getMockWeatherProviderSnapshot(searchContext: SearchContext): WeatherProviderSnapshot {
   const preset = Object.values(weatherPresets).find((item) => item.condition === searchContext.detectedWeather);
@@ -62,9 +81,11 @@ export async function fetchProviderSnapshot(searchContext: SearchContext): Promi
       { context: searchContext },
     );
 
-    if (response.ok && response.data) {
+    if (response.ok && response.data && response.data.source === 'api') {
       return normalizeProviderSnapshot(response.data, searchContext);
     }
+
+    return getUnavailableWeatherProviderSnapshot(searchContext);
   }
 
   return getMockWeatherProviderSnapshot(searchContext);
@@ -74,18 +95,21 @@ export function normalizeProviderSnapshot(
   snapshot: ApiWeatherProviderSnapshot,
   fallbackContext: SearchContext,
 ): WeatherProviderSnapshot {
-  const fallbackSnapshot = getMockWeatherProviderSnapshot(fallbackContext);
+  const unavailableSnapshot = getUnavailableWeatherProviderSnapshot(fallbackContext);
+  const hourlyRows = normalizeApiRows(snapshot.hourlyRows);
+  const dailyRows = normalizeApiRows(snapshot.dailyRows);
+  const hasForecastData = snapshot.source === 'api' && hourlyRows.length > 0;
 
   return {
     context: snapshot.context ?? fallbackContext,
     generatedAt: snapshot.generatedAt ?? new Date().toISOString(),
-    source: snapshot.source ?? 'api',
-    meta: normalizeProviderMeta(snapshot.meta, fallbackSnapshot.meta),
-    sources: hasItems(snapshot.sources) ? snapshot.sources : fallbackSnapshot.sources,
-    summaries: hasItems(snapshot.summaries) ? snapshot.summaries : fallbackSnapshot.summaries,
-    differences: hasItems(snapshot.differences) ? snapshot.differences : fallbackSnapshot.differences,
-    hourlyRows: normalizeApiRows(snapshot.hourlyRows, fallbackSnapshot.hourlyRows),
-    dailyRows: normalizeApiRows(snapshot.dailyRows, fallbackSnapshot.dailyRows),
+    source: hasForecastData ? 'api' : 'unavailable',
+    meta: normalizeProviderMeta(snapshot.meta, unavailableSnapshot.meta),
+    sources: hasItems(snapshot.sources) ? snapshot.sources : [],
+    summaries: hasItems(snapshot.summaries) ? snapshot.summaries : [],
+    differences: hasItems(snapshot.differences) ? snapshot.differences : [],
+    hourlyRows,
+    dailyRows,
   };
 }
 
@@ -93,12 +117,8 @@ function hasItems<T>(value: T[] | undefined) {
   return Array.isArray(value) && value.length > 0;
 }
 
-function normalizeApiRows(rows: CompareRow[] | undefined, fallbackRows: CompareRow[]) {
-  const normalized = normalizeProviderRows(rows);
-
-  if (normalized.length === 0) return fallbackRows;
-
-  return normalized;
+function normalizeApiRows(rows: CompareRow[] | undefined) {
+  return normalizeProviderRows(rows);
 }
 
 function normalizeProviderMeta(

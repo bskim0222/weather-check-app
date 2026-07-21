@@ -8,7 +8,11 @@ import { getCompareFocusText, getContextualCompareRows } from '../src/domain/com
 import { markReportHidden, markReportPending, visibleReportsOnly } from '../src/domain/moderation';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
 import { weatherPresets } from '../src/data/mockWeather';
-import type { WeatherProviderSnapshot } from '../src/services/weatherProviders';
+import {
+  getUnavailableWeatherProviderSnapshot,
+  normalizeProviderSnapshot,
+  type WeatherProviderSnapshot,
+} from '../src/services/weatherProviders';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -142,6 +146,28 @@ expectEqual(alignedPreset.sources[2].condition, '자료 없음', 'summary missin
 expectEqual(alignedPreset.sources[1].temp, '--', 'live missing temperature never falls back to an unrelated value');
 expectEqual(alignedPreset.forecastRows.length, 1, 'live forecast rows never append mock hours');
 expectTruthy(!alignedPreset.summary.includes('자료 없음'), 'missing provider excluded from summary sentence');
+
+const unavailableSnapshot = getUnavailableWeatherProviderSnapshot(defaultJudgement.searchContext);
+expectEqual(unavailableSnapshot.source, 'unavailable', 'unavailable snapshot source');
+expectEqual(unavailableSnapshot.hourlyRows.length, 0, 'unavailable snapshot has no fake hourly rows');
+expectEqual(unavailableSnapshot.sources.length, 0, 'unavailable snapshot has no fake provider cards');
+
+const emptyApiSnapshot = normalizeProviderSnapshot(
+  {
+    context: defaultJudgement.searchContext,
+    generatedAt: new Date().toISOString(),
+    source: 'api',
+    sources: [],
+    summaries: [],
+    differences: [],
+    hourlyRows: [],
+    dailyRows: [],
+  },
+  defaultJudgement.searchContext,
+);
+expectEqual(emptyApiSnapshot.hourlyRows.length, 0, 'empty API response does not receive mock hourly rows');
+expectEqual(emptyApiSnapshot.sources.length, 0, 'empty API response does not receive mock provider cards');
+expectEqual(emptyApiSnapshot.source, 'unavailable', 'empty API response is explicitly unavailable');
 
 const threeProviderSnapshot: WeatherProviderSnapshot = {
   ...alignedSnapshot,

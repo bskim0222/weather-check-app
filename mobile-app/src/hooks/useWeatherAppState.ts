@@ -38,6 +38,7 @@ import {
 import {
   fetchProviderSnapshot,
   getMockWeatherProviderSnapshot,
+  getUnavailableWeatherProviderSnapshot,
   type WeatherProviderSnapshot,
 } from '../services/weatherProviders';
 import type { DataStatus, LocationStatus, PersistedAppSnapshot } from '../types/appState';
@@ -65,9 +66,13 @@ export function useWeatherAppState() {
   const [refreshLabel, setRefreshLabel] = useState(appConfig.dataMode === 'api' ? '확인 중' : '미리보기 데이터');
   const [reports, setReports] = useState<LocalReport[]>([]);
   const [reportRequests, setReportRequests] = useState<ReportRequest[]>([]);
-  const [providerSnapshot, setProviderSnapshot] = useState<WeatherProviderSnapshot>(() =>
-    getMockWeatherProviderSnapshot(createDefaultJudgement().searchContext),
-  );
+  const [providerSnapshot, setProviderSnapshot] = useState<WeatherProviderSnapshot>(() => {
+    const initialContext = createDefaultJudgement().searchContext;
+
+    return appConfig.dataMode === 'api'
+      ? getUnavailableWeatherProviderSnapshot(initialContext)
+      : getMockWeatherProviderSnapshot(initialContext);
+  });
   const [dataStatus, setDataStatus] = useState<DataStatus>(
     appConfig.dataMode === 'api' ? apiInitialStatus : mockStatus,
   );
@@ -81,7 +86,9 @@ export function useWeatherAppState() {
     () => {
       const snapshotForCurrentContext = isSameWeatherContext(providerSnapshot.context, judgement.searchContext)
         ? providerSnapshot
-        : getMockWeatherProviderSnapshot(judgement.searchContext);
+        : appConfig.dataMode === 'api'
+          ? getUnavailableWeatherProviderSnapshot(judgement.searchContext)
+          : getMockWeatherProviderSnapshot(judgement.searchContext);
 
       return createProviderAdjustedPreset(judgement.preset, snapshotForCurrentContext);
     },
@@ -415,7 +422,12 @@ export function useWeatherAppState() {
     const resolvedLocationStatus = await refreshLocationStatus();
     const nextLocationJudgement = updateJudgementLocation(nextJudgement, resolvedLocationStatus);
     setJudgement(nextLocationJudgement);
-    if (!hasUsableCoordinates(resolvedLocationStatus)) return;
+    if (!hasUsableCoordinates(resolvedLocationStatus)) {
+      if (appConfig.dataMode === 'api') {
+        setProviderSnapshot(getUnavailableWeatherProviderSnapshot(nextLocationJudgement.searchContext));
+      }
+      return;
+    }
 
     refreshData('현재 위치', nextLocationJudgement.searchContext);
   };
@@ -439,6 +451,13 @@ export function useWeatherAppState() {
       message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 세 기상청 예보를 불러오고 있어요.`,
     });
 
+    if (
+      appConfig.dataMode === 'api' &&
+      !isSameWeatherContext(providerSnapshot.context, nextSearchContext)
+    ) {
+      setProviderSnapshot(getUnavailableWeatherProviderSnapshot(nextSearchContext));
+    }
+
     try {
       const [providerSnapshot, fieldSnapshot] = await Promise.all([
         fetchProviderSnapshot(nextSearchContext),
@@ -456,14 +475,14 @@ export function useWeatherAppState() {
 
       const isFallback =
         appConfig.dataMode === 'api' &&
-        providerSnapshot.source === 'mock';
+        providerSnapshot.source !== 'api';
 
       if (isFallback) {
-        setRefreshLabel('목업 대체');
+        setRefreshLabel('자료 없음');
         setDataStatus({
-          phase: 'fallback',
-          label: 'API 연결 대기',
-          message: createFallbackStatusMessage(providerSnapshot.meta.fallbackProviderIds),
+          phase: 'error',
+          label: '예보를 불러오지 못했어요',
+          message: '샘플값으로 대신 표시하지 않았어요. 연결 상태를 확인한 뒤 새로고침해주세요.',
         });
         return;
       }
@@ -602,16 +621,6 @@ function createReadyStatusMessage(providerIds: ForecastProviderId[]) {
   }
 
   return `${names.join(', ')} 예보와 현장 글을 최신 기준으로 확인했어요.`;
-}
-
-function createFallbackStatusMessage(providerIds: ForecastProviderId[]) {
-  const names = providerIds.map(getProviderDisplayName).filter(Boolean);
-
-  if (names.length === 0) {
-    return '실제 데이터 연결이 준비되지 않아 현재는 목업 예보와 현장 글로 대체 보여주고 있어요.';
-  }
-
-  return `${names.join(', ')} 데이터가 준비되지 않아 해당 예보는 샘플 값으로 대체 보여주고 있어요.`;
 }
 
 function getProviderDisplayName(providerId: ForecastProviderId) {

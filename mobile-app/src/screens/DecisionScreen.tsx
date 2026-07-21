@@ -55,13 +55,21 @@ export function DecisionScreen({
 
   return (
     <View>
-      <DecisionCard
-        current={current}
-        lastUpdatedAt={lastUpdatedAt}
-        locationStatus={locationStatus}
-        providerSnapshot={providerSnapshot}
-        searchContext={searchContext}
-      />
+      {providerSnapshot.source === 'unavailable' ? (
+        <EmptyState
+          title={dataStatus.phase === 'loading' ? '세 기상청 예보를 확인하고 있어요' : '예보 자료가 아직 없어요'}
+          body={dataStatus.message}
+          action="위치를 허용하거나 위의 새로고침 버튼을 눌러주세요."
+        />
+      ) : (
+        <DecisionCard
+          current={current}
+          lastUpdatedAt={lastUpdatedAt}
+          locationStatus={locationStatus}
+          providerSnapshot={providerSnapshot}
+          searchContext={searchContext}
+        />
+      )}
 
       <View style={styles.summaryActionGrid}>
         <Pressable onPress={onAskFieldQuestion} style={[styles.summaryActionCard, styles.summaryAskCard]}>

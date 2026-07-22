@@ -322,10 +322,22 @@ try {
       createAlignmentRow('2026-07-02T01:00:00Z', 'YR 10'),
     ],
     fmi: [createAlignmentRow('2026-07-02T01:00:00Z', 'FMI 10')],
-  }, 'hourly', 'fmi', { minimumKey: '2026-07-02T10' });
+  }, 'hourly', 'fmi', {
+    minimumKey: '2026-07-02T10',
+    currentRowsById: {
+      kma: {
+        condition: 'KMA current',
+        temp: '24C',
+        detail: 'rain 1mm',
+        mark: 'K',
+        tone: '#123456',
+      },
+    },
+  });
   expectEqual(currentAlignedRows.length, 1, 'past provider-only rows are removed');
   expectEqual(currentAlignedRows[0].forecastKey, '2026-07-02T10', 'current aligned row starts at current hour');
-  expectEqual(currentAlignedRows[0].kma.weather, 'KMA 10', 'current aligned row includes KMA data');
+  expectEqual(currentAlignedRows[0].kma.weather, 'KMA current', 'current aligned row uses KMA observation');
+  expectEqual(currentAlignedRows[0].kma.detail, '24C · rain 1mm', 'current KMA observation keeps detail');
 
   const deviceA = `verify-device-a-${Date.now()}`;
   const deviceB = `verify-device-b-${Date.now()}`;

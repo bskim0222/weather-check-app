@@ -98,7 +98,14 @@ async function createWeatherProviderSnapshotUncached(context) {
       kma: kmaForecast?.hourlyRows,
       yr: yrForecast?.hourlyRows,
       [thirdProvider.providerId]: thirdForecast?.hourlyRows,
-    }, 'hourly', thirdProvider.providerId, { minimumKey: hourlyMinimumKey }),
+    }, 'hourly', thirdProvider.providerId, {
+      minimumKey: hourlyMinimumKey,
+      currentRowsById: {
+        kma: kmaForecast?.current,
+        yr: yrForecast?.current,
+        [thirdProvider.providerId]: thirdForecast?.current,
+      },
+    }),
     dailyRows: mergeForecastRows(snapshot.dailyRows, {
       kma: kmaForecast?.dailyRows,
       yr: yrForecast?.dailyRows,
@@ -271,6 +278,14 @@ export function mergeForecastRows(
     return [providerId, new Map(rows.map((row) => [rowKey(row), row]).filter(([key]) => key))];
   }));
   const minimumKey = mode === 'hourly' ? String(options.minimumKey ?? '') : '';
+
+  if (minimumKey) {
+    providerIds.forEach((providerId) => {
+      const currentRow = createCurrentForecastRow(options.currentRowsById?.[providerId]);
+      if (currentRow) maps[providerId].set(minimumKey, currentRow);
+    });
+  }
+
   const keys = [...new Set(providerIds.flatMap((providerId) => [...maps[providerId].keys()]))]
     .filter((key) => !minimumKey || key >= minimumKey)
     .sort()
@@ -313,6 +328,17 @@ function createProviderCell(providerRow) {
     tone: providerRow.tone,
     morning: providerRow.morning,
     afternoon: providerRow.afternoon,
+  };
+}
+
+function createCurrentForecastRow(weather) {
+  if (!weather?.condition) return null;
+
+  return {
+    mark: weather.mark ?? String(weather.condition).slice(0, 1),
+    weather: weather.condition,
+    detail: [weather.temp, weather.detail].filter(Boolean).join(' · '),
+    tone: weather.tone,
   };
 }
 

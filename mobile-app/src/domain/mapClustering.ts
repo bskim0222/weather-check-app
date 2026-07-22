@@ -62,7 +62,11 @@ export function createMapReportClusters(
   coordinatesByPlace: Record<string, MapCoordinate | null>,
   gridDegrees = MAP_PRIVACY_GRID_DEGREES,
 ): MapReportCluster[] {
-  const groups = new Map<string, { coordinate: MapCoordinate; reports: LocalReport[] }>();
+  const groups = new Map<string, {
+    latitudeTotal: number;
+    longitudeTotal: number;
+    reports: LocalReport[];
+  }>();
   const safeGridDegrees = Math.max(MAP_PRIVACY_GRID_DEGREES, gridDegrees);
 
   reports.forEach((report) => {
@@ -83,7 +87,13 @@ export function createMapReportClusters(
       longitude: roundToGrid(coordinate.longitude, safeGridDegrees),
     };
     const key = `${aggregateCoordinate.latitude.toFixed(4)}:${aggregateCoordinate.longitude.toFixed(4)}`;
-    const group = groups.get(key) ?? { coordinate: aggregateCoordinate, reports: [] };
+    const group = groups.get(key) ?? {
+      latitudeTotal: 0,
+      longitudeTotal: 0,
+      reports: [],
+    };
+    group.latitudeTotal += coordinate.latitude;
+    group.longitudeTotal += coordinate.longitude;
     group.reports.push(report);
     groups.set(key, group);
   });
@@ -99,8 +109,10 @@ export function createMapReportClusters(
       dominantCondition: getDominantCondition(group.reports),
       privacyRadiusLabel: '최근 24시간 현장 글',
       reports: group.reports,
-      latitude: group.coordinate.latitude,
-      longitude: group.coordinate.longitude,
+      // The coarse grid is only a grouping key. Rendering at the grid center
+      // can move a Seoul cluster into North Korea at nationwide zoom levels.
+      latitude: group.latitudeTotal / group.reports.length,
+      longitude: group.longitudeTotal / group.reports.length,
       kind: getClusterKind(group.reports),
     };
   });

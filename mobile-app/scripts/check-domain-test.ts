@@ -196,7 +196,14 @@ const wideMapClusters = createMapReportClusters(recentMapReports, {}, 0.12);
 expectEqual(wideMapClusters.length, 1, 'nearby map reports merge at wide zoom');
 expectEqual(wideMapClusters[0].count, 2, 'wide map cluster count');
 expectEqual(wideMapClusters[0].dominantCondition, '비', 'wide map cluster dominant weather');
-expectTruthy(Math.abs((wideMapClusters[0].latitude ?? 0) - 37.56) < 0.000001, 'wide map cluster uses grid center latitude');
+expectTruthy(
+  Math.abs((wideMapClusters[0].latitude ?? 0) - 37.5225) < 0.000001,
+  'wide map cluster uses member centroid latitude',
+);
+expectTruthy(
+  Math.abs((wideMapClusters[0].longitude ?? 0) - 127.1025) < 0.000001,
+  'wide map cluster uses member centroid longitude',
+);
 expectEqual(
   hasStoredClusterCoordinate({
     id: 'legacy-zero-coordinate',
@@ -287,7 +294,7 @@ const targetQuestionClusters = createMapReportClusters(
 expectEqual(targetQuestionClusters.length, 1, 'question target produces one map marker');
 expectEqual(targetQuestionClusters[0].kind, 'question', 'question target marker remains a question');
 expectTruthy(
-  Math.abs((targetQuestionClusters[0].latitude ?? 0) - 35.16) < 0.000001,
+  Math.abs((targetQuestionClusters[0].latitude ?? 0) - 35.1532) < 0.000001,
   'question marker follows Busan target instead of Seoul requester',
 );
 expectEqual(
@@ -323,6 +330,15 @@ const nationwideReports = koreaCoordinateCases.map(([label, latitude, longitude]
     `zoom grid ${gridDegrees} keeps every marker inside Korea`,
   );
 });
+const nationwideSeoulCluster = createMapReportClusters([nationwideReports[0]], {}, 2)[0];
+expectTruthy(
+  Math.abs((nationwideSeoulCluster.latitude ?? 0) - koreaCoordinateCases[0][1]) < 0.000001,
+  'nationwide zoom keeps marker at the report latitude instead of grid center',
+);
+expectTruthy(
+  Math.abs((nationwideSeoulCluster.longitude ?? 0) - koreaCoordinateCases[0][2]) < 0.000001,
+  'nationwide zoom keeps marker at the report longitude instead of grid center',
+);
 
 const alignedSnapshot: WeatherProviderSnapshot = {
   context: defaultJudgement.searchContext,

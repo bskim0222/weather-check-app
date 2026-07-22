@@ -5147,8 +5147,16 @@ export const styles = StyleSheet.create({
   replyNotice: {
     color: 'rgba(36,36,36,0.60)',
     fontSize: 12,
+    lineHeight: 17,
     fontWeight: '800',
     marginTop: 10,
+  },
+  replyFeedback: {
+    color: '#7f3030',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '900',
+    marginTop: 8,
   },
   liveReportList: {
     gap: 8,

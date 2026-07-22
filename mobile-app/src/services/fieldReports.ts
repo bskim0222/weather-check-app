@@ -110,14 +110,18 @@ export function getUnavailableFieldReportSnapshot(searchContext: SearchContext):
 }
 
 export async function createRemoteFieldReport(report: LocalReport) {
+  const response = await createRemoteFieldReportResult(report);
+
+  return response?.ok && response.data ? response.data : null;
+}
+
+export async function createRemoteFieldReportResult(report: LocalReport) {
   if (!isApiModeEnabled()) return null;
 
-  const response = await writeApiJson<LocalReport, ApiCreateFieldReportRequest>(
+  return writeApiJson<LocalReport, ApiCreateFieldReportRequest>(
     '/field-reports',
     report,
   );
-
-  return response.ok && response.data ? response.data : null;
 }
 
 export async function updateRemoteFieldReport(reportId: string, updates: ApiUpdateFieldReportRequest) {

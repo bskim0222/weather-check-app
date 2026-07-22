@@ -7,7 +7,7 @@ import { inferConditionFromText } from '../domain/reports';
 import { isValidKoreaMapCoordinate } from '../domain/mapClustering';
 import { formatPostTime } from '../domain/timeDisplay';
 import {
-  createRemoteFieldReport,
+  createRemoteFieldReportResult,
   createRemoteReportRequest,
 } from '../services/fieldReports';
 import { searchRemotePlaces } from '../services/geocoding';
@@ -81,6 +81,7 @@ export function ReportScreen({
   const selectedRequestReplies = selectedRequestId
     ? visibleReports.filter((report) => report.requestId === selectedRequestId)
     : [];
+  const answerLocationMessage = getAnswerLocationMessage(selectedRequest, locationStatus);
 
   useEffect(() => {
     if (askFocusToken > 0) setActiveReportTab('ask');
@@ -170,7 +171,15 @@ export function ReportScreen({
 
   const submitReply = async () => {
     const clean = replyDraft.trim();
-    if (!clean || !selectedRequest || replySubmitting) return;
+    if (replySubmitting) return;
+    if (!selectedRequest) {
+      setReplyNotice('답변할 질문을 다시 선택해주세요.');
+      return;
+    }
+    if (!clean) {
+      setReplyNotice('지금 보이는 날씨를 한 줄로 적어주세요.');
+      return;
+    }
 
     if (!hasUsableLocation(locationStatus)) {
       setReplyNotice('현장 답변은 현재 위치를 확인한 뒤 남길 수 있어요.');
@@ -201,11 +210,12 @@ export function ReportScreen({
     setReplyNotice('현장 답변을 저장하고 있어요.');
 
     try {
-      const remoteReport = await createRemoteFieldReport(replyReport);
-      if (!remoteReport) {
-        setReplyNotice('답변이 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.');
+      const response = await createRemoteFieldReportResult(replyReport);
+      if (!response?.ok || !response.data) {
+        setReplyNotice(getReplySaveErrorMessage(response?.error));
         return;
       }
+      const remoteReport = response.data;
 
       onAddReport({ ...remoteReport, source: 'local', syncState: 'synced' });
       onRequestsChange((prev) => prev.map((request) => (
@@ -221,6 +231,8 @@ export function ReportScreen({
       setReplyDraft('');
       setReplyNotice(`${selectedRequest.place} 질문에 현장 답변을 남겼어요.`);
       setAnswerModalVisible(false);
+    } catch {
+      setReplyNotice('답변 저장 중 연결이 끊겼어요. 잠시 뒤 다시 시도해주세요.');
     } finally {
       setReplySubmitting(false);
     }
@@ -341,6 +353,8 @@ export function ReportScreen({
         request={selectedRequest}
         replies={selectedRequestReplies}
         replyDraft={replyDraft}
+        replyNotice={replyNotice}
+        locationMessage={answerLocationMessage}
         setReplyDraft={setReplyDraft}
         submitReply={submitReply}
         submitting={replySubmitting}
@@ -383,6 +397,49 @@ function isNearRequest(
     request.clusterLatitude!,
     request.clusterLongitude!,
   ) <= 3000;
+}
+
+function getAnswerLocationMessage(request: ReportRequest | undefined, locationStatus: LocationStatus) {
+  if (!request) return '답변할 질문을 선택해주세요.';
+  if (!hasUsableLocation(locationStatus)) return '현재 위치를 확인할 수 없어 답변을 등록할 수 없어요.';
+  if (!Number.isFinite(request.clusterLatitude) || !Number.isFinite(request.clusterLongitude)) {
+    return '이 질문은 장소를 확인할 수 없어 답변을 등록할 수 없어요.';
+  }
+
+  const distanceMeters = getDistanceMeters(
+    locationStatus.latitude,
+    locationStatus.longitude,
+    request.clusterLatitude!,
+    request.clusterLongitude!,
+  );
+
+  if (distanceMeters > 3000) {
+    const distanceLabel = distanceMeters >= 1000
+      ? `약 ${(distanceMeters / 1000).toFixed(distanceMeters >= 10_000 ? 0 : 1)}km`
+      : `약 ${Math.max(100, Math.round(distanceMeters / 100) * 100)}m`;
+    return `현재 위치가 질문 지역에서 ${distanceLabel} 떨어져 있어요. 약 3km 안에서만 답변할 수 있어요.`;
+  }
+
+  return '질문 지역 근처로 확인됐어요. 지금 직접 본 날씨를 남겨주세요.';
+}
+
+function getReplySaveErrorMessage(error?: string) {
+  const normalizedError = error?.toLowerCase() ?? '';
+
+  if (normalizedError.includes('within about 3 km')) {
+    return '현재 위치가 질문 지역에서 약 3km 밖이라 답변을 등록할 수 없어요.';
+  }
+  if (normalizedError.includes('current location is required')) {
+    return '현재 위치를 확인한 뒤 다시 답변해주세요.';
+  }
+  if (normalizedError.includes('question location cannot be verified')) {
+    return '질문 장소를 확인할 수 없어 답변을 등록하지 못했어요.';
+  }
+  if (normalizedError.includes('report request not found')) {
+    return '이미 삭제된 질문이에요. 질문 목록을 새로고침해주세요.';
+  }
+
+  return '답변이 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.';
 }
 
 function getDistanceMeters(latitudeA: number, longitudeA: number, latitudeB: number, longitudeB: number) {
@@ -749,8 +806,10 @@ function EditPostModal({
 }
 
 function AnswerModal({
+  locationMessage,
   onClose,
   replyDraft,
+  replyNotice,
   replies,
   request,
   setReplyDraft,
@@ -758,8 +817,10 @@ function AnswerModal({
   submitting,
   visible,
 }: {
+  locationMessage: string;
   onClose: () => void;
   replyDraft: string;
+  replyNotice: string;
   replies: LocalReport[];
   request?: ReportRequest;
   setReplyDraft: (value: string) => void;
@@ -773,7 +834,8 @@ function AnswerModal({
         <View style={styles.reportModalCard}>
           <Text style={styles.replyEyebrow}>선택한 질문에 답변쓰기</Text>
           <Text style={styles.replyQuestion}>{request?.question ?? '질문을 선택해주세요'}</Text>
-          <Text style={styles.replyNotice}>질문 장소 근처에서 확인한 현재 날씨만 남겨주세요.</Text>
+          <Text style={styles.replyNotice}>{locationMessage}</Text>
+          {!!replyNotice && <Text style={styles.replyFeedback}>{replyNotice}</Text>}
           <ReplyList replies={replies} emptyText={request?.answers ? '답변을 불러오는 중이에요.' : '아직 현장 답변이 없어요.'} />
           <TextInput
             multiline

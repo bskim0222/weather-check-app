@@ -30,7 +30,7 @@ export function CompareScreen({ providerSnapshot, searchContext }: CompareScreen
     return (
       <EmptyState
         title="비교할 예보 자료가 아직 없어요"
-        body="샘플값을 보여주지 않고 실제 기상청 자료가 준비될 때까지 기다리고 있어요."
+        body="위치를 허용하거나 새로고침한 뒤 다시 확인해주세요."
         action="요약 탭에서 위치를 허용하거나 새로고침해주세요."
       />
     );

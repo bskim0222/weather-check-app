@@ -94,7 +94,20 @@ try {
   console.log('Backend mode smoke checks passed.');
 } finally {
   rmSync(outDir, { force: true, recursive: true });
-  backendProcess.kill();
+  await stopBackendProcess(backendProcess);
+}
+
+async function stopBackendProcess(childProcess) {
+  if (childProcess.exitCode === null && childProcess.signalCode === null) {
+    childProcess.kill();
+    await Promise.race([
+      new Promise((resolve) => childProcess.once('close', resolve)),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  }
+
+  childProcess.stdout?.destroy();
+  childProcess.stderr?.destroy();
 }
 
 async function waitForHealth(url, getDebugOutput) {

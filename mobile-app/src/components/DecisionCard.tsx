@@ -64,6 +64,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
           <Text style={[styles.figmaWeatherTemp, { color: figma.ink }]}>{current.temp}</Text>
           <Text style={[styles.figmaWeatherDegree, { color: figma.dim }]}>°C</Text>
         </View>
+        <Text style={[styles.figmaWeatherAverageLabel, { color: figma.dim }]}>3개 예보 평균</Text>
         <Text style={[styles.figmaWeatherCondition, { color: figma.ink }]}>
           {getDecisionSignalValue(normalizedCondition, current.level)}
         </Text>
@@ -74,8 +75,9 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
 
       <View style={styles.figmaWeatherMessage}>
         <Text
-          numberOfLines={3}
+          numberOfLines={2}
           adjustsFontSizeToFit
+          minimumFontScale={0.72}
           style={[styles.figmaWeatherTitle, { color: figma.ink }]}
         >
           {title}
@@ -134,7 +136,7 @@ function ForecastSourceMiniCard({
           mark={source.mark}
           style={styles.figmaWeatherSourceLogo}
         />
-        <Text numberOfLines={1} style={[styles.figmaWeatherSourceName, { color: figma.dim }]}>
+        <Text adjustsFontSizeToFit minimumFontScale={0.82} numberOfLines={1} style={[styles.figmaWeatherSourceName, { color: figma.dim }]}>
           {shortForecastSourceName(source.name)}
         </Text>
       </View>
@@ -144,13 +146,13 @@ function ForecastSourceMiniCard({
           <Text style={[styles.figmaWeatherSourceWeather, { color: figma.ink }]}>
             {source.condition}
           </Text>
-          <Text style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.8} numberOfLines={1} style={[styles.figmaWeatherSourceTemp, { color: figma.ink }]}>
             {source.temp}
           </Text>
         </View>
       </View>
       <Text style={[styles.figmaWeatherSourceDetail, { color: figma.dim }]}>
-        {source.detail}
+        {formatSourceCardDetail(source.detail)}
       </Text>
     </Pressable>
   );
@@ -417,12 +419,12 @@ function getDecisionPlaceLabel(searchContext: SearchContext, locationStatus: Loc
 }
 
 function getDisplayTitle(title: string) {
-  if (title.includes('쪽이 ')) return title.replace('쪽이 ', '쪽이\n');
-  if (title.includes('천둥 ')) return title.replace('천둥 ', '천둥\n');
-  if (title.includes('하늘은 ')) return title.replace('하늘은 ', '하늘은\n');
-  if (title.includes('진눈깨비 ')) return title.replace('진눈깨비 ', '진눈깨비\n');
-
   return title;
+}
+
+function formatSourceCardDetail(detail: string) {
+  const precipitation = extractPrecipitationMetric(detail);
+  return precipitation ? `강수 ${precipitation}` : '강수 자료 없음';
 }
 
 function getCompactSignal(condition: string, signal: string) {

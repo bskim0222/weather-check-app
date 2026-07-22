@@ -3,9 +3,9 @@ import {
   createRemoteFieldReport,
   createRemoteReportRequest,
   fetchFieldReportSnapshot,
-  moderateRemoteFieldReport,
 } from '../src/services/fieldReports';
 import { appConfig, isApiModeEnabled, isBackendConfigured } from '../src/config/appConfig';
+import { buildApiUrl } from '../src/services/apiClient';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -71,9 +71,24 @@ export async function runBackendCreateSmokeCheck() {
   });
   expectTruthy(answerReport?.id, 'created linked answer');
 
-  const moderation = await moderateRemoteFieldReport(String(createdReport?.id), 'backend mode smoke moderation');
-  expectEqual(moderation?.ok, true, 'moderation ok');
-  expectEqual(moderation?.moderationStatus, 'pending', 'moderation status');
+  const moderationResponse = await fetch(
+    buildApiUrl(`/reports/${encodeURIComponent(String(createdReport?.id))}/moderation`),
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-WeatherCheck-Device-Id': `backend-mode-reviewer-${stamp}`,
+      },
+      body: JSON.stringify({
+        moderationStatus: 'pending',
+        reason: 'backend mode smoke moderation',
+      }),
+    },
+  );
+  const moderation = await moderationResponse.json() as { moderationStatus?: string };
+  expectEqual(moderationResponse.ok, true, 'moderation ok');
+  expectEqual(moderation.moderationStatus, 'pending', 'moderation status');
 
   const fieldSnapshot = await fetchFieldReportSnapshot([], judgement.searchContext, []);
   const answeredRequest = fieldSnapshot.requests.find((request) => request.id === createdRequest?.id);

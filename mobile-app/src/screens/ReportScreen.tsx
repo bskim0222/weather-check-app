@@ -27,6 +27,7 @@ type ReportScreenProps = {
   onDeleteReport: (reportId: string) => void;
   onDeleteRequest: (requestId: string) => void;
   onReportIssue: (report: LocalReport) => void;
+  onRefreshLocation: () => void;
   onRequestsChange: (requests: ReportRequest[] | ((prev: ReportRequest[]) => ReportRequest[])) => void;
   onUpdateReport: (reportId: string, updates: Partial<Pick<LocalReport, 'body' | 'condition'>>) => void;
   onUpdateRequest: (requestId: string, updates: Partial<Pick<ReportRequest, 'question'>>) => void;
@@ -48,6 +49,7 @@ export function ReportScreen({
   onDeleteReport,
   onDeleteRequest,
   onReportIssue,
+  onRefreshLocation,
   onRequestsChange,
   onUpdateReport,
   onUpdateRequest,
@@ -290,10 +292,6 @@ export function ReportScreen({
           <Text style={styles.reportHeaderTitle}>현장문의</Text>
           <Text style={styles.reportHeaderCaption}>궁금한 곳은 묻고, 내가 본 날씨는 제보로 남겨요.</Text>
         </View>
-        <View style={styles.reportHeaderActions}>
-          <Text style={styles.reportHeaderActionText}>⌕</Text>
-          <Text style={styles.reportHeaderActionText}>•••</Text>
-        </View>
       </View>
 
       <View style={styles.reportToggleShell}>
@@ -303,6 +301,9 @@ export function ReportScreen({
             return (
               <Pressable
                 key={tab.key}
+                accessibilityLabel={`${tab.label} 보기`}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
                 onPress={() => setActiveReportTab(tab.key)}
                 style={[styles.reportSegment, selected && styles.reportSegmentActive]}
               >
@@ -355,6 +356,7 @@ export function ReportScreen({
         replyDraft={replyDraft}
         replyNotice={replyNotice}
         locationMessage={answerLocationMessage}
+        onRefreshLocation={onRefreshLocation}
         setReplyDraft={setReplyDraft}
         submitReply={submitReply}
         submitting={replySubmitting}
@@ -421,6 +423,10 @@ function getAnswerLocationMessage(request: ReportRequest | undefined, locationSt
   }
 
   return '질문 지역 근처로 확인됐어요. 지금 직접 본 날씨를 남겨주세요.';
+}
+
+function hasUsableLocationStatusForReply(message: string) {
+  return !message.includes('현재 위치를 확인할 수 없어');
 }
 
 function getReplySaveErrorMessage(error?: string) {
@@ -512,8 +518,11 @@ function AskPanel({
         <Text style={styles.reportPanelSectionTitle}>내 문의</Text>
         <Text style={styles.reportPanelSectionMeta}>{rows.length}개</Text>
       </View>
+      <Text style={styles.reportInlineNotice}>
+        이 기기에서 작성한 문의만 수정하거나 삭제할 수 있어요.
+      </Text>
       <View style={styles.reportLiveFeed}>
-        {rows.slice(0, 4).map((request) => (
+        {rows.map((request) => (
           <ReportQuestionItem
             key={request.id}
             request={request}
@@ -544,14 +553,14 @@ function QuestionsPanel({
     <>
       <View style={styles.reportPanelSectionHeader}>
         <Text style={styles.reportPanelSectionTitle}>답변이 필요한 질문</Text>
-        <Text style={styles.reportPanelSectionMeta}>Live Now</Text>
+        <Text style={styles.reportPanelSectionMeta}>실시간</Text>
       </View>
       <Text style={styles.reportInlineNotice}>
         가까이에 있다면 현장 날씨가 궁금한 사람에게 답장을 보내주세요.
       </Text>
       {requests.length > 0 ? (
         <View style={styles.reportLiveFeed}>
-          {requests.slice(0, 8).map((request) => (
+          {requests.map((request) => (
             <ReportQuestionItem
               key={request.id}
               request={request}
@@ -588,7 +597,7 @@ function FeedPanel({
     <>
       <View style={styles.reportPanelSectionHeader}>
         <Text style={styles.reportPanelSectionTitle}>실시간 현장 흐름</Text>
-        <Text style={styles.reportPanelSectionMeta}>Live Now</Text>
+        <Text style={styles.reportPanelSectionMeta}>전국 최신순</Text>
       </View>
       {reports.length > 0 ? (
         <View style={styles.reportLiveFeed}>
@@ -808,6 +817,7 @@ function EditPostModal({
 function AnswerModal({
   locationMessage,
   onClose,
+  onRefreshLocation,
   replyDraft,
   replyNotice,
   replies,
@@ -819,6 +829,7 @@ function AnswerModal({
 }: {
   locationMessage: string;
   onClose: () => void;
+  onRefreshLocation: () => void;
   replyDraft: string;
   replyNotice: string;
   replies: LocalReport[];
@@ -835,6 +846,11 @@ function AnswerModal({
           <Text style={styles.replyEyebrow}>선택한 질문에 답변쓰기</Text>
           <Text style={styles.replyQuestion}>{request?.question ?? '질문을 선택해주세요'}</Text>
           <Text style={styles.replyNotice}>{locationMessage}</Text>
+          {!hasUsableLocationStatusForReply(locationMessage) ? (
+            <Pressable onPress={onRefreshLocation} style={styles.replyLocationRetryButton}>
+              <Text style={styles.replyLocationRetryText}>위치 다시 확인</Text>
+            </Pressable>
+          ) : null}
           {!!replyNotice && <Text style={styles.replyFeedback}>{replyNotice}</Text>}
           <ReplyList replies={replies} emptyText={request?.answers ? '답변을 불러오는 중이에요.' : '아직 현장 답변이 없어요.'} />
           <TextInput

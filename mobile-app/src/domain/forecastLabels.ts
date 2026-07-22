@@ -15,7 +15,7 @@ export function normalizeHourlyLabels(rows: CompareRow[], searchContext: SearchC
 function formatForecastKeyLabel(key: string, index: number, isCurrentContext: boolean) {
   const match = key.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})$/);
   if (!match) return key;
-  if (index === 0) return isCurrentContext ? '지금' : '기준';
+  if (index === 0 && isCurrentContext) return '지금';
 
   const [, , month, day, hour] = match;
   const today = getLocalDateKey(new Date());
@@ -34,8 +34,6 @@ function getLocalDateKey(value: Date) {
 
 function formatForecastHourLabel(index: number, baseDate: Date, isCurrentContext: boolean) {
   if (index === 0 && isCurrentContext) return '지금';
-  if (index === 0) return '기준';
-
   const itemDate = new Date(baseDate.getTime() + index * 60 * 60 * 1000);
   const hour = `${String(itemDate.getHours()).padStart(2, '0')}시`;
 

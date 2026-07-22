@@ -38,7 +38,7 @@ export default function App() {
   useEffect(() => {
     const maximumBootLoadingId = setTimeout(() => {
       setShowBootLoading(false);
-    }, 12_000);
+    }, 6_000);
 
     return () => clearTimeout(maximumBootLoadingId);
   }, []);
@@ -105,6 +105,7 @@ export default function App() {
                   locationStatus={appState.locationStatus}
                   onAddReport={appState.addLocalReport}
                   onReportIssue={appState.reportFieldReport}
+                  onRefreshLocation={appState.refreshCurrentLocation}
                   onRequestsChange={appState.setReportRequests}
                   onUpdateReport={appState.updateLocalReport}
                   onDeleteReport={appState.deleteLocalReport}

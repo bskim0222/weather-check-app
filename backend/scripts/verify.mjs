@@ -506,18 +506,22 @@ try {
     'answer count returns to zero after delete',
   );
 
-  const forbiddenModeration = await requestJson(`/reports/${encodeURIComponent(report.id)}/moderation`, 'POST', {
-    moderationStatus: 'hidden',
-    reason: 'verify hidden report',
-  });
+  const forbiddenModeration = await requestJson(
+    `/reports/${encodeURIComponent(report.id)}/moderation`,
+    'POST',
+    { moderationStatus: 'hidden', reason: 'verify hidden report' },
+    deviceB,
+  );
   expectEqual(forbiddenModeration.status, 400, 'public moderation cannot hide a report');
 
-  const moderation = await postJson(`/reports/${encodeURIComponent(report.id)}/moderation`, {
-    moderationStatus: 'pending',
-    reason: 'verify pending review',
-  });
-  expectEqual(moderation.ok, true, 'moderation ok');
-  expectEqual(moderation.moderationStatus, 'pending', 'public moderation only requests review');
+  const moderation = await requestJson(
+    `/reports/${encodeURIComponent(report.id)}/moderation`,
+    'POST',
+    { moderationStatus: 'pending', reason: 'verify pending review' },
+    deviceB,
+  );
+  expectEqual(moderation.status, 200, 'moderation ok');
+  expectEqual(moderation.data.moderationStatus, 'pending', 'public moderation only requests review');
 
   const unauthorizedAdmin = await adminJsonRequest('/admin/reports?status=pending');
   expectEqual(unauthorizedAdmin.status, 401, 'admin reports require authorization');

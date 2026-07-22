@@ -30,8 +30,13 @@ export function QuestionSearchBar({
     if (!query || !place) return;
 
     setIsSearchingPlace(true);
-    const candidates = await searchRemotePlaces(place, query);
-    setIsSearchingPlace(false);
+    let candidates: PlaceCandidate[] = [];
+
+    try {
+      candidates = await searchRemotePlaces(place, query);
+    } finally {
+      setIsSearchingPlace(false);
+    }
 
     if (candidates.length === 1) {
       setPlaceCandidates([]);
@@ -67,6 +72,7 @@ export function QuestionSearchBar({
         <Ionicons color="rgba(25,28,27,0.62)" name="search" size={23} style={styles.searchIcon} />
         <TextInput
           ref={inputRef}
+          accessibilityLabel="날씨를 확인할 장소와 시간"
           editable={!isBusy}
           value={value}
           onChangeText={(nextValue) => {
@@ -81,7 +87,7 @@ export function QuestionSearchBar({
           style={styles.searchInput}
         />
         <Pressable
-          accessibilityLabel="질문 검색"
+          accessibilityLabel="장소와 시간 검색"
           accessibilityRole="button"
           disabled={isBusy || isSearchingPlace}
           onPress={submitStructuredSearch}
@@ -90,6 +96,15 @@ export function QuestionSearchBar({
           <Text style={styles.searchSubmitText}>{isBusy || isSearchingPlace ? '…' : '↗'}</Text>
         </Pressable>
       </View>
+
+      {isSearchingPlace ? (
+        <View accessibilityLiveRegion="polite" style={styles.searchProgressNotice}>
+          <Ionicons color="rgba(25,28,27,0.62)" name="location-outline" size={15} />
+          <Text style={styles.searchProgressNoticeText}>
+            장소를 찾고 있어요. 아래 날씨는 검색 전 결과예요.
+          </Text>
+        </View>
+      ) : null}
 
       {placeCandidates.length > 0 ? (
         <View style={styles.placeCandidatePanel}>
@@ -107,7 +122,7 @@ export function QuestionSearchBar({
                   <Text style={styles.placeCandidateSubtitle}>{candidate.subtitle}</Text>
                 ) : null}
               </View>
-              <Text style={styles.placeCandidateAction}>보기</Text>
+              <Text style={styles.placeCandidateAction}>날씨 보기</Text>
             </Pressable>
           ))}
           <Pressable

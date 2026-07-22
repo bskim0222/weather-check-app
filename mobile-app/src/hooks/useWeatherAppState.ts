@@ -82,6 +82,7 @@ export function useWeatherAppState() {
   const refreshTokenRef = useRef(0);
   const locationResolutionTokenRef = useRef(0);
   const locationAutoRefreshRequestedRef = useRef(false);
+  const restoredSearchContextRef = useRef<SearchContext | null>(null);
 
   const current = useMemo(
     () => {
@@ -172,6 +173,9 @@ export function useWeatherAppState() {
             snapshot.judgement.createdAt,
           ),
         );
+        if (snapshot.judgement.source !== 'current-location') {
+          restoredSearchContextRef.current = snapshot.judgement.searchContext;
+        }
       }
 
       setIsPersistenceReady(true);
@@ -188,6 +192,12 @@ export function useWeatherAppState() {
     if (locationAutoRefreshRequestedRef.current) return;
 
     locationAutoRefreshRequestedRef.current = true;
+    const restoredSearchContext = restoredSearchContextRef.current;
+    if (restoredSearchContext) {
+      refreshData('검색 기준', restoredSearchContext);
+      return;
+    }
+
     refreshCurrentLocation();
   }, [isPersistenceReady, locationStatus.phase]);
 
@@ -512,27 +522,14 @@ export function useWeatherAppState() {
       message: `${nextSearchContext.place} · ${nextSearchContext.timeLabel} 기준 세 기상청 예보를 불러오고 있어요.`,
     });
 
-    if (
-      appConfig.dataMode === 'api' &&
-      !isSameWeatherContext(providerSnapshot.context, nextSearchContext)
-    ) {
-      setProviderSnapshot(getUnavailableWeatherProviderSnapshot(nextSearchContext));
-    }
-
     try {
-      const [providerSnapshot, fieldSnapshot] = await Promise.all([
-        fetchProviderSnapshot(nextSearchContext),
-        fetchFieldReportSnapshot(reports, nextSearchContext, reportRequests),
-      ] as const);
+      const fieldSnapshotPromise = fetchFieldReportSnapshot(reports, nextSearchContext, reportRequests)
+        .catch(() => null);
+      const providerSnapshot = await fetchProviderSnapshot(nextSearchContext);
 
       if (refreshTokenRef.current !== token) return;
 
       setProviderSnapshot(providerSnapshot);
-
-      if (fieldSnapshot.source === 'api') {
-        setReports((prev) => mergeSyncedItems(removeMockOrSeedReports(fieldSnapshot.reports), removeMockOrSeedReports(prev)));
-        setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
-      }
 
       const isFallback =
         appConfig.dataMode === 'api' &&
@@ -543,12 +540,12 @@ export function useWeatherAppState() {
         setDataStatus({
           phase: 'error',
           label: '예보를 불러오지 못했어요',
-          message: '샘플값으로 대신 표시하지 않았어요. 연결 상태를 확인한 뒤 새로고침해주세요.',
+          message: '현재 예보를 불러오지 못했어요. 연결 상태를 확인한 뒤 다시 시도해주세요.',
         });
         return;
       }
 
-      if (appConfig.dataMode !== 'api' && (providerSnapshot.source === 'mock' || fieldSnapshot.source === 'mock')) {
+      if (appConfig.dataMode !== 'api' && providerSnapshot.source === 'mock') {
         setRefreshLabel(label);
         setLastUpdatedAt(new Date());
         setDataStatus(mockStatus);
@@ -561,6 +558,13 @@ export function useWeatherAppState() {
         phase: 'ready',
         label: '최신 데이터',
         message: createReadyStatusMessage(providerSnapshot.meta.liveProviderIds),
+      });
+
+      void fieldSnapshotPromise.then((fieldSnapshot) => {
+        if (!fieldSnapshot || refreshTokenRef.current !== token || fieldSnapshot.source !== 'api') return;
+
+        setReports((prev) => mergeSyncedItems(removeMockOrSeedReports(fieldSnapshot.reports), removeMockOrSeedReports(prev)));
+        setReportRequests((prev) => mergeSyncedItems(fieldSnapshot.requests, prev));
       });
     } catch {
       if (refreshTokenRef.current !== token) return;

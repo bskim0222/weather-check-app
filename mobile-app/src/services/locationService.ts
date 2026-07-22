@@ -69,7 +69,7 @@ async function resolveNativeCurrentLocation(): Promise<LocationStatus> {
       return {
         phase: 'denied',
         label: '위치 권한 꺼짐',
-        message: '위치 권한이 꺼져 있어 날씨를 불러오지 않았어요. 권한을 허용한 뒤 다시 시도해주세요.',
+        message: '기기 설정 > 앱 > 웨더체크 > 권한에서 위치를 허용한 뒤 새로고침해주세요.',
         source: 'native',
       };
     }
@@ -278,7 +278,7 @@ function resolveWebCurrentLocation(): Promise<LocationStatus> {
           label: permissionDenied ? '위치 권한 꺼짐' : '위치 확인 실패',
           message:
             permissionDenied
-              ? '위치 권한이 꺼져 있어 날씨를 불러오지 않았어요. 권한을 허용한 뒤 다시 시도해주세요.'
+              ? '브라우저 주소창의 자물쇠 아이콘에서 위치를 허용한 뒤 새로고침해주세요.'
               : '위치를 정확히 확인하지 못해 날씨를 불러오지 않았어요. 잠시 뒤 다시 시도해주세요.',
           source: 'web',
         });

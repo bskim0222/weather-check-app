@@ -15,7 +15,6 @@ export const KOREA_MAP_BOUNDS = {
 
 export const MAP_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const MAP_PRIVACY_GRID_DEGREES = 0.015;
-export const QUESTION_TARGET_COORDINATE_CUTOFF_MS = Date.parse('2026-07-22T00:00:00.000Z');
 
 export function requestToMapReport(request: ReportRequest): LocalReport {
   return {
@@ -31,6 +30,8 @@ export function requestToMapReport(request: ReportRequest): LocalReport {
     // Question markers must represent the requested place, never the
     // requester's GPS position. Resolve the public place label on the map.
     mapItemKind: 'question',
+    clusterLatitude: request.clusterLatitude,
+    clusterLongitude: request.clusterLongitude,
     privacyRadiusMeters: request.privacyRadiusMeters,
   };
 }
@@ -48,11 +49,13 @@ export function isSpecificMapPlaceLabel(place: string | null | undefined) {
 }
 
 export function hasTrustedQuestionMapTarget(request: ReportRequest) {
-  const createdAt = request.createdAt ? Date.parse(request.createdAt) : Number.NaN;
-
-  return Number.isFinite(createdAt)
-    && createdAt >= QUESTION_TARGET_COORDINATE_CUTOFF_MS
-    && isSpecificMapPlaceLabel(request.place);
+  return isSpecificMapPlaceLabel(request.place)
+    && Number.isFinite(request.clusterLatitude)
+    && Number.isFinite(request.clusterLongitude)
+    && isValidKoreaMapCoordinate({
+      latitude: request.clusterLatitude,
+      longitude: request.clusterLongitude,
+    });
 }
 
 export function getRecentMapReports(reports: LocalReport[], now = Date.now()) {

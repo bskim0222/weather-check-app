@@ -92,9 +92,7 @@ function CompareMomentCard({
     <View style={styles.compareMomentCard}>
       <View style={styles.compareMomentHeader}>
         <Text style={styles.compareMomentLabel}>{row.label}</Text>
-        <Text style={styles.compareMomentHint}>
-          {mode === 'hourly' ? '3개 예보를 같은 시간으로 비교' : '오전/오후를 나눠 비교'}
-        </Text>
+        {mode === 'daily' ? <Text style={styles.compareMomentHint}>오전 · 오후</Text> : null}
       </View>
 
       <View style={styles.compareMomentServiceList}>
@@ -132,7 +130,7 @@ function CompareMomentHourlyService({
       <View style={styles.compareMomentServiceHead}>
         <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareMomentServiceLogo} />
         <View style={styles.compareMomentServiceNameBox}>
-          <Text numberOfLines={2} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
+          <Text style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
           <Text numberOfLines={1} style={styles.compareMomentServiceSub}>{service.subtitle || '공식 예보'}</Text>
         </View>
         <Text style={styles.compareMomentTemp}>{metrics.temperature}</Text>
@@ -162,7 +160,7 @@ function CompareMomentDailyService({
     <View style={styles.compareMomentDailyService}>
       <View style={styles.compareMomentDailyServiceHead}>
         <ProviderServiceIcon mark={service.mark} name={service.name} style={styles.compareMomentServiceLogo} />
-        <Text numberOfLines={2} style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
+        <Text style={styles.compareMomentServiceName}>{normalizeServiceName(service.name)}</Text>
       </View>
       <View style={styles.compareMomentDailyPeriods}>
         <CompareMomentDailyPeriod label="오전" period={cell.morning ?? cell} />
@@ -227,7 +225,7 @@ function getCompareMetrics(detail: string) {
 
 function extractCompareTemperature(detail: string) {
   const match = detail.match(/-?\d+(?:\.\d+)?\s*(?:°C|℃|도|°)/i);
-  if (!match) return '-';
+  if (!match) return '미제공';
 
   return match[0]
     .replace(/\s+/g, '')
@@ -242,7 +240,7 @@ function extractComparePrecipitation(detail: string) {
   const probability = detail.match(/\d+\s*%/);
   if (probability) return probability[0].replace(/\s+/g, '');
 
-  return '-';
+  return '미제공';
 }
 
 function extractCompareWind(detail: string) {
@@ -252,7 +250,7 @@ function extractCompareWind(detail: string) {
   const direction = detail.match(/(?:북동풍|동풍|남동풍|남풍|남서풍|서풍|북서풍|북풍|약풍|강풍)/);
   if (direction) return direction[0];
 
-  return '-';
+  return '미제공';
 }
 
 function normalizeServiceName(name: string) {

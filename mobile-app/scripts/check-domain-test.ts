@@ -283,8 +283,8 @@ const targetQuestion = requestToMapReport({
   hint: '현장 답변을 기다리는 중',
   mark: '광',
   accent: '#f4f5f2',
-  clusterLatitude: 37.56,
-  clusterLongitude: 126.98,
+  clusterLatitude: 35.1532,
+  clusterLongitude: 129.1187,
 });
 expectEqual(targetQuestion.mapItemKind, 'question', 'question map item kind');
 expectEqual(
@@ -303,12 +303,14 @@ expectEqual(
     question: '광안리 비 와요?',
     place: '광안리해수욕장',
     createdAt: '2026-07-22T00:00:01.000Z',
+    clusterLatitude: 35.1532,
+    clusterLongitude: 129.1187,
   } as ReportRequest),
   true,
   'new resolved question target is shown on map',
 );
-expectEqual(targetQuestion.clusterLatitude, undefined, 'requester latitude is never reused as question latitude');
-expectEqual(targetQuestion.clusterLongitude, undefined, 'requester longitude is never reused as question longitude');
+expectEqual(targetQuestion.clusterLatitude, 35.1532, 'verified question target latitude is retained');
+expectEqual(targetQuestion.clusterLongitude, 129.1187, 'verified question target longitude is retained');
 const targetQuestionClusters = createMapReportClusters(
   [targetQuestion],
   { '부산 수영구 광안리': { latitude: 35.1532, longitude: 129.1187 } },
@@ -321,7 +323,12 @@ expectTruthy(
 );
 expectEqual(
   createMapReportClusters([
-    { ...targetQuestion, place: 'invalid legacy place' },
+    {
+      ...targetQuestion,
+      place: 'invalid legacy place',
+      clusterLatitude: undefined,
+      clusterLongitude: undefined,
+    },
   ], { 'invalid legacy place': { latitude: 39.0392, longitude: 125.7625 } }).length,
   0,
   'legacy North Korea question marker is hidden',

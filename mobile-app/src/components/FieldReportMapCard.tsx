@@ -145,6 +145,10 @@ export function FieldReportMapCard({
         <Text style={styles.mapCurrentButtonLabel}>내 위치</Text>
       </Pressable>
 
+      <View pointerEvents="none" style={styles.mapActivityPolicyBadge}>
+        <Text style={styles.mapActivityPolicyText}>최근 24시간 문의 · 제보</Text>
+      </View>
+
       <Animated.View
         pointerEvents={selectedCluster ? 'auto' : 'none'}
         style={[styles.mapBottomSheet, sheetStyle]}

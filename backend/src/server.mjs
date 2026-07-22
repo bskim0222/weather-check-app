@@ -287,11 +287,15 @@ async function routeRequest(request, response) {
 
   if (moderationMatch) {
     requireMethod(request, ['POST']);
+    requireDeviceId(deviceId);
     enforceWriteRateLimit(request, deviceId);
     const reportId = decodeURIComponent(moderationMatch[1]);
     validateId(reportId, 'Field report id');
     const existingReport = await findFieldReportById(reportId);
     if (!existingReport) throw new HttpError(404, 'Field report not found.');
+    if (canManageOwnedItem(existingReport, deviceId)) {
+      throw new HttpError(400, 'You cannot report your own field report.');
+    }
     if (payload.moderationStatus !== 'pending') {
       throw new HttpError(400, 'Public moderation requests can only mark a report as pending review.');
     }

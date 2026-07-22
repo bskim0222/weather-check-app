@@ -305,7 +305,12 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
     : 'weather-check-cluster-marker';
   element.setAttribute('role', 'button');
   element.setAttribute('tabindex', '0');
-  element.setAttribute('aria-label', `${cluster.label} 현장 제보 ${cluster.count}개 보기`);
+  const itemType = cluster.kind === 'question'
+    ? '현장 문의'
+    : cluster.kind === 'mixed'
+      ? '현장 문의와 제보'
+      : '현장 제보';
+  element.setAttribute('aria-label', `${cluster.label} ${itemType} ${cluster.count}개 보기`);
   element.append(icon, count);
   element.style.background = 'transparent';
   element.style.border = '0';

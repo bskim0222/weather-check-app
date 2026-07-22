@@ -13,11 +13,13 @@ import {
 } from '../domain/mapClustering';
 import { searchRemotePlaces } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
+import type { LocationStatus } from '../types/appState';
 import type { LocalReport, ReportRequest, SearchContext } from '../types/weather';
 
 type MapScreenProps = {
   requests: ReportRequest[];
   reports: LocalReport[];
+  locationStatus: LocationStatus;
   searchContext: SearchContext;
   questionText: string;
   onUseCurrentLocation: () => void;
@@ -28,6 +30,7 @@ type MapScreenProps = {
 export function MapScreen({
   requests,
   reports,
+  locationStatus,
   searchContext,
   questionText,
   onUseCurrentLocation,
@@ -99,6 +102,12 @@ export function MapScreen({
   return (
     <View style={styles.mapScreenRoot}>
       <FieldReportMapCard
+        currentLocation={
+          Number.isFinite(locationStatus.latitude) && Number.isFinite(locationStatus.longitude)
+            ? { latitude: locationStatus.latitude!, longitude: locationStatus.longitude! }
+            : undefined
+        }
+        currentLocationLabel={locationStatus.shortPlaceName ?? locationStatus.placeName ?? '내 위치'}
         searchContext={searchContext}
         selectedCluster={selectedCluster}
         selectedIndex={selectedIndex}

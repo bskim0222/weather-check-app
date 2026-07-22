@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Text, View } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 
-import { hasMapTargetCoordinates } from '../domain/mapClustering';
+import { hasMapTargetCoordinates, isValidKoreaMapCoordinate, type MapCoordinate } from '../domain/mapClustering';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
 type NativeMapLayerProps = {
   onClusterGridChange: (gridDegrees: number) => void;
+  currentLocation?: MapCoordinate;
+  currentLocationLabel: string;
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
@@ -16,6 +18,8 @@ type NativeMapLayerProps = {
 
 export function NativeMapLayer({
   onClusterGridChange,
+  currentLocation,
+  currentLocationLabel,
   onSelectCluster,
   searchContext,
   selectedIndex,
@@ -50,11 +54,19 @@ export function NativeMapLayer({
       toolbarEnabled={false}
       zoomEnabled
     >
-      {hasVerifiedCenter ? (
+      {isValidKoreaMapCoordinate(currentLocation) ? (
+        <Marker
+          coordinate={currentLocation}
+          description="현재 GPS 위치"
+          pinColor="#4f8f79"
+          title={currentLocationLabel}
+        />
+      ) : null}
+      {hasVerifiedCenter && searchContext.target.kind !== 'current' ? (
         <Marker
           coordinate={center}
-          description={searchContext.target.kind === 'current' ? '현재 위치' : '검색한 위치'}
-          pinColor="#2f7894"
+          description="검색한 위치"
+          pinColor="#df7e6e"
           title={searchContext.place}
         />
       ) : null}
@@ -72,7 +84,7 @@ export function NativeMapLayer({
           >
             <View style={[styles.mapNativeCluster, active && styles.mapNativeClusterActive]}>
               <Text style={styles.mapNativeClusterIcon}>
-                {getClusterWeatherSymbol(cluster.dominantCondition)}
+                {cluster.kind === 'question' ? '?' : getClusterWeatherSymbol(cluster.dominantCondition)}
               </Text>
               <Text style={styles.mapNativeClusterCount}>{cluster.count}</Text>
             </View>

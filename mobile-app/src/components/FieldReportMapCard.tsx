@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { NativeMapLayer } from './NativeMapLayer';
+import type { MapCoordinate } from '../domain/mapClustering';
 import { formatPostTime } from '../domain/timeDisplay';
 import { searchRemotePlaces, type PlaceCandidate } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
@@ -10,6 +11,8 @@ import type { LocalReport, LocationReference, MapReportCluster, SearchContext } 
 
 type FieldReportMapCardProps = {
   questionText: string;
+  currentLocation?: MapCoordinate;
+  currentLocationLabel: string;
   searchContext: SearchContext;
   selectedCluster?: MapReportCluster;
   selectedIndex: number;
@@ -24,6 +27,8 @@ type FieldReportMapCardProps = {
 
 export function FieldReportMapCard({
   questionText,
+  currentLocation,
+  currentLocationLabel,
   searchContext,
   selectedCluster,
   selectedIndex,
@@ -69,6 +74,8 @@ export function FieldReportMapCard({
   return (
     <View style={styles.mapCard}>
       <NativeMapLayer
+        currentLocation={currentLocation}
+        currentLocationLabel={currentLocationLabel}
         onClusterGridChange={onClusterGridChange}
         searchContext={searchContext}
         selectedIndex={selectedIndex}

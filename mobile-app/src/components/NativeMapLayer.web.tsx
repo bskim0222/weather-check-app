@@ -1,9 +1,9 @@
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
 import { getPrivacySafePlaceName } from '../domain/locationDisplay';
-import { hasMapTargetCoordinates } from '../domain/mapClustering';
+import { hasMapTargetCoordinates, isValidKoreaMapCoordinate, type MapCoordinate } from '../domain/mapClustering';
 import { styles } from '../styles/appStyles';
 import type { MapReportCluster, SearchContext } from '../types/weather';
 
@@ -34,6 +34,8 @@ type KakaoWindow = Window & {
 
 type NativeMapLayerProps = {
   onClusterGridChange: (gridDegrees: number) => void;
+  currentLocation?: MapCoordinate;
+  currentLocationLabel: string;
   searchContext: SearchContext;
   selectedIndex: number;
   visibleClusters: MapReportCluster[];
@@ -44,6 +46,8 @@ const KAKAO_SCRIPT_ID = 'weather-check-kakao-map-sdk';
 
 export function NativeMapLayer({
   onClusterGridChange,
+  currentLocation,
+  currentLocationLabel,
   searchContext,
   selectedIndex,
   visibleClusters,
@@ -53,6 +57,7 @@ export function NativeMapLayer({
   const onClusterGridChangeRef = useRef(onClusterGridChange);
   const mapRef = useRef<unknown | null>(null);
   const centerOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
+  const currentLocationOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
   const overlaysRef = useRef<Array<{ setMap: (map: unknown | null) => void }>>([]);
   const [kakaoReady, setKakaoReady] = useState(false);
   const [kakaoFailed, setKakaoFailed] = useState(false);
@@ -127,17 +132,14 @@ export function NativeMapLayer({
     if (!kakao || !CustomOverlay) return;
 
     centerOverlayRef.current?.setMap(null);
+    currentLocationOverlayRef.current?.setMap(null);
     overlaysRef.current.forEach((overlay) => overlay.setMap(null));
     overlaysRef.current = [];
 
-    const centerOverlay = hasVerifiedCenter
+    const centerOverlay = hasVerifiedCenter && searchContext.target.kind !== 'current'
       ? new CustomOverlay({
           clickable: false,
-          content: createCenterPinElement(
-            searchContext.target.kind === 'current'
-              ? getPrivacySafePlaceName(searchContext.place)
-              : searchContext.place,
-          ),
+          content: createLocationPinElement('search', searchContext.place),
           position: new kakao.LatLng(center.latitude, center.longitude),
           xAnchor: 0.5,
           yAnchor: 1,
@@ -147,10 +149,23 @@ export function NativeMapLayer({
     centerOverlay?.setMap(mapRef.current);
     centerOverlayRef.current = centerOverlay;
 
+    const currentOverlay = isValidKoreaMapCoordinate(currentLocation)
+      ? new CustomOverlay({
+          clickable: false,
+          content: createLocationPinElement('current', getPrivacySafePlaceName(currentLocationLabel)),
+          position: new kakao.LatLng(currentLocation.latitude, currentLocation.longitude),
+          xAnchor: 0.5,
+          yAnchor: 1,
+          zIndex: 36,
+        })
+      : null;
+    currentOverlay?.setMap(mapRef.current);
+    currentLocationOverlayRef.current = currentOverlay;
+
     const nextOverlays = visibleClusters.map((cluster, index) => {
-      const offset = clusterCoordinateOffsets[index];
-      const latitude = cluster.latitude ?? center.latitude + (offset?.latitude ?? 0);
-      const longitude = cluster.longitude ?? center.longitude + (offset?.longitude ?? 0);
+      if (!isValidKoreaMapCoordinate(cluster)) return null;
+      const latitude = cluster.latitude;
+      const longitude = cluster.longitude;
       const coordinate = new kakao.LatLng(latitude, longitude);
       const element = createClusterElement(cluster, index === selectedIndex);
 
@@ -182,16 +197,20 @@ export function NativeMapLayer({
       return overlay;
     });
 
-    overlaysRef.current = nextOverlays;
+    overlaysRef.current = nextOverlays.filter((overlay): overlay is NonNullable<typeof overlay> => Boolean(overlay));
 
     return () => {
       centerOverlay?.setMap(null);
+      currentOverlay?.setMap(null);
       if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
-      nextOverlays.forEach((overlay) => overlay.setMap(null));
+      if (currentLocationOverlayRef.current === currentOverlay) currentLocationOverlayRef.current = null;
+      nextOverlays.forEach((overlay) => overlay?.setMap(null));
     };
   }, [
     center.latitude,
     center.longitude,
+    currentLocation,
+    currentLocationLabel,
     kakaoReady,
     kakaoMapMounted,
     hasVerifiedCenter,
@@ -231,25 +250,16 @@ export function NativeMapLayer({
     <OpenStreetMapLayer
       center={center}
       place={searchContext.place}
-      selectedIndex={selectedIndex}
-      visibleClusters={visibleClusters}
-      onSelectCluster={onSelectCluster}
     />
   );
 }
 
 function OpenStreetMapLayer({
   center,
-  onSelectCluster,
   place,
-  selectedIndex,
-  visibleClusters,
 }: {
   center: { latitude: number; longitude: number };
-  onSelectCluster: (index: number) => void;
   place: string;
-  selectedIndex: number;
-  visibleClusters: MapReportCluster[];
 }) {
   const mapEmbedUrl = createOpenStreetMapEmbedUrl(center.latitude, center.longitude);
 
@@ -270,61 +280,10 @@ function OpenStreetMapLayer({
             loading: 'lazy',
             referrerPolicy: 'no-referrer-when-downgrade',
           })}
-      {visibleClusters.slice(0, fallbackClusterPositions.length).map((cluster, index) => {
-        const isActive = index === selectedIndex;
-        const isDark = isDarkCluster(cluster);
-
-        return (
-          <Pressable
-            accessibilityLabel={`${cluster.label} 현장 제보 ${cluster.count}개 보기`}
-            accessibilityRole="button"
-            key={cluster.id}
-            onPress={() => onSelectCluster(index)}
-            style={[
-              styles.mapFallbackClusterBubble,
-              fallbackClusterPositions[index],
-              isActive && styles.mapFallbackClusterBubbleActive,
-            ]}
-          >
-            <View
-              style={[
-                styles.mapFallbackClusterIconBadge,
-                { backgroundColor: getClusterTone(cluster) },
-                isActive && styles.mapFallbackClusterIconBadgeActive,
-              ]}
-            >
-              <Text style={[styles.mapFallbackClusterIcon, isDark && styles.mapFallbackClusterTextDark]}>
-                {getClusterWeatherSymbol(cluster.dominantCondition)}
-              </Text>
-            </View>
-            <Text style={styles.mapFallbackClusterCountLabel}>
-              {cluster.count}
-            </Text>
-          </Pressable>
-        );
-      })}
       <MapProviderBadge label="Fallback Map" />
     </View>
   );
 }
-
-const clusterCoordinateOffsets = [
-  { latitude: 0.0042, longitude: -0.0048 },
-  { latitude: 0.0012, longitude: 0.0054 },
-  { latitude: -0.0034, longitude: -0.0018 },
-  { latitude: -0.0046, longitude: 0.0042 },
-  { latitude: 0.0002, longitude: -0.0062 },
-  { latitude: 0.0052, longitude: 0.0016 },
-] as const;
-
-const fallbackClusterPositions = [
-  { top: '39%', left: '56%' },
-  { top: '31%', left: '27%' },
-  { top: '53%', left: '42%' },
-  { top: '47%', left: '74%' },
-  { top: '62%', left: '18%' },
-  { top: '24%', left: '66%' },
-] as const;
 
 function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   ensureClusterAnimationStyle();
@@ -337,7 +296,7 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   const isDark = isDarkCluster(cluster);
 
   icon.className = 'weather-check-cluster-icon';
-  icon.textContent = getClusterWeatherSymbol(cluster.dominantCondition);
+  icon.textContent = cluster.kind === 'question' ? '?' : getClusterWeatherSymbol(cluster.dominantCondition);
   count.className = 'weather-check-cluster-count';
   count.textContent = String(cluster.count);
 
@@ -367,15 +326,15 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
   return element;
 }
 
-function createCenterPinElement(place: string) {
+function createLocationPinElement(kind: 'current' | 'search', place: string) {
   ensureClusterAnimationStyle();
 
   const element = document.createElement('div');
   const pin = document.createElement('span');
   const label = document.createElement('span');
 
-  element.className = 'weather-check-center-pin';
-  pin.className = 'weather-check-center-pin-dot';
+  element.className = `weather-check-center-pin weather-check-center-pin-${kind}`;
+  pin.className = `weather-check-center-pin-dot weather-check-center-pin-dot-${kind}`;
   label.className = 'weather-check-center-pin-label';
   label.textContent = place;
   element.append(pin, label);
@@ -528,6 +487,13 @@ function ensureClusterAnimationStyle() {
       z-index: -1;
       animation: weatherCheckCenterPinPulse 1.65s ease-out infinite;
     }
+    .weather-check-center-pin-dot-search,
+    .weather-check-center-pin-dot-search::after {
+      background: #df7e6e;
+    }
+    .weather-check-center-pin-search .weather-check-center-pin-label {
+      background: rgba(166,74,62,0.92);
+    }
     .weather-check-center-pin-label {
       max-width: 156px;
       overflow: hidden;
@@ -547,6 +513,7 @@ function ensureClusterAnimationStyle() {
 }
 
 function getClusterTone(cluster: MapReportCluster) {
+  if (cluster.kind === 'question') return 'rgba(242, 166, 144, 0.82)';
   const kind = getClusterWeatherKind(cluster.dominantCondition);
 
   if (kind === 'question') return 'rgba(242, 166, 144, 0.82)';

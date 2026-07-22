@@ -11,8 +11,10 @@ import {
   getRecentMapReports,
   hasMapTargetCoordinates,
   hasStoredClusterCoordinate,
+  isValidKoreaMapCoordinate,
   MAP_ACTIVITY_WINDOW_MS,
   MAP_PRIVACY_GRID_DEGREES,
+  requestToMapReport,
 } from '../src/domain/mapClustering';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
 import { createFallbackLocationStatus } from '../src/domain/locationStatus';
@@ -230,6 +232,90 @@ expectEqual(
   true,
   'map shows a pin for a verified searched place',
 );
+
+const koreaCoordinateCases = [
+  ['Seoul', 37.5665, 126.9780],
+  ['Busan', 35.1796, 129.0756],
+  ['Jeju', 33.4996, 126.5312],
+  ['Gangneung', 37.7519, 128.8761],
+  ['Ulleungdo', 37.4845, 130.9057],
+] as const;
+koreaCoordinateCases.forEach(([label, latitude, longitude]) => {
+  expectEqual(isValidKoreaMapCoordinate({ latitude, longitude }), true, `${label} coordinate is accepted`);
+});
+[
+  ['zero', 0, 0],
+  ['Pyongyang', 39.0392, 125.7625],
+  ['Tokyo', 35.6762, 139.6503],
+  ['invalid latitude', 95, 127],
+].forEach(([label, latitude, longitude]) => {
+  expectEqual(
+    isValidKoreaMapCoordinate({ latitude: Number(latitude), longitude: Number(longitude) }),
+    false,
+    `${label} coordinate is rejected`,
+  );
+});
+
+const targetQuestion = requestToMapReport({
+  id: 'question-from-seoul-for-busan',
+  question: '광안리 지금 비 와요?',
+  place: '부산 수영구 광안리',
+  distance: '질문 지역',
+  answers: 0,
+  time: '방금',
+  status: '답변 대기',
+  hint: '현장 답변을 기다리는 중',
+  mark: '광',
+  accent: '#f4f5f2',
+  clusterLatitude: 37.56,
+  clusterLongitude: 126.98,
+});
+expectEqual(targetQuestion.mapItemKind, 'question', 'question map item kind');
+expectEqual(targetQuestion.clusterLatitude, undefined, 'requester latitude is never reused as question latitude');
+expectEqual(targetQuestion.clusterLongitude, undefined, 'requester longitude is never reused as question longitude');
+const targetQuestionClusters = createMapReportClusters(
+  [targetQuestion],
+  { '부산 수영구 광안리': { latitude: 35.1532, longitude: 129.1187 } },
+);
+expectEqual(targetQuestionClusters.length, 1, 'question target produces one map marker');
+expectEqual(targetQuestionClusters[0].kind, 'question', 'question target marker remains a question');
+expectTruthy(
+  Math.abs((targetQuestionClusters[0].latitude ?? 0) - 35.16) < 0.000001,
+  'question marker follows Busan target instead of Seoul requester',
+);
+expectEqual(
+  createMapReportClusters([
+    { ...targetQuestion, place: 'invalid legacy place' },
+  ], { 'invalid legacy place': { latitude: 39.0392, longitude: 125.7625 } }).length,
+  0,
+  'legacy North Korea question marker is hidden',
+);
+
+const nationwideReports = koreaCoordinateCases.map(([label, latitude, longitude], index) => ({
+  id: `nationwide-${index}`,
+  place: label,
+  time: '방금',
+  condition: index % 2 === 0 ? '맑음' : '비',
+  body: `${label} 현장 테스트`,
+  source: 'api' as const,
+  moderationStatus: 'visible' as const,
+  createdAt: new Date(mapNow - index * 1_000).toISOString(),
+  clusterLatitude: latitude,
+  clusterLongitude: longitude,
+}));
+[0.015, 0.03, 0.06, 0.12, 0.25, 0.5, 1, 2].forEach((gridDegrees) => {
+  const clusters = createMapReportClusters(nationwideReports, {}, gridDegrees);
+  expectEqual(
+    clusters.reduce((sum, cluster) => sum + cluster.count, 0),
+    nationwideReports.length,
+    `zoom grid ${gridDegrees} preserves every valid report`,
+  );
+  expectEqual(
+    clusters.every((cluster) => isValidKoreaMapCoordinate(cluster)),
+    true,
+    `zoom grid ${gridDegrees} keeps every marker inside Korea`,
+  );
+});
 
 const alignedSnapshot: WeatherProviderSnapshot = {
   context: defaultJudgement.searchContext,

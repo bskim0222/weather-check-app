@@ -4,11 +4,13 @@ import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
 import { visibleReportsOnly } from '../domain/moderation';
 import { inferConditionFromText } from '../domain/reports';
+import { isValidKoreaMapCoordinate } from '../domain/mapClustering';
 import { formatPostTime } from '../domain/timeDisplay';
 import {
   createRemoteFieldReport,
   createRemoteReportRequest,
 } from '../services/fieldReports';
+import { searchRemotePlaces } from '../services/geocoding';
 import { styles } from '../styles/appStyles';
 import type { LocationStatus } from '../types/appState';
 import type { LocalReport, ReportRequest, SearchContext } from '../types/weather';
@@ -56,6 +58,7 @@ export function ReportScreen({
   const [selectedRequestId, setSelectedRequestId] = useState(requests[0]?.id ?? '');
   const [replyNotice, setReplyNotice] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [answerModalVisible, setAnswerModalVisible] = useState(false);
   const [myQuestionModalVisible, setMyQuestionModalVisible] = useState(false);
   const [editingReport, setEditingReport] = useState<LocalReport | undefined>();
@@ -94,15 +97,39 @@ export function ReportScreen({
     }
   }, [orderedRequests, selectedRequestId]);
 
-  const addRequest = () => {
+  const addRequest = async () => {
     const clean = requestDraft.trim();
-    if (!clean) return;
+    if (!clean || requestSubmitting) return;
+
+    setRequestSubmitting(true);
+    setReplyNotice('문의할 장소를 확인하고 있어요.');
+
+    const placeQuery = resolveRequestPlace(clean, searchContext.place);
+    let resolvedTarget: SearchContext['target'] | undefined;
+
+    try {
+      const candidates = await searchRemotePlaces(placeQuery, clean);
+      resolvedTarget = candidates.find((candidate) => isValidKoreaMapCoordinate(candidate.location))?.location
+        ?? (searchContext.target.kind !== 'current' && isValidKoreaMapCoordinate(searchContext.target)
+          ? searchContext.target
+          : undefined);
+    } catch {
+      resolvedTarget = searchContext.target.kind !== 'current' && isValidKoreaMapCoordinate(searchContext.target)
+        ? searchContext.target
+        : undefined;
+    }
+
+    if (!resolvedTarget) {
+      setRequestSubmitting(false);
+      setReplyNotice('문의할 장소를 찾지 못했어요. 장소명을 더 구체적으로 입력해주세요.');
+      return;
+    }
 
     const newRequest: ReportRequest = {
       id: `request-${Date.now()}`,
       question: clean,
       hint: '현장 답변을 기다리는 중',
-      place: resolveRequestPlace(clean, searchContext.place),
+      place: resolvedTarget.label,
       distance: '질문 지역',
       answers: 0,
       time: '방금',
@@ -112,6 +139,8 @@ export function ReportScreen({
       createdAt: new Date().toISOString(),
       source: 'local',
       syncState: 'pending',
+      latitude: resolvedTarget.latitude,
+      longitude: resolvedTarget.longitude,
     };
 
     onRequestsChange((prev) => [newRequest, ...prev]);
@@ -120,6 +149,7 @@ export function ReportScreen({
     setReplyNotice('문의가 올라갔어요. 답변이 달리면 문의하기에서 확인할 수 있어요.');
 
     createRemoteReportRequest(newRequest).then((remoteRequest) => {
+      setRequestSubmitting(false);
       if (!remoteRequest) {
         onRequestsChange((prev) => prev.filter((request) => request.id !== newRequest.id));
         setReplyNotice('문의가 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.');
@@ -131,6 +161,10 @@ export function ReportScreen({
         syncState: 'synced',
       }));
       setSelectedRequestId(remoteRequest.id);
+    }).catch(() => {
+      setRequestSubmitting(false);
+      onRequestsChange((prev) => prev.filter((request) => request.id !== newRequest.id));
+      setReplyNotice('문의 저장 중 오류가 생겼어요. 잠시 뒤 다시 시도해주세요.');
     });
   };
 

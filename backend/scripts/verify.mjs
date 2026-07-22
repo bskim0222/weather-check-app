@@ -370,6 +370,24 @@ try {
   expectEqual(request.answers, 0, 'request answer count is server-owned');
   expectEqual(request.status, '답변 대기', 'request status is server-owned');
   expectEqual(request.accent, '#aabbcc', 'request accent is normalized');
+  expectEqual(request.latitude, undefined, 'exact question target latitude is not returned');
+  expectEqual(request.longitude, undefined, 'exact question target longitude is not returned');
+  expectTruthy(
+    Math.abs(request.clusterLatitude - 37.515) <= 0.015,
+    'question marker remains near the requested target latitude',
+  );
+  expectTruthy(
+    Math.abs(request.clusterLongitude - 127.0728) <= 0.015,
+    'question marker remains near the requested target longitude',
+  );
+
+  const northKoreaQuestion = await requestJson('/report-requests', 'POST', {
+    latitude: 39.0392,
+    longitude: 125.7625,
+    place: '평양',
+    question: '대한민국 서비스 범위 밖 좌표 테스트',
+  }, deviceB);
+  expectEqual(northKoreaQuestion.status, 400, 'North Korea question coordinates are rejected');
 
   const invalidAccent = await requestJson('/report-requests', 'POST', {
     place: '잠실운동장',

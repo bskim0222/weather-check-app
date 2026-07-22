@@ -6,6 +6,13 @@ export type MapCoordinate = {
   longitude: number;
 };
 
+export const KOREA_MAP_BOUNDS = {
+  minLatitude: 32.8,
+  maxLatitude: 38.7,
+  minLongitude: 124.0,
+  maxLongitude: 132.2,
+} as const;
+
 export const MAP_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const MAP_PRIVACY_GRID_DEGREES = 0.015;
 
@@ -20,8 +27,9 @@ export function requestToMapReport(request: ReportRequest): LocalReport {
     createdAt: request.createdAt,
     moderationStatus: 'visible',
     source: request.source,
-    clusterLatitude: request.clusterLatitude,
-    clusterLongitude: request.clusterLongitude,
+    // Question markers must represent the requested place, never the
+    // requester's GPS position. Resolve the public place label on the map.
+    mapItemKind: 'question',
     privacyRadiusMeters: request.privacyRadiusMeters,
   };
 }
@@ -53,7 +61,7 @@ export function createMapReportClusters(
           longitude: report.clusterLongitude,
         }
       : coordinatesByPlace[sourcePlace];
-    if (!sourcePlace || !coordinate) return;
+    if (!sourcePlace || !coordinate || !isValidKoreaMapCoordinate(coordinate)) return;
 
     const aggregateCoordinate = {
       latitude: roundToGrid(coordinate.latitude, safeGridDegrees),
@@ -78,6 +86,7 @@ export function createMapReportClusters(
       reports: group.reports,
       latitude: group.coordinate.latitude,
       longitude: group.coordinate.longitude,
+      kind: getClusterKind(group.reports),
     };
   });
 }
@@ -87,8 +96,23 @@ export function roundToPrivacyGrid(value: number) {
 }
 
 export function hasMapTargetCoordinates(searchContext: SearchContext) {
-  return Number.isFinite(searchContext.target.latitude)
-    && Number.isFinite(searchContext.target.longitude);
+  return isValidKoreaMapCoordinate(searchContext.target);
+}
+
+export function isValidKoreaMapCoordinate(
+  coordinate: { latitude?: number; longitude?: number } | null | undefined,
+): coordinate is MapCoordinate {
+  if (!coordinate) return false;
+  const { latitude, longitude } = coordinate;
+
+  return typeof latitude === 'number'
+    && typeof longitude === 'number'
+    && Number.isFinite(latitude)
+    && Number.isFinite(longitude)
+    && latitude >= KOREA_MAP_BOUNDS.minLatitude
+    && latitude <= KOREA_MAP_BOUNDS.maxLatitude
+    && longitude >= KOREA_MAP_BOUNDS.minLongitude
+    && longitude <= KOREA_MAP_BOUNDS.maxLongitude;
 }
 
 function roundToGrid(value: number, gridDegrees: number) {
@@ -101,13 +125,15 @@ export function hasStoredClusterCoordinate(
   const latitude = report.clusterLatitude;
   const longitude = report.clusterLongitude;
 
-  return typeof latitude === 'number'
-    && typeof longitude === 'number'
-    && Number.isFinite(latitude)
-    && Number.isFinite(longitude)
-    && Math.abs(latitude) <= 90
-    && Math.abs(longitude) <= 180
-    && !(latitude === 0 && longitude === 0);
+  return isValidKoreaMapCoordinate({ latitude, longitude });
+}
+
+function getClusterKind(reports: LocalReport[]): MapReportCluster['kind'] {
+  const hasQuestions = reports.some((report) => report.mapItemKind === 'question');
+  const hasReports = reports.some((report) => report.mapItemKind !== 'question');
+
+  if (hasQuestions && hasReports) return 'mixed';
+  return hasQuestions ? 'question' : 'report';
 }
 
 function normalizeClusterLabel(place: string) {

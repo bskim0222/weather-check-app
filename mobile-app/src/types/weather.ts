@@ -70,6 +70,7 @@ export type LocalReport = {
   clusterLatitude?: number;
   clusterLongitude?: number;
   privacyRadiusMeters?: number;
+  mapItemKind?: 'report' | 'question';
 };
 
 export type FieldReport = LocalReport;
@@ -83,6 +84,7 @@ export type MapReportCluster = {
   reports: LocalReport[];
   latitude?: number;
   longitude?: number;
+  kind: 'report' | 'question' | 'mixed';
 };
 
 export type ForecastSource = {

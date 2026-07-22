@@ -50,6 +50,7 @@ export default function App() {
         {isMapTab ? (
           <View style={styles.mapTabFrame}>
             <MapScreen
+              locationStatus={appState.locationStatus}
               requests={appState.reportRequests}
               reports={appState.reports}
               searchContext={appState.searchContext}

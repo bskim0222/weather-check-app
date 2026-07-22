@@ -384,6 +384,9 @@ async function createReportRequest(payload, deviceId) {
   validateCoordinatePair(payload.latitude, payload.longitude, false);
   const place = requiredText(payload.place, 'place', 120);
   const coordinates = await resolvePrivacyCoordinates(payload, place);
+  if (!Number.isFinite(coordinates.clusterLatitude) || !Number.isFinite(coordinates.clusterLongitude)) {
+    throw new HttpError(400, 'The question location could not be resolved.');
+  }
 
   return {
     id: validateOptionalId(payload.id) ?? createId('request'),
@@ -478,7 +481,7 @@ async function resolvePrivacyCoordinates(payload, place) {
     longitude = finiteNumber(geocoded?.location?.longitude);
   }
 
-  if (latitude == null || longitude == null) return {};
+  if (latitude == null || longitude == null || !isKoreaServiceCoordinate(latitude, longitude)) return {};
 
   const privacyRadiusMeters = 1500;
   const gridDegrees = 0.015;
@@ -488,6 +491,13 @@ async function resolvePrivacyCoordinates(payload, place) {
     clusterLongitude: Math.round(longitude / gridDegrees) * gridDegrees,
     privacyRadiusMeters,
   };
+}
+
+function isKoreaServiceCoordinate(latitude, longitude) {
+  return latitude >= 32.8
+    && latitude <= 38.7
+    && longitude >= 124
+    && longitude <= 132.2;
 }
 
 function getRequestDeviceId(request) {

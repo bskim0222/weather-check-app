@@ -315,6 +315,18 @@ try {
   expectEqual(alignedRows[1].yr.weather, 'YR 10', 'yr aligned by timestamp');
   expectEqual(alignedRows[1].fmi.weather, 'FMI 10', 'fmi aligned by timestamp');
 
+  const currentAlignedRows = mergeForecastRows([], {
+    kma: [createAlignmentRow('2026-07-02T01:00:00Z', 'KMA 10')],
+    yr: [
+      createAlignmentRow('2026-07-02T00:00:00Z', 'YR 09'),
+      createAlignmentRow('2026-07-02T01:00:00Z', 'YR 10'),
+    ],
+    fmi: [createAlignmentRow('2026-07-02T01:00:00Z', 'FMI 10')],
+  }, 'hourly', 'fmi', { minimumKey: '2026-07-02T10' });
+  expectEqual(currentAlignedRows.length, 1, 'past provider-only rows are removed');
+  expectEqual(currentAlignedRows[0].forecastKey, '2026-07-02T10', 'current aligned row starts at current hour');
+  expectEqual(currentAlignedRows[0].kma.weather, 'KMA 10', 'current aligned row includes KMA data');
+
   const deviceA = `verify-device-a-${Date.now()}`;
   const deviceB = `verify-device-b-${Date.now()}`;
   const missingDevice = await requestJson('/field-reports', 'POST', {

@@ -29,6 +29,7 @@ const liveProviders = new Set(snapshot.meta?.liveProviderIds ?? []);
 const missingConfigured = requiredProviders.filter((providerId) => !configuredProviders.has(providerId));
 const missingLive = requiredProviders.filter((providerId) => !liveProviders.has(providerId));
 const firstFmiCell = snapshot.hourlyRows?.[0]?.fmi ?? snapshot.hourlyRows?.[0]?.windy;
+const firstKmaCell = snapshot.hourlyRows?.[0]?.kma;
 
 if (missingConfigured.length > 0 || missingLive.length > 0) {
   throw new Error(
@@ -43,6 +44,10 @@ if (missingConfigured.length > 0 || missingLive.length > 0) {
 
 if (!firstFmiCell || firstFmiCell.weather === '자료 없음') {
   throw new Error('FMI current-hour forecast is missing from the first comparison row.');
+}
+
+if (!firstKmaCell || firstKmaCell.weather === '자료 없음') {
+  throw new Error('KMA current-hour forecast is missing from the first comparison row.');
 }
 
 console.log(

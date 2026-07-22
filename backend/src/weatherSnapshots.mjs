@@ -8,6 +8,7 @@ import {
   getDailyForecastKey,
   getHourlyForecastKey,
 } from './forecastKeys.mjs';
+import { getTargetTimestampMs } from './timeIntent.mjs';
 
 const providerColors = {
   kma: '#e6465f',
@@ -86,13 +87,18 @@ async function createWeatherProviderSnapshotUncached(context) {
 
   if (!kmaForecast && !yrForecast && !thirdForecast) return snapshot;
 
+  const targetTimestampMs = getTargetTimestampMs(context);
+  const hourlyMinimumKey = getHourlyForecastKey(
+    Number.isFinite(targetTimestampMs) ? new Date(targetTimestampMs) : new Date(),
+  );
+
   return {
     ...snapshot,
     hourlyRows: mergeForecastRows(snapshot.hourlyRows, {
       kma: kmaForecast?.hourlyRows,
       yr: yrForecast?.hourlyRows,
       [thirdProvider.providerId]: thirdForecast?.hourlyRows,
-    }, 'hourly', thirdProvider.providerId),
+    }, 'hourly', thirdProvider.providerId, { minimumKey: hourlyMinimumKey }),
     dailyRows: mergeForecastRows(snapshot.dailyRows, {
       kma: kmaForecast?.dailyRows,
       yr: yrForecast?.dailyRows,
@@ -251,14 +257,22 @@ async function resolveFmiForecast(context) {
   }
 }
 
-export function mergeForecastRows(baseRows, providerRowsById, mode, thirdProviderId = 'fmi') {
+export function mergeForecastRows(
+  baseRows,
+  providerRowsById,
+  mode,
+  thirdProviderId = 'fmi',
+  options = {},
+) {
   const rowKey = mode === 'daily' ? getDailyRowKey : getHourlyRowKey;
   const providerIds = ['kma', 'yr', thirdProviderId];
   const maps = Object.fromEntries(providerIds.map((providerId) => {
     const rows = Array.isArray(providerRowsById?.[providerId]) ? providerRowsById[providerId] : [];
     return [providerId, new Map(rows.map((row) => [rowKey(row), row]).filter(([key]) => key))];
   }));
+  const minimumKey = mode === 'hourly' ? String(options.minimumKey ?? '') : '';
   const keys = [...new Set(providerIds.flatMap((providerId) => [...maps[providerId].keys()]))]
+    .filter((key) => !minimumKey || key >= minimumKey)
     .sort()
     .slice(0, mode === 'daily' ? 10 : 18);
 

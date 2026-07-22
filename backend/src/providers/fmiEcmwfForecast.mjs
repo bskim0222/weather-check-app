@@ -18,7 +18,7 @@ export async function fetchFmiEcmwfForecast(context) {
   url.searchParams.set('request', 'getFeature');
   url.searchParams.set('storedquery_id', storedQueryId);
   url.searchParams.set('latlon', `${roundCoordinate(coordinates.latitude)},${roundCoordinate(coordinates.longitude)}`);
-  url.searchParams.set('starttime', new Date().toISOString());
+  url.searchParams.set('starttime', getFmiRequestStartTime().toISOString());
   url.searchParams.set('endtime', new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString());
 
   const response = await fetchWithTimeout(url, {}, 12000);
@@ -44,7 +44,7 @@ export function createFmiForecastModel(xml, context = null) {
     current: {
       condition,
       temp: formatTemperature(current.Temperature),
-      detail: createDetail(current.Precipitation1h, current.WindSpeedMS, current.RelativeHumidity),
+      detail: createDetail(current.Precipitation1h, current.WindSpeedMS, getHumidity(current)),
       badge: condition,
       value: formatPrecipitation(current.Precipitation1h),
       mark: conditionToMark(condition),
@@ -224,8 +224,19 @@ function createDetail(precipitation, wind, humidity = null) {
 function createForecastDetail(row) {
   return [
     formatTemperature(row.Temperature),
-    createDetail(row.Precipitation1h, row.WindSpeedMS, row.RelativeHumidity),
+    createDetail(row.Precipitation1h, row.WindSpeedMS, getHumidity(row)),
   ].join(' · ');
+}
+
+function getHumidity(row) {
+  return row?.Humidity ?? row?.RelativeHumidity;
+}
+
+export function getFmiRequestStartTime(now = new Date()) {
+  const startTime = new Date(now);
+  startTime.setUTCMinutes(0, 0, 0);
+
+  return startTime;
 }
 
 function getCoordinates(context) {

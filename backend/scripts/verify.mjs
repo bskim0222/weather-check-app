@@ -1,6 +1,6 @@
 import { createBackendServer, resolveRequestAnswerSummary } from '../src/server.mjs';
 import { compactDatabase, storageLimits } from '../src/storage.mjs';
-import { createFmiForecastModel } from '../src/providers/fmiEcmwfForecast.mjs';
+import { createFmiForecastModel, getFmiRequestStartTime } from '../src/providers/fmiEcmwfForecast.mjs';
 import { convertLatLonToKmaGrid, createKmaForecastModel } from '../src/providers/kmaShortForecast.mjs';
 import { createWindyForecastModel } from '../src/providers/windyPointForecast.mjs';
 import { createYrForecastModel } from '../src/providers/yrLocationforecast.mjs';
@@ -273,6 +273,11 @@ try {
   expectTruthy(fmiModel.hourlyRows.length > 0, 'fmi hourly rows');
   expectTruthy(Boolean(fmiModel.hourlyRows[0].forecastAt), 'fmi hourly timestamp');
   expectTruthy(/습도 \d+%/.test(fmiModel.hourlyRows[0].detail), 'fmi hourly humidity');
+  expectEqual(
+    getFmiRequestStartTime(new Date('2026-07-22T06:47:35.000Z')).toISOString(),
+    '2026-07-22T06:00:00.000Z',
+    'fmi request includes the current forecast hour',
+  );
 
   const fixedSeoulNow = new Date('2026-07-02T02:34:00Z');
   expectEqual(

@@ -15,6 +15,7 @@ export const KOREA_MAP_BOUNDS = {
 
 export const MAP_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const MAP_PRIVACY_GRID_DEGREES = 0.015;
+export const QUESTION_TARGET_COORDINATE_CUTOFF_MS = Date.parse('2026-07-22T00:00:00.000Z');
 
 export function requestToMapReport(request: ReportRequest): LocalReport {
   return {
@@ -44,6 +45,14 @@ export function isSpecificMapPlaceLabel(place: string | null | undefined) {
   );
 
   return meaningfulPlace.length >= 2;
+}
+
+export function hasTrustedQuestionMapTarget(request: ReportRequest) {
+  const createdAt = request.createdAt ? Date.parse(request.createdAt) : Number.NaN;
+
+  return Number.isFinite(createdAt)
+    && createdAt >= QUESTION_TARGET_COORDINATE_CUTOFF_MS
+    && isSpecificMapPlaceLabel(request.place);
 }
 
 export function getRecentMapReports(reports: LocalReport[], now = Date.now()) {

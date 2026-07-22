@@ -11,6 +11,7 @@ import {
   getRecentMapReports,
   hasMapTargetCoordinates,
   hasStoredClusterCoordinate,
+  hasTrustedQuestionMapTarget,
   isSpecificMapPlaceLabel,
   isValidKoreaMapCoordinate,
   MAP_ACTIVITY_WINDOW_MS,
@@ -27,6 +28,7 @@ import {
   type WeatherProviderSnapshot,
 } from '../src/services/weatherProviders';
 import { getUnavailableFieldReportSnapshot } from '../src/services/fieldReports';
+import type { ReportRequest } from '../src/types/weather';
 
 function expectEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -285,6 +287,26 @@ const targetQuestion = requestToMapReport({
   clusterLongitude: 126.98,
 });
 expectEqual(targetQuestion.mapItemKind, 'question', 'question map item kind');
+expectEqual(
+  hasTrustedQuestionMapTarget({
+    id: 'legacy-question',
+    question: '서울 비 와요?',
+    place: '서울',
+    createdAt: '2026-07-21T23:59:59.000Z',
+  } as ReportRequest),
+  false,
+  'legacy question target is hidden from map',
+);
+expectEqual(
+  hasTrustedQuestionMapTarget({
+    id: 'trusted-question',
+    question: '광안리 비 와요?',
+    place: '광안리해수욕장',
+    createdAt: '2026-07-22T00:00:01.000Z',
+  } as ReportRequest),
+  true,
+  'new resolved question target is shown on map',
+);
 expectEqual(targetQuestion.clusterLatitude, undefined, 'requester latitude is never reused as question latitude');
 expectEqual(targetQuestion.clusterLongitude, undefined, 'requester longitude is never reused as question longitude');
 const targetQuestionClusters = createMapReportClusters(

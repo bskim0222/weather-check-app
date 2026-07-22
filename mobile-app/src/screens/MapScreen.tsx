@@ -5,6 +5,7 @@ import { FieldReportMapCard } from '../components/FieldReportMapCard';
 import {
   createMapReportClusters,
   getRecentMapReports,
+  hasTrustedQuestionMapTarget,
   hasStoredClusterCoordinate,
   isSpecificMapPlaceLabel,
   MAP_PRIVACY_GRID_DEGREES,
@@ -39,7 +40,10 @@ export function MapScreen({
   onReportIssue,
 }: MapScreenProps) {
   const mapReports = useMemo(
-    () => getRecentMapReports([...reports, ...requests.map(requestToMapReport)]),
+    () => getRecentMapReports([
+      ...reports,
+      ...requests.filter(hasTrustedQuestionMapTarget).map(requestToMapReport),
+    ]),
     [reports, requests],
   );
   const [coordinatesByPlace, setCoordinatesByPlace] = useState<Record<string, MapCoordinate | null>>({});

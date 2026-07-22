@@ -75,8 +75,8 @@ export function createMapReportClusters(
   gridDegrees = MAP_PRIVACY_GRID_DEGREES,
 ): MapReportCluster[] {
   const groups = new Map<string, {
-    latitudeTotal: number;
-    longitudeTotal: number;
+    anchorLatitude: number;
+    anchorLongitude: number;
     reports: LocalReport[];
   }>();
   const safeGridDegrees = Math.max(MAP_PRIVACY_GRID_DEGREES, gridDegrees);
@@ -100,12 +100,10 @@ export function createMapReportClusters(
     };
     const key = `${aggregateCoordinate.latitude.toFixed(4)}:${aggregateCoordinate.longitude.toFixed(4)}`;
     const group = groups.get(key) ?? {
-      latitudeTotal: 0,
-      longitudeTotal: 0,
+      anchorLatitude: coordinate.latitude,
+      anchorLongitude: coordinate.longitude,
       reports: [],
     };
-    group.latitudeTotal += coordinate.latitude;
-    group.longitudeTotal += coordinate.longitude;
     group.reports.push(report);
     groups.set(key, group);
   });
@@ -121,10 +119,10 @@ export function createMapReportClusters(
       dominantCondition: getDominantCondition(group.reports),
       privacyRadiusLabel: '최근 24시간 현장 글',
       reports: group.reports,
-      // The coarse grid is only a grouping key. Rendering at the grid center
-      // can move a Seoul cluster into North Korea at nationwide zoom levels.
-      latitude: group.latitudeTotal / group.reports.length,
-      longitude: group.longitudeTotal / group.reports.length,
+      // Keep the marker on one real privacy-safe report coordinate. Averaging
+      // the group on every zoom level makes the marker visibly drift.
+      latitude: group.anchorLatitude,
+      longitude: group.anchorLongitude,
       kind: getClusterKind(group.reports),
     };
   });

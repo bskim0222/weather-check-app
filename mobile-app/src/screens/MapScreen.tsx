@@ -47,6 +47,12 @@ export function MapScreen({
     [reports, requests],
   );
   const [coordinatesByPlace, setCoordinatesByPlace] = useState<Record<string, MapCoordinate | null>>({});
+  const currentLocation = useMemo(
+    () => Number.isFinite(locationStatus.latitude) && Number.isFinite(locationStatus.longitude)
+      ? { latitude: locationStatus.latitude!, longitude: locationStatus.longitude! }
+      : undefined,
+    [locationStatus.latitude, locationStatus.longitude],
+  );
   const [clusterGridDegrees, setClusterGridDegrees] = useState(MAP_PRIVACY_GRID_DEGREES);
   const visibleClusters = useMemo(
     () => createMapReportClusters(mapReports, coordinatesByPlace, clusterGridDegrees),
@@ -108,11 +114,7 @@ export function MapScreen({
   return (
     <View style={styles.mapScreenRoot}>
       <FieldReportMapCard
-        currentLocation={
-          Number.isFinite(locationStatus.latitude) && Number.isFinite(locationStatus.longitude)
-            ? { latitude: locationStatus.latitude!, longitude: locationStatus.longitude! }
-            : undefined
-        }
+        currentLocation={currentLocation}
         currentLocationLabel={locationStatus.shortPlaceName ?? locationStatus.placeName ?? '내 위치'}
         searchContext={searchContext}
         selectedCluster={selectedCluster}

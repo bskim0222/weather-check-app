@@ -199,12 +199,12 @@ expectEqual(wideMapClusters.length, 1, 'nearby map reports merge at wide zoom');
 expectEqual(wideMapClusters[0].count, 2, 'wide map cluster count');
 expectEqual(wideMapClusters[0].dominantCondition, '비', 'wide map cluster dominant weather');
 expectTruthy(
-  Math.abs((wideMapClusters[0].latitude ?? 0) - 37.5225) < 0.000001,
-  'wide map cluster uses member centroid latitude',
+  Math.abs((wideMapClusters[0].latitude ?? 0) - 37.515) < 0.000001,
+  'wide map cluster keeps a stable privacy-safe anchor latitude',
 );
 expectTruthy(
-  Math.abs((wideMapClusters[0].longitude ?? 0) - 127.1025) < 0.000001,
-  'wide map cluster uses member centroid longitude',
+  Math.abs((wideMapClusters[0].longitude ?? 0) - 127.095) < 0.000001,
+  'wide map cluster keeps a stable privacy-safe anchor longitude',
 );
 expectEqual(
   hasStoredClusterCoordinate({

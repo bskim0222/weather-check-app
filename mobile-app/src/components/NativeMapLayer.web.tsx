@@ -16,6 +16,8 @@ type KakaoWindow = Window & {
         setCenter?: (center: unknown) => void;
         setLevel?: (level: number) => void;
         getLevel?: () => number;
+        getCenter?: () => unknown;
+        relayout?: () => void;
         addControl?: (control: unknown, position: unknown) => void;
       };
       event?: {
@@ -55,6 +57,7 @@ export function NativeMapLayer({
 }: NativeMapLayerProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const onClusterGridChangeRef = useRef(onClusterGridChange);
+  const onSelectClusterRef = useRef(onSelectCluster);
   const mapRef = useRef<unknown | null>(null);
   const centerOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
   const currentLocationOverlayRef = useRef<{ setMap: (map: unknown | null) => void } | null>(null);
@@ -67,6 +70,7 @@ export function NativeMapLayer({
   const shouldUseKakao = appConfig.kakaoJavaScriptKey.trim().length > 0 && !kakaoFailed;
 
   onClusterGridChangeRef.current = onClusterGridChange;
+  onSelectClusterRef.current = onSelectCluster;
 
   useEffect(() => {
     if (!shouldUseKakao || typeof document === 'undefined') return;
@@ -125,16 +129,47 @@ export function NativeMapLayer({
   }, [center.latitude, center.longitude, kakaoReady, shouldUseKakao]);
 
   useEffect(() => {
+    if (!shouldUseKakao || !kakaoMapMounted || !containerRef.current || !mapRef.current) return;
+
+    const map = mapRef.current as {
+      getCenter?: () => unknown;
+      relayout?: () => void;
+      setCenter?: (center: unknown) => void;
+    };
+    const container = containerRef.current;
+    let frame = 0;
+
+    const relayoutMap = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const currentCenter = map.getCenter?.();
+        map.relayout?.();
+        if (currentCenter) map.setCenter?.(currentCenter);
+      });
+    };
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(relayoutMap);
+    resizeObserver?.observe(container);
+    window.addEventListener('resize', relayoutMap);
+    window.visualViewport?.addEventListener('resize', relayoutMap);
+    relayoutMap();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', relayoutMap);
+      window.visualViewport?.removeEventListener('resize', relayoutMap);
+    };
+  }, [kakaoMapMounted, shouldUseKakao]);
+
+  useEffect(() => {
     if (!shouldUseKakao || !kakaoReady || !mapRef.current) return;
 
     const kakao = (window as KakaoWindow).kakao?.maps;
     const CustomOverlay = kakao?.CustomOverlay;
     if (!kakao || !CustomOverlay) return;
-
-    centerOverlayRef.current?.setMap(null);
-    currentLocationOverlayRef.current?.setMap(null);
-    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
-    overlaysRef.current = [];
 
     const centerOverlay = hasVerifiedCenter && searchContext.target.kind !== 'current'
       ? new CustomOverlay({
@@ -162,6 +197,36 @@ export function NativeMapLayer({
     currentOverlay?.setMap(mapRef.current);
     currentLocationOverlayRef.current = currentOverlay;
 
+    return () => {
+      centerOverlay?.setMap(null);
+      currentOverlay?.setMap(null);
+      if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
+      if (currentLocationOverlayRef.current === currentOverlay) currentLocationOverlayRef.current = null;
+    };
+  }, [
+    center.latitude,
+    center.longitude,
+    currentLocation?.latitude,
+    currentLocation?.longitude,
+    currentLocationLabel,
+    hasVerifiedCenter,
+    kakaoMapMounted,
+    kakaoReady,
+    searchContext.place,
+    searchContext.target.kind,
+    shouldUseKakao,
+  ]);
+
+  useEffect(() => {
+    if (!shouldUseKakao || !kakaoReady || !mapRef.current) return;
+
+    const kakao = (window as KakaoWindow).kakao?.maps;
+    const CustomOverlay = kakao?.CustomOverlay;
+    if (!kakao || !CustomOverlay) return;
+
+    overlaysRef.current.forEach((overlay) => overlay.setMap(null));
+    overlaysRef.current = [];
+
     const nextOverlays = visibleClusters.map((cluster, index) => {
       if (!isValidKoreaMapCoordinate(cluster)) return null;
       const latitude = cluster.latitude;
@@ -172,7 +237,7 @@ export function NativeMapLayer({
       const openSheet = (event: Event) => {
         event.preventDefault();
         event.stopPropagation();
-        onSelectCluster(index);
+        onSelectClusterRef.current(index);
       };
 
       const openSheetFromKeyboard = (event: KeyboardEvent) => {
@@ -200,23 +265,11 @@ export function NativeMapLayer({
     overlaysRef.current = nextOverlays.filter((overlay): overlay is NonNullable<typeof overlay> => Boolean(overlay));
 
     return () => {
-      centerOverlay?.setMap(null);
-      currentOverlay?.setMap(null);
-      if (centerOverlayRef.current === centerOverlay) centerOverlayRef.current = null;
-      if (currentLocationOverlayRef.current === currentOverlay) currentLocationOverlayRef.current = null;
       nextOverlays.forEach((overlay) => overlay?.setMap(null));
     };
   }, [
-    center.latitude,
-    center.longitude,
-    currentLocation,
-    currentLocationLabel,
     kakaoReady,
     kakaoMapMounted,
-    hasVerifiedCenter,
-    onSelectCluster,
-    searchContext.place,
-    searchContext.target.kind,
     selectedIndex,
     shouldUseKakao,
     visibleClusters,
@@ -238,7 +291,7 @@ export function NativeMapLayer({
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                touchAction: 'auto',
+                touchAction: 'none',
               },
             })}
         <MapProviderBadge label={kakaoMapMounted ? 'Kakao Map' : 'Kakao Loading'} />
@@ -387,12 +440,9 @@ function ensureClusterAnimationStyle() {
       min-width: 68px;
       pointer-events: auto;
       position: relative;
-      transform-origin: center bottom;
-      animation: weatherCheckClusterBounce 1.4s ease-in-out infinite;
-      will-change: transform;
     }
     .weather-check-cluster-marker-active {
-      animation: weatherCheckClusterPop 0.95s ease-in-out infinite;
+      filter: saturate(1.12);
     }
     .weather-check-cluster-icon {
       align-items: center;
@@ -446,7 +496,6 @@ function ensureClusterAnimationStyle() {
       flex-direction: column;
       gap: 7px;
       pointer-events: none;
-      transform: translateY(-7px);
       user-select: none;
       white-space: nowrap;
     }

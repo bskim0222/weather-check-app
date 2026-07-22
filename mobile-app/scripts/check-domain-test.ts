@@ -11,6 +11,7 @@ import {
   getRecentMapReports,
   hasMapTargetCoordinates,
   hasStoredClusterCoordinate,
+  isSpecificMapPlaceLabel,
   isValidKoreaMapCoordinate,
   MAP_ACTIVITY_WINDOW_MS,
   MAP_PRIVACY_GRID_DEGREES,
@@ -243,6 +244,9 @@ const koreaCoordinateCases = [
 koreaCoordinateCases.forEach(([label, latitude, longitude]) => {
   expectEqual(isValidKoreaMapCoordinate({ latitude, longitude }), true, `${label} coordinate is accepted`);
 });
+expectEqual(isSpecificMapPlaceLabel('광안리해수욕장'), true, 'specific map place is accepted');
+expectEqual(isSpecificMapPlaceLabel('근처'), false, 'generic nearby place is rejected');
+expectEqual(isSpecificMapPlaceLabel('현재 위치'), false, 'generic current place is rejected');
 [
   ['zero', 0, 0],
   ['Pyongyang', 39.0392, 125.7625],

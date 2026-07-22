@@ -34,6 +34,23 @@ export function requestToMapReport(request: ReportRequest): LocalReport {
   };
 }
 
+export function isSpecificMapPlaceLabel(place: string | null | undefined) {
+  const normalized = (place ?? '').replace(/\s+/g, '').toLowerCase();
+  if (!normalized) return false;
+
+  return ![
+    '근처',
+    '내근처',
+    '내주변',
+    '주변',
+    '현재위치',
+    '내위치',
+    '질문지역',
+    '검색지역',
+    '현위치',
+  ].includes(normalized);
+}
+
 export function getRecentMapReports(reports: LocalReport[], now = Date.now()) {
   const cutoff = now - MAP_ACTIVITY_WINDOW_MS;
 
@@ -55,7 +72,10 @@ export function createMapReportClusters(
 
   reports.forEach((report) => {
     const sourcePlace = report.place.trim();
-    const coordinate = hasStoredClusterCoordinate(report)
+    const hasStoredCoordinate = hasStoredClusterCoordinate(report);
+    if (!hasStoredCoordinate && !isSpecificMapPlaceLabel(sourcePlace)) return;
+
+    const coordinate = hasStoredCoordinate
       ? {
           latitude: report.clusterLatitude,
           longitude: report.clusterLongitude,

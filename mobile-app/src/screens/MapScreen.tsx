@@ -6,6 +6,7 @@ import {
   createMapReportClusters,
   getRecentMapReports,
   hasStoredClusterCoordinate,
+  isSpecificMapPlaceLabel,
   MAP_PRIVACY_GRID_DEGREES,
   requestToMapReport,
   roundToPrivacyGrid,
@@ -64,6 +65,7 @@ export function MapScreen({
       new Set(
         mapReports
           .filter((report) => !hasStoredClusterCoordinate(report))
+          .filter((report) => isSpecificMapPlaceLabel(report.place))
           .map((report) => report.place.trim())
           .filter(Boolean),
       ),

@@ -245,7 +245,10 @@ koreaCoordinateCases.forEach(([label, latitude, longitude]) => {
   expectEqual(isValidKoreaMapCoordinate({ latitude, longitude }), true, `${label} coordinate is accepted`);
 });
 expectEqual(isSpecificMapPlaceLabel('광안리해수욕장'), true, 'specific map place is accepted');
+expectEqual(isSpecificMapPlaceLabel('잠실 근처'), true, 'specific nearby place is accepted');
 expectEqual(isSpecificMapPlaceLabel('근처'), false, 'generic nearby place is rejected');
+expectEqual(isSpecificMapPlaceLabel('근처 주변'), false, 'combined generic place is rejected');
+expectEqual(isSpecificMapPlaceLabel('내 위치 주변'), false, 'generic personal place is rejected');
 expectEqual(isSpecificMapPlaceLabel('현재 위치'), false, 'generic current place is rejected');
 [
   ['zero', 0, 0],

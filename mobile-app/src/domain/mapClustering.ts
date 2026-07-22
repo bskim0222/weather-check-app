@@ -38,17 +38,12 @@ export function isSpecificMapPlaceLabel(place: string | null | undefined) {
   const normalized = (place ?? '').replace(/\s+/g, '').toLowerCase();
   if (!normalized) return false;
 
-  return ![
-    '근처',
-    '내근처',
-    '내주변',
-    '주변',
-    '현재위치',
-    '내위치',
-    '질문지역',
-    '검색지역',
-    '현위치',
-  ].includes(normalized);
+  const meaningfulPlace = normalized.replace(
+    /현재|현위치|검색|질문|내위치|위치|지역|근처|주변/g,
+    '',
+  );
+
+  return meaningfulPlace.length >= 2;
 }
 
 export function getRecentMapReports(reports: LocalReport[], now = Date.now()) {

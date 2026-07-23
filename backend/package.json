@@ -11,6 +11,7 @@
     "check:kma-live": "node scripts/check-kma-live.mjs",
     "check:mvp-live": "node scripts/check-mvp-live.mjs",
     "check:render-live": "node scripts/check-render-live.mjs",
+    "check:release-live": "node scripts/check-release-live.mjs",
     "check:windy-live": "node scripts/check-windy-live.mjs",
     "check:yr-live": "node scripts/check-yr-live.mjs",
     "verify:live": "node scripts/verify-live.mjs",

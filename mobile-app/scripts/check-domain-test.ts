@@ -470,5 +470,41 @@ const threeProviderPreset = createProviderAdjustedPreset(weatherPresets.rain, th
 expectTruthy(threeProviderPreset.summary.includes('대한민국 기상청 흐림 29°C'), 'summary names KMA correctly');
 expectTruthy(threeProviderPreset.summary.includes('노르웨이 기상청 흐림 28°C'), 'summary names Norway correctly');
 expectTruthy(threeProviderPreset.summary.includes('핀란드 기상청 비 27°C'), 'summary names Finland correctly');
+expectEqual(threeProviderPreset.condition, '흐림', 'two cloudy providers produce a cloudy majority');
+expectEqual(threeProviderPreset.temp, 28, 'representative temperature averages the same three visible values');
+
+const unanimousCloudySnapshot: WeatherProviderSnapshot = {
+  ...threeProviderSnapshot,
+  hourlyRows: [
+    {
+      label: '지금',
+      forecastKey: '2026-07-21T15',
+      kma: { mark: 'K', weather: '흐림', detail: '29°C · 강수 0mm', tone: '#aaa' },
+      yr: { mark: 'Yr', weather: '흐림', detail: '28°C · 강수 0mm', tone: '#aaa' },
+      windy: { mark: 'FMI', weather: '흐림', detail: '27°C · 강수 0mm', tone: '#aaa' },
+      fmi: { mark: 'FMI', weather: '흐림', detail: '27°C · 강수 0mm', tone: '#aaa' },
+    },
+  ],
+};
+const unanimousCloudyPreset = createProviderAdjustedPreset(weatherPresets.rain, unanimousCloudySnapshot);
+expectEqual(unanimousCloudyPreset.condition, '흐림', 'unanimous cloudy data never renders a rain card');
+expectTruthy(unanimousCloudyPreset.title.includes('모두 흐림'), 'unanimous cloudy copy states the agreement');
+
+const splitSnapshot: WeatherProviderSnapshot = {
+  ...threeProviderSnapshot,
+  hourlyRows: [
+    {
+      label: '지금',
+      forecastKey: '2026-07-21T15',
+      kma: { mark: 'K', weather: '맑음', detail: '29°C · 강수 0mm', tone: '#aaa' },
+      yr: { mark: 'Yr', weather: '흐림', detail: '28°C · 강수 0mm', tone: '#aaa' },
+      windy: { mark: 'FMI', weather: '비', detail: '27°C · 강수 0.2mm', tone: '#aaa' },
+      fmi: { mark: 'FMI', weather: '비', detail: '27°C · 강수 0.2mm', tone: '#aaa' },
+    },
+  ],
+};
+const splitPreset = createProviderAdjustedPreset(weatherPresets.rain, splitSnapshot);
+expectTruthy(splitPreset.title.includes('서로 갈려'), 'one-to-one-to-one split is shown as disagreement');
+expectEqual(splitPreset.temp, 28, 'split forecast still averages only the displayed provider values');
 
 console.log('Domain smoke checks passed.');

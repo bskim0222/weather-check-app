@@ -38,6 +38,7 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
   const artworkCaption = getArtworkCaption(normalizedCondition, current.level);
   const figma = getFigmaPreset(normalizedCondition);
   const forecastSources = getSyncedForecastSources(current);
+  const availableForecastCount = forecastSources.filter(isAvailableForecastSource).length;
 
   return (
     <View style={[styles.decisionCard, styles.figmaWeatherCard, { backgroundColor: figma.bg }]}>
@@ -64,7 +65,9 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
           <Text style={[styles.figmaWeatherTemp, { color: figma.ink }]}>{current.temp}</Text>
           <Text style={[styles.figmaWeatherDegree, { color: figma.dim }]}>°C</Text>
         </View>
-        <Text style={[styles.figmaWeatherAverageLabel, { color: figma.dim }]}>3개 예보 평균</Text>
+        <Text style={[styles.figmaWeatherAverageLabel, { color: figma.dim }]}>
+          {getForecastAverageLabel(availableForecastCount)}
+        </Text>
         <Text style={[styles.figmaWeatherCondition, { color: figma.ink }]}>
           {getDecisionSignalValue(normalizedCondition, current.level)}
         </Text>
@@ -110,6 +113,23 @@ export function DecisionCard({ current, lastUpdatedAt, locationStatus, providerS
       />
     </View>
   );
+}
+
+function isAvailableForecastSource(source: ForecastSource) {
+  const condition = source.condition.trim().toLowerCase();
+  return condition !== ''
+    && condition !== '자료 없음'
+    && condition !== 'unavailable'
+    && source.mark !== '-'
+    && source.temp !== '--';
+}
+
+function getForecastAverageLabel(availableCount: number) {
+  if (availableCount >= 3) return '3개 예보 평균';
+  if (availableCount === 2) return '확인된 2개 예보 평균';
+  if (availableCount === 1) return '확인된 1개 예보';
+
+  return '예보 확인 중';
 }
 
 function ForecastSourceMiniCard({

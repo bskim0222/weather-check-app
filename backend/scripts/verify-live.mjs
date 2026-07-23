@@ -90,13 +90,16 @@ try {
   const forbiddenHide = await jsonRequest(`/reports/${standaloneId}/moderation`, 'POST', {
     moderationStatus: 'hidden',
     reason: 'public hide attempt',
-  });
-  assert(forbiddenHide.status === 400, 'public hide protection');
+  }, deviceB);
+  assert(
+    forbiddenHide.status === 400,
+    `public hide protection (received ${forbiddenHide.status}: ${forbiddenHide.data?.error ?? 'no error body'})`,
+  );
 
   const reviewRequest = await jsonRequest(`/reports/${standaloneId}/moderation`, 'POST', {
     moderationStatus: 'pending',
     reason: 'live verification review request',
-  });
+  }, deviceB);
   assert(reviewRequest.status === 200, 'public review request');
   assert(reviewRequest.data?.moderationStatus === 'pending', 'review status remains pending');
 

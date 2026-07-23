@@ -33,7 +33,7 @@ export async function createWeatherProviderSnapshot(context) {
 
   try {
     const snapshot = await pending;
-    if (snapshot.source === 'api') {
+    if (isCompleteConfiguredSnapshot(snapshot)) {
       snapshotCache.set(cacheKey, {
         snapshot,
         expiresAt: Date.now() + snapshotCacheTtlMs,
@@ -47,6 +47,21 @@ export async function createWeatherProviderSnapshot(context) {
     snapshotCache.delete(cacheKey);
     throw error;
   }
+}
+
+function isCompleteConfiguredSnapshot(snapshot) {
+  if (snapshot.source !== 'api') return false;
+
+  const expectedProviderIds = [
+    ...(shouldUseKmaProvider() ? ['kma'] : []),
+    ...(shouldUseYrProvider() ? ['yr'] : []),
+    ...(shouldUseFmiProvider() ? ['fmi'] : []),
+    ...(shouldUseWindyProvider() && !shouldUseFmiProvider() ? ['windy'] : []),
+  ];
+  const liveProviderIds = new Set(snapshot.meta?.liveProviderIds ?? []);
+
+  return expectedProviderIds.length > 0
+    && expectedProviderIds.every((providerId) => liveProviderIds.has(providerId));
 }
 
 async function createWeatherProviderSnapshotUncached(context) {
@@ -223,45 +238,45 @@ function createThirdProvider(providerId) {
 async function resolveYrForecast(context) {
   if (!shouldUseYrProvider()) return null;
 
-  try {
-    return await fetchYrLocationforecast(context);
-  } catch (error) {
-    console.warn(error instanceof Error ? error.message : 'Yr.no request failed.');
-    return null;
-  }
+  return resolveProviderWithRetry('Yr.no', () => fetchYrLocationforecast(context));
 }
 
 async function resolveKmaForecast(context) {
   if (!shouldUseKmaProvider()) return null;
 
-  try {
-    return await fetchKmaShortForecast(context);
-  } catch (error) {
-    console.warn(error instanceof Error ? error.message : 'KMA request failed.');
-    return null;
-  }
+  return resolveProviderWithRetry('KMA', () => fetchKmaShortForecast(context));
 }
 
 async function resolveWindyForecast(context) {
   if (!shouldUseWindyProvider()) return null;
 
-  try {
-    return await fetchWindyPointForecast(context);
-  } catch (error) {
-    console.warn(error instanceof Error ? error.message : 'Windy request failed.');
-    return null;
-  }
+  return resolveProviderWithRetry('Windy', () => fetchWindyPointForecast(context));
 }
 
 async function resolveFmiForecast(context) {
   if (!shouldUseFmiProvider()) return null;
 
-  try {
-    return await fetchFmiEcmwfForecast(context);
-  } catch (error) {
-    console.warn(error instanceof Error ? error.message : 'FMI request failed.');
-    return null;
+  return resolveProviderWithRetry('FMI', () => fetchFmiEcmwfForecast(context));
+}
+
+async function resolveProviderWithRetry(providerName, fetchProvider) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await fetchProvider();
+    } catch (error) {
+      lastError = error;
+      if (attempt === 1) await delay(250);
+    }
   }
+
+  console.warn(lastError instanceof Error ? lastError.message : `${providerName} request failed.`);
+  return null;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export function mergeForecastRows(

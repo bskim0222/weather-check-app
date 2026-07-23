@@ -258,6 +258,40 @@ try {
     expectEqual(firstCachedSnapshot.source, 'api', 'live provider snapshot is cacheable');
     expectEqual(secondCachedSnapshot.generatedAt, firstCachedSnapshot.generatedAt, 'cached snapshot is reused');
     expectEqual(yrFetchCount, 1, 'same weather context calls provider once within cache TTL');
+
+    yrFetchCount = 0;
+    globalThis.fetch = async () => {
+      yrFetchCount += 1;
+      if (yrFetchCount === 1) throw new Error('temporary provider failure');
+
+      return {
+        ok: true,
+        json: async () => ({
+          properties: {
+            timeseries: [
+              {
+                time: new Date().toISOString(),
+                data: {
+                  instant: { details: { air_temperature: 24, wind_speed: 3 } },
+                  next_1_hours: {
+                    summary: { symbol_code: 'cloudy' },
+                    details: { precipitation_amount: 0 },
+                  },
+                },
+              },
+            ],
+          },
+        }),
+      };
+    };
+    const retryContext = {
+      ...context,
+      raw: `retry-verification-${Date.now()}`,
+      target: { ...context.target, latitude: 35.1151, longitude: 129.0414 },
+    };
+    const retriedSnapshot = await createWeatherProviderSnapshot(retryContext);
+    expectEqual(yrFetchCount, 2, 'temporary provider failure is retried once');
+    expectTruthy(retriedSnapshot.meta.liveProviderIds.includes('yr'), 'retry recovers the provider response');
   } finally {
     globalThis.fetch = originalFetch;
     if (originalProviderMode == null) delete process.env.WEATHER_PROVIDER_MODE;

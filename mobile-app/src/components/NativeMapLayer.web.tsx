@@ -199,7 +199,7 @@ export function NativeMapLayer({
       const nextLevel = getPinchTargetLevel(pinchStartLevel, pinchStartDistance, distance);
       if (map.getLevel?.() === nextLevel) return;
 
-      event.preventDefault();
+      if (event.cancelable) event.preventDefault();
       map.setLevel?.(nextLevel, { animate: { duration: 140 } });
     };
 

@@ -18,6 +18,7 @@ import {
   MAP_PRIVACY_GRID_DEGREES,
   requestToMapReport,
 } from '../src/domain/mapClustering';
+import { getPinchTargetLevel } from '../src/domain/mapGestures';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
 import { createFallbackLocationStatus } from '../src/domain/locationStatus';
 import { deviceIdStorageKey, loadOrCreateDeviceId } from '../src/services/deviceIdentityShared';
@@ -41,6 +42,12 @@ function expectTruthy(value: unknown, label: string) {
     throw new Error(`${label}: expected truthy value`);
   }
 }
+
+expectEqual(getPinchTargetLevel(6, 100, 160), 5, 'pinch spread zooms in');
+expectEqual(getPinchTargetLevel(6, 100, 55), 7, 'pinch close zooms out');
+expectEqual(getPinchTargetLevel(1, 100, 200), 1, 'pinch respects minimum map level');
+expectEqual(getPinchTargetLevel(14, 100, 50), 14, 'pinch respects maximum map level');
+expectEqual(getPinchTargetLevel(6, 0, 100), 6, 'pinch ignores invalid starting distance');
 
 const defaultJudgement = createDefaultJudgement();
 expectEqual(defaultJudgement.weatherKey, 'rain', 'default weather');

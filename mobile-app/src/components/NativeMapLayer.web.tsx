@@ -2,6 +2,7 @@ import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { appConfig } from '../config/appConfig';
+import { getPinchTargetLevel } from '../domain/mapGestures';
 import { getPrivacySafePlaceName } from '../domain/locationDisplay';
 import { hasMapTargetCoordinates, isValidKoreaMapCoordinate, type MapCoordinate } from '../domain/mapClustering';
 import { styles } from '../styles/appStyles';
@@ -14,7 +15,7 @@ type KakaoWindow = Window & {
       LatLng: new (latitude: number, longitude: number) => unknown;
       Map: new (container: HTMLElement, options: Record<string, unknown>) => {
         setCenter?: (center: unknown) => void;
-        setLevel?: (level: number) => void;
+        setLevel?: (level: number, options?: Record<string, unknown>) => void;
         getLevel?: () => number;
         getCenter?: () => unknown;
         relayout?: () => void;
@@ -103,10 +104,13 @@ export function NativeMapLayer({
 
       const map = new kakao.Map(containerRef.current, {
         center: mapCenter,
+        draggable: true,
         // A 1.5 km privacy grid can move a public marker several hundred
         // metres from the searched point. Level 6 keeps that safe marker in
         // view on narrow phones instead of making it appear to be missing.
         level: 6,
+        scrollwheel: true,
+        tileAnimation: true,
       });
       mapRef.current = map;
 
@@ -161,6 +165,60 @@ export function NativeMapLayer({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', relayoutMap);
       window.visualViewport?.removeEventListener('resize', relayoutMap);
+    };
+  }, [kakaoMapMounted, shouldUseKakao]);
+
+  useEffect(() => {
+    if (!shouldUseKakao || !kakaoMapMounted || !containerRef.current || !mapRef.current) return;
+
+    const container = containerRef.current;
+    const map = mapRef.current as {
+      getLevel?: () => number;
+      setLevel?: (level: number, options?: Record<string, unknown>) => void;
+    };
+    let pinchStartDistance = 0;
+    let pinchStartLevel = 0;
+
+    const getTouchDistance = (touches: TouchList) => {
+      if (touches.length < 2) return 0;
+      return Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY,
+      );
+    };
+
+    const startPinch = (event: TouchEvent) => {
+      if (event.touches.length !== 2) return;
+      pinchStartDistance = getTouchDistance(event.touches);
+      pinchStartLevel = map.getLevel?.() ?? 6;
+    };
+
+    const continuePinch = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || pinchStartDistance <= 0) return;
+      const distance = getTouchDistance(event.touches);
+      const nextLevel = getPinchTargetLevel(pinchStartLevel, pinchStartDistance, distance);
+      if (map.getLevel?.() === nextLevel) return;
+
+      event.preventDefault();
+      map.setLevel?.(nextLevel, { animate: { duration: 140 } });
+    };
+
+    const endPinch = (event: TouchEvent) => {
+      if (event.touches.length >= 2) return;
+      pinchStartDistance = 0;
+      pinchStartLevel = 0;
+    };
+
+    container.addEventListener('touchstart', startPinch, { passive: true });
+    container.addEventListener('touchmove', continuePinch, { passive: false });
+    container.addEventListener('touchend', endPinch, { passive: true });
+    container.addEventListener('touchcancel', endPinch, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', startPinch);
+      container.removeEventListener('touchmove', continuePinch);
+      container.removeEventListener('touchend', endPinch);
+      container.removeEventListener('touchcancel', endPinch);
     };
   }, [kakaoMapMounted, shouldUseKakao]);
 
@@ -364,6 +422,9 @@ function createClusterElement(cluster: MapReportCluster, isActive: boolean) {
       ? '현장 문의와 제보'
       : '현장 제보';
   element.setAttribute('aria-label', `${cluster.label} ${itemType} ${cluster.count}개 보기`);
+  element.dataset.clusterLatitude = String(cluster.latitude);
+  element.dataset.clusterLongitude = String(cluster.longitude);
+  element.dataset.clusterKind = cluster.kind;
   element.append(icon, count);
   element.style.background = 'transparent';
   element.style.border = '0';

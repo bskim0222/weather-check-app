@@ -93,7 +93,7 @@ export async function runBackendCreateSmokeCheck() {
   const fieldSnapshot = await fetchFieldReportSnapshot([], judgement.searchContext, []);
   const answeredRequest = fieldSnapshot.requests.find((request) => request.id === createdRequest?.id);
   expectEqual(answeredRequest?.answers, 1, 'answered remote request count');
-  expectEqual(answeredRequest?.status, '답변 있음', 'answered remote request status');
+  expectEqual(answeredRequest?.status, '답변 1개', 'answered remote request status');
   expectTruthy(
     fieldSnapshot.reports.some((report) => report.id === createdReport?.id),
     'created report appears in snapshot',

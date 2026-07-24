@@ -13,7 +13,7 @@ export const KOREA_MAP_BOUNDS = {
   maxLongitude: 132.2,
 } as const;
 
-export const MAP_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const MAP_ACTIVITY_WINDOW_MS = 6 * 60 * 60 * 1000;
 export const MAP_PRIVACY_GRID_DEGREES = 0.015;
 
 export function requestToMapReport(request: ReportRequest): LocalReport {

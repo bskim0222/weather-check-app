@@ -1,4 +1,12 @@
-import { createBackendServer, resolveRequestAnswerSummary } from '../src/server.mjs';
+import {
+  createBackendServer,
+  fieldReportVisibleWindowMs,
+  myQuestionHistoryWindowMs,
+  questionActiveWindowMs,
+  resolveRequestAnswerSummary,
+  selectReportRequests,
+  selectVisibleReports,
+} from '../src/server.mjs';
 import { compactDatabase, storageLimits } from '../src/storage.mjs';
 import { createFmiForecastModel, getFmiRequestStartTime } from '../src/providers/fmiEcmwfForecast.mjs';
 import {
@@ -77,6 +85,73 @@ try {
     retainedAnswerSummary.lastAnsweredAt,
     '2026-07-01T11:00:00Z',
     'latest visible answer timestamp is retained',
+  );
+
+  const lifecycleNow = Date.parse('2026-07-24T12:00:00.000Z');
+  const lifecycleDevice = 'verify-lifecycle-device';
+  const lifecycleContext = {};
+  const lifecycleReports = selectVisibleReports([
+    {
+      id: 'recent-report',
+      moderationStatus: 'visible',
+      createdAt: new Date(lifecycleNow - fieldReportVisibleWindowMs + 1).toISOString(),
+    },
+    {
+      id: 'old-report',
+      moderationStatus: 'visible',
+      createdAt: new Date(lifecycleNow - fieldReportVisibleWindowMs - 1).toISOString(),
+    },
+  ], lifecycleContext, lifecycleDevice, lifecycleNow);
+  expectEqual(lifecycleReports.length, 1, 'community feed keeps only the last 24 hours');
+  expectEqual(lifecycleReports[0].id, 'recent-report', 'community feed keeps the recent report');
+
+  const lifecycleRequests = selectReportRequests([
+    {
+      id: 'near-active-question',
+      authorDeviceId: 'another-device',
+      createdAt: new Date(lifecycleNow - questionActiveWindowMs + 1).toISOString(),
+      clusterLatitude: 37.515,
+      clusterLongitude: 127.08,
+      answers: 0,
+    },
+    {
+      id: 'far-active-question',
+      authorDeviceId: 'another-device',
+      createdAt: new Date(lifecycleNow - questionActiveWindowMs + 1).toISOString(),
+      clusterLatitude: 35.1796,
+      clusterLongitude: 129.0756,
+      answers: 0,
+    },
+    {
+      id: 'owned-closed-question',
+      authorDeviceId: lifecycleDevice,
+      createdAt: new Date(lifecycleNow - questionActiveWindowMs - 1).toISOString(),
+      clusterLatitude: 37.515,
+      clusterLongitude: 127.08,
+      answers: 0,
+    },
+    {
+      id: 'owned-expired-history',
+      authorDeviceId: lifecycleDevice,
+      createdAt: new Date(lifecycleNow - myQuestionHistoryWindowMs - 1).toISOString(),
+      clusterLatitude: 37.515,
+      clusterLongitude: 127.08,
+      answers: 0,
+    },
+  ], lifecycleContext, [], lifecycleDevice, lifecycleNow);
+  expectEqual(lifecycleRequests.length, 3, 'snapshot contains all active and owned recent questions');
+  expectTruthy(
+    lifecycleRequests.some((item) => item.id === 'near-active-question'),
+    'nearby active question remains visible',
+  );
+  expectTruthy(
+    lifecycleRequests.some((item) => item.id === 'far-active-question'),
+    'far active question remains available to the map',
+  );
+  expectEqual(
+    lifecycleRequests.find((item) => item.id === 'owned-closed-question')?.status,
+    '종료',
+    'owned closed question remains in history with closed status',
   );
 
   const context = {
@@ -564,7 +639,9 @@ try {
   expectEqual(ownedReport?.source, 'local', 'report is editable on owner device');
   expectEqual(ownedRequest?.authorDeviceId, undefined, 'request device id is private');
 
-  const otherSnapshot = await postJson('/field-reports/snapshot', { context }, deviceB);
+  const otherSnapshot = await postJson('/field-reports/snapshot', {
+    context,
+  }, deviceB);
   expectEqual(
     otherSnapshot.requests.find((item) => item.id === request.id)?.source,
     'api',

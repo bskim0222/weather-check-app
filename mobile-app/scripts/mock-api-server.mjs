@@ -62,7 +62,7 @@ export function createMockApiServer() {
       const linkedRequest = storedRequests.find((item) => item.id === report.requestId);
       if (linkedRequest) {
         linkedRequest.answers = storedReports.filter((item) => item.requestId === report.requestId).length;
-        linkedRequest.status = '답변 있음';
+        linkedRequest.status = `답변 ${linkedRequest.answers}개`;
         linkedRequest.hint = `${linkedRequest.answers}개의 현장 답변이 있어요.`;
         linkedRequest.lastAnsweredAt = report.createdAt;
       }
@@ -98,7 +98,7 @@ export function createMockApiServer() {
     const updatedRequest = {
       ...existingRequest,
       answers: Number.isFinite(existingRequest.answers) ? existingRequest.answers + 1 : 1,
-      status: typeof payload.status === 'string' ? payload.status : '답변 있음',
+      status: typeof payload.status === 'string' ? payload.status : '답변 대기',
       hint: typeof payload.hint === 'string' ? payload.hint : '방금 답변됨',
       lastAnsweredAt: new Date().toISOString(),
     };

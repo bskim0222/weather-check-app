@@ -21,6 +21,14 @@ import {
 import { getPinchTargetLevel } from '../src/domain/mapGestures';
 import { createProviderAdjustedPreset } from '../src/domain/providerJudgement';
 import { createFallbackLocationStatus } from '../src/domain/locationStatus';
+import {
+  ANSWER_RADIUS_METERS,
+  FIELD_REPORT_VISIBLE_WINDOW_MS,
+  getAnswerableQuestions,
+  getQuestionStatus,
+  getVisibleFieldReports,
+  QUESTION_ACTIVE_WINDOW_MS,
+} from '../src/domain/community';
 import { deviceIdStorageKey, loadOrCreateDeviceId } from '../src/services/deviceIdentityShared';
 import { weatherPresets } from '../src/data/mockWeather';
 import {
@@ -48,6 +56,95 @@ expectEqual(getPinchTargetLevel(6, 100, 55), 7, 'pinch close zooms out');
 expectEqual(getPinchTargetLevel(1, 100, 200), 1, 'pinch respects minimum map level');
 expectEqual(getPinchTargetLevel(14, 100, 50), 14, 'pinch respects maximum map level');
 expectEqual(getPinchTargetLevel(6, 0, 100), 6, 'pinch ignores invalid starting distance');
+
+const communityNow = Date.parse('2026-07-24T12:00:00.000Z');
+const nearbyLocation = {
+  phase: 'granted' as const,
+  label: '현재 위치',
+  message: '확인됨',
+  latitude: 37.515,
+  longitude: 127.08,
+  source: 'native' as const,
+};
+const communityQuestions: ReportRequest[] = [
+  {
+    id: 'near-active',
+    question: '지금 비 와요?',
+    hint: '',
+    place: '잠실',
+    distance: '',
+    answers: 0,
+    time: '',
+    status: '',
+    mark: '',
+    accent: '#fff',
+    source: 'api',
+    createdAt: new Date(communityNow - QUESTION_ACTIVE_WINDOW_MS + 1).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.08,
+  },
+  {
+    id: 'far-active',
+    question: '지금 비 와요?',
+    hint: '',
+    place: '부산',
+    distance: '',
+    answers: 0,
+    time: '',
+    status: '',
+    mark: '',
+    accent: '#fff',
+    source: 'api',
+    createdAt: new Date(communityNow - 60_000).toISOString(),
+    clusterLatitude: 35.1796,
+    clusterLongitude: 129.0756,
+  },
+  {
+    id: 'near-closed',
+    question: '이전 질문',
+    hint: '',
+    place: '잠실',
+    distance: '',
+    answers: 1,
+    time: '',
+    status: '',
+    mark: '',
+    accent: '#fff',
+    source: 'api',
+    createdAt: new Date(communityNow - QUESTION_ACTIVE_WINDOW_MS - 1).toISOString(),
+    clusterLatitude: 37.515,
+    clusterLongitude: 127.08,
+  },
+];
+expectEqual(
+  getAnswerableQuestions(communityQuestions, nearbyLocation, communityNow).length,
+  1,
+  'answer list only includes active questions within the reply radius',
+);
+expectEqual(getQuestionStatus(communityQuestions[2], communityNow), '종료', 'expired question status');
+expectTruthy(ANSWER_RADIUS_METERS === 3000, 'answer radius remains 3km');
+expectEqual(
+  getVisibleFieldReports([
+    {
+      id: 'recent-community-report',
+      place: '잠실',
+      time: '방금',
+      condition: '맑음',
+      body: '맑아요',
+      createdAt: new Date(communityNow - FIELD_REPORT_VISIBLE_WINDOW_MS + 1).toISOString(),
+    },
+    {
+      id: 'old-community-report',
+      place: '잠실',
+      time: '어제',
+      condition: '맑음',
+      body: '오래된 글',
+      createdAt: new Date(communityNow - FIELD_REPORT_VISIBLE_WINDOW_MS - 1).toISOString(),
+    },
+  ], communityNow).length,
+  1,
+  'community feed only includes reports from the last 24 hours',
+);
 
 const defaultJudgement = createDefaultJudgement();
 expectEqual(defaultJudgement.weatherKey, 'rain', 'default weather');
@@ -198,7 +295,7 @@ const recentMapReports = getRecentMapReports([
     clusterLongitude: 127.095,
   },
 ], mapNow);
-expectEqual(recentMapReports.length, 2, 'map only includes visible real reports from the last 24 hours');
+expectEqual(recentMapReports.length, 2, 'map only includes visible real reports from the last 6 hours');
 const closeMapClusters = createMapReportClusters(recentMapReports, {}, MAP_PRIVACY_GRID_DEGREES);
 expectEqual(closeMapClusters.length, 2, 'nearby map reports remain separate at close zoom');
 const wideMapClusters = createMapReportClusters(recentMapReports, {}, 0.12);

@@ -112,7 +112,7 @@ export function useWeatherAppState() {
   const screenTitle = useMemo(() => {
     if (activeTab === 'decision') return '요약';
     if (activeTab === 'map') return '주변 현장 지도';
-    if (activeTab === 'report') return '현장 제보';
+    if (activeTab === 'report') return '현장 날씨';
 
     return '예보 비교';
   }, [activeTab]);
@@ -147,6 +147,8 @@ export function useWeatherAppState() {
     searchContext.target.latitude,
     searchContext.target.longitude,
     searchContext.timeLabel,
+    locationStatus.latitude,
+    locationStatus.longitude,
   ]);
 
   useEffect(() => {
@@ -523,7 +525,11 @@ export function useWeatherAppState() {
     });
 
     try {
-      const fieldSnapshotPromise = fetchFieldReportSnapshot(reports, nextSearchContext, reportRequests)
+      const fieldSnapshotPromise = fetchFieldReportSnapshot(
+        reports,
+        nextSearchContext,
+        reportRequests,
+      )
         .catch(() => null);
       const providerSnapshot = await fetchProviderSnapshot(nextSearchContext);
 

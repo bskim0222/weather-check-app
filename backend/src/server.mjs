@@ -22,6 +22,10 @@ const port = Number(process.env.PORT ?? 8796);
 const writeRateLimitWindowMs = 10 * 60 * 1000;
 const writeRateLimitMax = 30;
 const ipWriteRateLimitMax = 300;
+export const questionActiveWindowMs = 2 * 60 * 60 * 1000;
+export const fieldReportVisibleWindowMs = 24 * 60 * 60 * 1000;
+export const myQuestionHistoryWindowMs = 7 * 24 * 60 * 60 * 1000;
+export const answerRadiusMeters = 3000;
 const writeRateLimitEntries = new Map();
 
 export function createBackendServer() {
@@ -225,7 +229,12 @@ async function routeRequest(request, response) {
       source: 'api',
       context,
       reports: selectVisibleReports(database.fieldReports, context, deviceId),
-      requests: selectReportRequests(database.reportRequests, context, database.fieldReports, deviceId),
+      requests: selectReportRequests(
+        database.reportRequests,
+        context,
+        database.fieldReports,
+        deviceId,
+      ),
     });
     return;
   }
@@ -347,6 +356,9 @@ async function createFieldReport(payload, deviceId) {
   if (requestId) {
     const existingRequest = await findReportRequestById(requestId);
     if (!existingRequest) throw new HttpError(404, 'Report request not found.');
+    if (!isWithinWindow(existingRequest.createdAt, questionActiveWindowMs)) {
+      throw new HttpError(410, 'This field question is closed.');
+    }
     if (submittedLatitude == null || submittedLongitude == null) {
       throw new HttpError(400, 'Current location is required to answer a field question.');
     }
@@ -359,7 +371,7 @@ async function createFieldReport(payload, deviceId) {
       existingRequest.clusterLatitude,
       existingRequest.clusterLongitude,
     );
-    if (distanceMeters > 3000) {
+    if (distanceMeters > answerRadiusMeters) {
       throw new HttpError(403, 'You must be within about 3 km of the question location to answer.');
     }
     validatedPlace = existingRequest.place;
@@ -410,13 +422,24 @@ async function createReportRequest(payload, deviceId) {
   };
 }
 
-function selectVisibleReports(reports, context, deviceId) {
-  const visibleReports = reports.filter((report) => report.moderationStatus !== 'hidden');
+export function selectVisibleReports(reports, context, deviceId, now = Date.now()) {
+  const visibleReports = reports.filter(
+    (report) =>
+      report.moderationStatus !== 'hidden'
+      && !report.deletedAt
+      && isWithinWindow(report.createdAt, fieldReportVisibleWindowMs, now),
+  );
 
   return visibleReports.map((report) => toViewerItem(report, deviceId));
 }
 
-function selectReportRequests(requests, context, reports = [], deviceId) {
+export function selectReportRequests(
+  requests,
+  context,
+  reports = [],
+  deviceId,
+  now = Date.now(),
+) {
   const visibleAnswers = reports.filter(
     (report) =>
       report.requestId &&
@@ -440,6 +463,11 @@ function selectReportRequests(requests, context, reports = [], deviceId) {
 
   return requests
     .filter((requestItem) => !requestItem.deletedAt)
+    .filter((requestItem) => {
+      const owned = isOwnedByDevice(requestItem, deviceId);
+      if (owned) return isWithinWindow(requestItem.createdAt, myQuestionHistoryWindowMs, now);
+      return isWithinWindow(requestItem.createdAt, questionActiveWindowMs, now);
+    })
     .map((requestItem) => {
       const stats = answerStatsByRequestId.get(requestItem.id);
       // PostgreSQL readDatabase already derives this count from the complete
@@ -450,13 +478,20 @@ function selectReportRequests(requests, context, reports = [], deviceId) {
       return toViewerItem({
         ...requestItem,
         answers,
-        status: answers > 0 ? '답변 있음' : '답변 대기',
+        status: isWithinWindow(requestItem.createdAt, questionActiveWindowMs, now)
+          ? (answers > 0 ? `답변 ${answers}개` : '답변 대기')
+          : '종료',
         hint: answers > 0 ? `${answers}개의 현장 답변이 있어요.` : '현장 답변을 기다리는 중',
         lastAnsweredAt,
       }, deviceId);
     })
     .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
     .slice(0, 100);
+}
+
+function isWithinWindow(createdAt, windowMs, now = Date.now()) {
+  const createdAtMs = getTime(createdAt);
+  return createdAtMs > 0 && createdAtMs <= now && createdAtMs >= now - windowMs;
 }
 
 export function resolveRequestAnswerSummary(requestItem, stats) {

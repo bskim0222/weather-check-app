@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 
 import { EmptyState } from '../components/EmptyState';
+import {
+  canAnswerQuestion,
+  formatDistance,
+  getAnswerDistanceMeters,
+  getAnswerableQuestions,
+  getQuestionStatus,
+  getVisibleFieldReports,
+  isMyQuestionVisible,
+  isQuestionActive,
+} from '../domain/community';
 import { visibleReportsOnly } from '../domain/moderation';
 import { inferConditionFromText } from '../domain/reports';
 import { isValidKoreaMapCoordinate } from '../domain/mapClustering';
@@ -34,9 +44,9 @@ type ReportScreenProps = {
 };
 
 const reportTabs: { key: ReportTab; label: string }[] = [
-  { key: 'ask', label: '문의하기' },
-  { key: 'questions', label: '질문모음' },
-  { key: 'feed', label: '제보모음' },
+  { key: 'ask', label: '내 문의' },
+  { key: 'questions', label: '답변하기' },
+  { key: 'feed', label: '현장 소식' },
 ];
 
 export function ReportScreen({
@@ -66,16 +76,25 @@ export function ReportScreen({
   const [editingReport, setEditingReport] = useState<LocalReport | undefined>();
   const [editingRequest, setEditingRequest] = useState<ReportRequest | undefined>();
   const [editDraft, setEditDraft] = useState('');
+  const [communityNow, setCommunityNow] = useState(Date.now());
 
   const orderedRequests = useMemo(
     () => requests.filter((request) => request.source !== 'mock'),
     [requests],
   );
   const visibleReports = useMemo(
-    () => orderLiveReports(visibleReportsOnly(reports).filter((report) => report.source !== 'mock')),
-    [reports],
+    () => orderLiveReports(getVisibleFieldReports(
+      visibleReportsOnly(reports).filter((report) => report.source !== 'mock'),
+      communityNow,
+    )),
+    [communityNow, reports],
   );
-  const myQuestions = orderedRequests.filter((request) => request.source === 'local');
+  const myQuestions = orderedRequests.filter((request) => isMyQuestionVisible(request, communityNow));
+  const answerableQuestions = getAnswerableQuestions(orderedRequests, locationStatus, communityNow)
+    .map((request) => ({
+      ...request,
+      distance: formatDistance(getAnswerDistanceMeters(request, locationStatus)),
+    }));
   const selectedRequest = useMemo(
     () => orderedRequests.find((request) => request.id === selectedRequestId),
     [orderedRequests, selectedRequestId],
@@ -88,6 +107,11 @@ export function ReportScreen({
   useEffect(() => {
     if (askFocusToken > 0) setActiveReportTab('ask');
   }, [askFocusToken]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setCommunityNow(Date.now()), 60_000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (orderedRequests.length === 0) {
@@ -178,6 +202,10 @@ export function ReportScreen({
       setReplyNotice('답변할 질문을 다시 선택해주세요.');
       return;
     }
+    if (!isQuestionActive(selectedRequest)) {
+      setReplyNotice('답변 시간이 끝난 문의예요.');
+      return;
+    }
     if (!clean) {
       setReplyNotice('지금 보이는 날씨를 한 줄로 적어주세요.');
       return;
@@ -188,7 +216,7 @@ export function ReportScreen({
       return;
     }
 
-    if (!isNearRequest(selectedRequest, locationStatus)) {
+    if (!canAnswerQuestion(selectedRequest, locationStatus)) {
       setReplyNotice('질문 지역에서 약 3km 이내에 있을 때만 현장 답변을 남길 수 있어요.');
       return;
     }
@@ -225,7 +253,7 @@ export function ReportScreen({
           ? {
               ...request,
               answers: request.answers + 1,
-              status: '답변 있음',
+              status: `답변 ${request.answers + 1}개`,
               hint: '방금 답변',
             }
           : request
@@ -289,8 +317,8 @@ export function ReportScreen({
     <View>
       <View style={styles.reportReferenceTop}>
         <View>
-          <Text style={styles.reportHeaderTitle}>현장문의</Text>
-          <Text style={styles.reportHeaderCaption}>궁금한 곳은 묻고, 내가 본 날씨는 제보로 남겨요.</Text>
+          <Text style={styles.reportHeaderTitle}>현장 날씨</Text>
+          <Text style={styles.reportHeaderCaption}>궁금한 곳은 묻고, 가까운 곳은 직접 알려주세요</Text>
         </View>
       </View>
 
@@ -332,10 +360,12 @@ export function ReportScreen({
 
           {activeReportTab === 'questions' && (
             <QuestionsPanel
-              requests={orderedRequests}
+              locationReady={hasUsableLocation(locationStatus)}
+              requests={answerableQuestions}
               onAnswer={openAnswerModal}
               onDeleteRequest={onDeleteRequest}
               onEditRequest={openEditRequest}
+              onRefreshLocation={onRefreshLocation}
             />
           )}
 
@@ -387,22 +417,9 @@ function hasUsableLocation(
   return Number.isFinite(locationStatus.latitude) && Number.isFinite(locationStatus.longitude);
 }
 
-function isNearRequest(
-  request: ReportRequest,
-  locationStatus: LocationStatus & { latitude: number; longitude: number },
-) {
-  if (!Number.isFinite(request.clusterLatitude) || !Number.isFinite(request.clusterLongitude)) return false;
-
-  return getDistanceMeters(
-    locationStatus.latitude,
-    locationStatus.longitude,
-    request.clusterLatitude!,
-    request.clusterLongitude!,
-  ) <= 3000;
-}
-
 function getAnswerLocationMessage(request: ReportRequest | undefined, locationStatus: LocationStatus) {
   if (!request) return '답변할 질문을 선택해주세요.';
+  if (!isQuestionActive(request)) return '답변 시간이 끝난 문의예요.';
   if (!hasUsableLocation(locationStatus)) return '현재 위치를 확인할 수 없어 답변을 등록할 수 없어요.';
   if (!Number.isFinite(request.clusterLatitude) || !Number.isFinite(request.clusterLongitude)) {
     return '이 질문은 장소를 확인할 수 없어 답변을 등록할 수 없어요.';
@@ -443,6 +460,9 @@ function getReplySaveErrorMessage(error?: string) {
   }
   if (normalizedError.includes('report request not found')) {
     return '이미 삭제된 질문이에요. 질문 목록을 새로고침해주세요.';
+  }
+  if (normalizedError.includes('field question is closed')) {
+    return '답변 시간이 끝난 문의예요.';
   }
 
   return '답변이 서버에 저장되지 않았어요. 연결을 확인한 뒤 다시 시도해주세요.';
@@ -488,7 +508,7 @@ function AskPanel({
       <View style={styles.reportAskHeroCard}>
         <View style={styles.reportAskKickerRow}>
           <View style={styles.reportAskPin} />
-          <Text style={styles.reportAskKicker}>궁금한 지역의 날씨를 물어보세요</Text>
+          <Text style={styles.reportAskKicker}>궁금한 지역의 지금 날씨를 물어보세요</Text>
         </View>
         <Text style={styles.reportAskTitle}>지금 그곳은 실제로 어떤가요?</Text>
         <View style={styles.reportBigQuestionBox}>
@@ -505,60 +525,74 @@ function AskPanel({
             <Text style={styles.reportRoundSubmitText}>↗</Text>
           </Pressable>
         </View>
-        <View style={styles.reportAskChipRow}>
-          <Text style={[styles.reportAskChip, styles.reportAskChipBlue]}>서서울CC 잔디 젖었나요?</Text>
-          <Text style={[styles.reportAskChip, styles.reportAskChipGreen]}>광안리 바람 어때요?</Text>
-          <Text style={styles.reportAskChip}>홍대 앞 우산 필요?</Text>
-        </View>
       </View>
 
       {!!replyNotice && <Text style={styles.reportInlineNotice}>{replyNotice}</Text>}
 
       <View style={styles.reportPanelSectionHeader}>
-        <Text style={styles.reportPanelSectionTitle}>내 문의</Text>
+        <Text style={styles.reportPanelSectionTitle}>내가 보낸 문의</Text>
         <Text style={styles.reportPanelSectionMeta}>{rows.length}개</Text>
       </View>
       <Text style={styles.reportInlineNotice}>
-        이 기기에서 작성한 문의만 수정하거나 삭제할 수 있어요.
+        답변이 달리면 문의를 눌러 한자리에서 확인할 수 있어요.
       </Text>
       <View style={styles.reportLiveFeed}>
-        {rows.map((request) => (
-          <ReportQuestionItem
-            key={request.id}
-            request={request}
-            onDelete={onDeleteRequest}
-            onEdit={onEditRequest}
-            onPress={() => onOpenQuestion(request)}
-            actionLabel={request.answers > 0 ? `답변 ${request.answers}개 보기` : '답변 대기'}
-            variant="mine"
-          />
-        ))}
+        {rows.length > 0 ? rows.map((request) => (
+            <ReportQuestionItem
+              key={request.id}
+              request={request}
+              onDelete={onDeleteRequest}
+              onEdit={onEditRequest}
+              onPress={() => onOpenQuestion(request)}
+              actionLabel={getQuestionStatus(request)}
+              variant="mine"
+            />
+          )) : (
+            <EmptyState
+              title="아직 보낸 문의가 없어요"
+              body="궁금한 지역과 현재 날씨를 적어 문의를 보내보세요."
+            />
+          )}
       </View>
     </>
   );
 }
 
 function QuestionsPanel({
+  locationReady,
   onDeleteRequest,
   requests,
   onAnswer,
   onEditRequest,
+  onRefreshLocation,
 }: {
+  locationReady: boolean;
   onDeleteRequest: (requestId: string) => void;
   requests: ReportRequest[];
   onAnswer: (request: ReportRequest) => void;
   onEditRequest: (request: ReportRequest) => void;
+  onRefreshLocation: () => void;
 }) {
   return (
     <>
       <View style={styles.reportPanelSectionHeader}>
-        <Text style={styles.reportPanelSectionTitle}>답변이 필요한 질문</Text>
-        <Text style={styles.reportPanelSectionMeta}>실시간</Text>
+        <Text style={styles.reportPanelSectionTitle}>가까운 현장 질문</Text>
+        <Text style={styles.reportPanelSectionMeta}>3km 이내</Text>
       </View>
       <Text style={styles.reportInlineNotice}>
-        가까이에 있다면 현장 날씨가 궁금한 사람에게 답장을 보내주세요.
+        현재 위치에서 직접 확인할 수 있는 질문만 보여드려요.
       </Text>
-      {requests.length > 0 ? (
+      {!locationReady ? (
+        <>
+          <EmptyState
+            title="현재 위치 확인이 필요해요"
+            body="현장 답변은 질문 지역 3km 안에서만 남길 수 있어요."
+          />
+          <Pressable onPress={onRefreshLocation} style={styles.replyLocationRetryButton}>
+            <Text style={styles.replyLocationRetryText}>위치 다시 확인</Text>
+          </Pressable>
+        </>
+      ) : requests.length > 0 ? (
         <View style={styles.reportLiveFeed}>
           {requests.map((request) => (
             <ReportQuestionItem
@@ -567,15 +601,15 @@ function QuestionsPanel({
               onDelete={onDeleteRequest}
               onEdit={onEditRequest}
               onPress={() => onAnswer(request)}
-              actionLabel={request.answers > 0 ? `현장 답변 ${request.answers}개 · 답변쓰기` : '답변쓰기'}
+              actionLabel={request.answers > 0 ? `답변 ${request.answers}개 · 답변 남기기` : '현장 답변 남기기'}
               variant={request.answers > 0 ? 'answered' : 'open'}
             />
           ))}
         </View>
       ) : (
         <EmptyState
-          title="답변할 질문이 없어요"
-          body="다른 사용자가 질문을 올리면 최신순으로 보여줄게요."
+          title="근처에 답변할 질문이 없어요"
+          body="위치를 새로 확인하거나 잠시 뒤 다시 살펴보세요."
         />
       )}
     </>
@@ -596,8 +630,8 @@ function FeedPanel({
   return (
     <>
       <View style={styles.reportPanelSectionHeader}>
-        <Text style={styles.reportPanelSectionTitle}>실시간 현장 흐름</Text>
-        <Text style={styles.reportPanelSectionMeta}>전국 최신순</Text>
+        <Text style={styles.reportPanelSectionTitle}>최신 현장 소식</Text>
+        <Text style={styles.reportPanelSectionMeta}>최근 24시간</Text>
       </View>
       {reports.length > 0 ? (
         <View style={styles.reportLiveFeed}>
@@ -613,8 +647,8 @@ function FeedPanel({
         </View>
       ) : (
         <EmptyState
-          title="올라온 현장 글이 없어요"
-          body="질문 답변이나 현재위치 제보가 등록되면 최신순으로 보입니다."
+          title="아직 현장 소식이 없어요"
+          body="현재 위치 제보나 문의 답변이 등록되면 최신순으로 보여드려요."
         />
       )}
     </>
@@ -645,7 +679,9 @@ function ReportQuestionItem({
           <View style={[styles.reportAvatar, variant === 'answered' && styles.reportAvatarAnswer]} />
           <View>
             <Text style={styles.reportAuthorName}>{request.place}</Text>
-            <Text style={styles.reportMetaSmall}>{formatPostTime(request.createdAt)} · {request.status}</Text>
+            <Text style={styles.reportMetaSmall}>
+              {formatPostTime(request.createdAt)} · {variant !== 'mine' && request.distance ? `${request.distance} · ` : ''}{getQuestionStatus(request)}
+            </Text>
           </View>
         </View>
         {canEdit ? (
@@ -710,7 +746,9 @@ function FieldReportPost({
           <View style={styles.reportAvatar} />
           <View>
             <Text style={styles.reportAuthorName}>{report.place}</Text>
-            <Text style={styles.reportMetaSmall}>현장 제보 · {formatPostTime(report.createdAt)}</Text>
+            <Text style={styles.reportMetaSmall}>
+              {report.requestId ? '문의 답변' : '현장 제보'} · {formatPostTime(report.createdAt)}
+            </Text>
           </View>
         </View>
         {canEdit ? (
@@ -735,7 +773,7 @@ function FieldReportPost({
             ]}
           >
             <Text style={styles.reportIssueText}>
-              {report.moderationStatus === 'pending' ? '신고됨' : '신고'}
+              {report.moderationStatus === 'pending' ? '신고 접수됨' : '신고'}
             </Text>
           </Pressable>
         )}

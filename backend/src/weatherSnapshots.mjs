@@ -261,13 +261,15 @@ async function resolveFmiForecast(context) {
 
 async function resolveProviderWithRetry(providerName, fetchProvider) {
   let lastError;
+  const retryDelays = [200, 500];
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= retryDelays.length + 1; attempt += 1) {
     try {
       return await fetchProvider();
     } catch (error) {
       lastError = error;
-      if (attempt === 1) await delay(250);
+      const retryDelay = retryDelays[attempt - 1];
+      if (retryDelay !== undefined) await delay(retryDelay);
     }
   }
 

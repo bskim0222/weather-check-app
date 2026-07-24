@@ -14,7 +14,7 @@ export async function fetchKmaShortForecast(context) {
 
   const grid = convertLatLonToKmaGrid(coordinates.latitude, coordinates.longitude);
   const now = new Date();
-  const [current, forecast] = await Promise.all([
+  const [currentResult, forecastResult] = await Promise.allSettled([
     fetchKmaEndpoint('/getUltraSrtNcst', {
       ...createKmaBaseTime(now, 'current'),
       nx: grid.nx,
@@ -29,6 +29,16 @@ export async function fetchKmaShortForecast(context) {
     }),
   ]);
 
+  if (forecastResult.status === 'rejected') {
+    throw forecastResult.reason;
+  }
+
+  const forecast = forecastResult.value;
+  if (getItems(forecast).length === 0) {
+    throw new Error('KMA forecast response did not contain forecast rows.');
+  }
+
+  const current = currentResult.status === 'fulfilled' ? currentResult.value : forecast;
   return createKmaForecastModel(current, forecast, context);
 }
 

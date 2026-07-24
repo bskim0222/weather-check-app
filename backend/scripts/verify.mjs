@@ -1,7 +1,11 @@
 import { createBackendServer, resolveRequestAnswerSummary } from '../src/server.mjs';
 import { compactDatabase, storageLimits } from '../src/storage.mjs';
 import { createFmiForecastModel, getFmiRequestStartTime } from '../src/providers/fmiEcmwfForecast.mjs';
-import { convertLatLonToKmaGrid, createKmaForecastModel } from '../src/providers/kmaShortForecast.mjs';
+import {
+  convertLatLonToKmaGrid,
+  createKmaForecastModel,
+  fetchKmaShortForecast,
+} from '../src/providers/kmaShortForecast.mjs';
 import { createWindyForecastModel } from '../src/providers/windyPointForecast.mjs';
 import { createYrForecastModel } from '../src/providers/yrLocationforecast.mjs';
 import { getForecastWindow, getTargetTimestampMs } from '../src/timeIntent.mjs';
@@ -157,6 +161,48 @@ try {
   expectTruthy(kmaModel.hourlyRows[0].detail.includes('바람 4m/s'), 'kma hourly wind');
   expectTruthy(kmaModel.hourlyRows[0].detail.includes('습도 72%'), 'kma hourly humidity');
 
+  const originalKmaFetch = globalThis.fetch;
+  const originalKmaServiceKey = process.env.KMA_SERVICE_KEY;
+  try {
+    process.env.KMA_SERVICE_KEY = 'verification-key';
+    globalThis.fetch = async (url) => {
+      if (String(url).includes('getUltraSrtNcst')) {
+        return { ok: false, status: 503 };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          response: {
+            body: {
+              items: {
+                item: [
+                  { category: 'TMP', fcstDate: '20260702', fcstTime: '1500', fcstValue: '25' },
+                  { category: 'PCP', fcstDate: '20260702', fcstTime: '1500', fcstValue: '0' },
+                  { category: 'PTY', fcstDate: '20260702', fcstTime: '1500', fcstValue: '0' },
+                  { category: 'SKY', fcstDate: '20260702', fcstTime: '1500', fcstValue: '4' },
+                  { category: 'WSD', fcstDate: '20260702', fcstTime: '1500', fcstValue: '3' },
+                  { category: 'REH', fcstDate: '20260702', fcstTime: '1500', fcstValue: '70' },
+                ],
+              },
+            },
+          },
+        }),
+      };
+    };
+
+    const kmaWithoutObservation = await fetchKmaShortForecast({
+      raw: 'KMA optional observation verification',
+      target: { latitude: 37.515, longitude: 127.0728 },
+    });
+    expectTruthy(kmaWithoutObservation.hourlyRows.length > 0, 'kma forecast survives current observation failure');
+    expectEqual(kmaWithoutObservation.current.temp, '25℃', 'kma forecast supplies fallback current temperature');
+  } finally {
+    globalThis.fetch = originalKmaFetch;
+    if (originalKmaServiceKey == null) delete process.env.KMA_SERVICE_KEY;
+    else process.env.KMA_SERVICE_KEY = originalKmaServiceKey;
+  }
+
   const windyModel = createWindyForecastModel({
     ts: [Date.UTC(2026, 6, 2, 9), Date.UTC(2026, 6, 2, 12)],
     'temp-surface': [24.4, 25.1],
@@ -262,7 +308,7 @@ try {
     yrFetchCount = 0;
     globalThis.fetch = async () => {
       yrFetchCount += 1;
-      if (yrFetchCount === 1) throw new Error('temporary provider failure');
+      if (yrFetchCount <= 2) throw new Error('temporary provider failure');
 
       return {
         ok: true,
@@ -290,7 +336,7 @@ try {
       target: { ...context.target, latitude: 35.1151, longitude: 129.0414 },
     };
     const retriedSnapshot = await createWeatherProviderSnapshot(retryContext);
-    expectEqual(yrFetchCount, 2, 'temporary provider failure is retried once');
+    expectEqual(yrFetchCount, 3, 'temporary provider failure is retried twice');
     expectTruthy(retriedSnapshot.meta.liveProviderIds.includes('yr'), 'retry recovers the provider response');
   } finally {
     globalThis.fetch = originalFetch;
